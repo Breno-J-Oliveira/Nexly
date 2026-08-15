@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { AtualizarProfissionalDto } from './dto/atualizar-profissional.dto';
 import { CriarProfissionalDto } from './dto/criar-profissional.dto';
 import { ProfissionaisService } from './profissionais.service';

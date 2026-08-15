@@ -25,9 +25,7 @@ describe('AuthGuard', () => {
   }
 
   it('acesso a rota protegida sem token retorna 401', async () => {
-    await expect(guard.canActivate(makeContext(undefined))).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(guard.canActivate(makeContext(undefined))).rejects.toThrow(UnauthorizedException);
   });
 
   it('acesso a rota protegida com token expirado retorna 401', async () => {

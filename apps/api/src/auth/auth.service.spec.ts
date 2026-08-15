@@ -57,16 +57,16 @@ describe('AuthService', () => {
     prisma.client.usuario.findUnique.mockResolvedValue(usuarioMock);
     jest.spyOn(argon2, 'verify').mockResolvedValue(false);
 
-    await expect(
-      service.login({ email: 'admin@test.com', senha: 'senha-errada' }),
-    ).rejects.toThrow(UnauthorizedException);
+    await expect(service.login({ email: 'admin@test.com', senha: 'senha-errada' })).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('login com e-mail inexistente retorna 401 com mensagem genérica', async () => {
     prisma.client.usuario.findUnique.mockResolvedValue(null);
 
-    await expect(
-      service.login({ email: 'nao@existe.com', senha: 'qualquer' }),
-    ).rejects.toThrow('E-mail ou senha incorretos');
+    await expect(service.login({ email: 'nao@existe.com', senha: 'qualquer' })).rejects.toThrow(
+      'E-mail ou senha incorretos',
+    );
   });
 });

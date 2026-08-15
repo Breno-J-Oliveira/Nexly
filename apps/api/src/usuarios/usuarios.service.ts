@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Role } from '@nexly/shared';
+
 import * as argon2 from 'argon2';
 import { PrismaService } from '../database/prisma.service';
 import { AtualizarUsuarioDto } from './dto/atualizar-usuario.dto';
@@ -56,12 +56,7 @@ export class UsuariosService {
     });
   }
 
-  async atualizar(
-    empresaId: string,
-    usuarioAtualId: string,
-    id: string,
-    dto: AtualizarUsuarioDto,
-  ) {
+  async atualizar(empresaId: string, usuarioAtualId: string, id: string, dto: AtualizarUsuarioDto) {
     if (id === usuarioAtualId && dto.role) {
       throw new BadRequestException('Você não pode alterar a própria role');
     }

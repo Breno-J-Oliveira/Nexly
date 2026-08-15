@@ -133,7 +133,6 @@ export function AgendamentoModal({ onClose, onSuccess }: Props) {
           </div>
         )}
 
-
         {step === 2 && (
           <div className="mt-4 space-y-4">
             <div>

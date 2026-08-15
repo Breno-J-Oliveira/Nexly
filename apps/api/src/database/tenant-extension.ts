@@ -33,7 +33,7 @@ export const tenantExtension = Prisma.defineExtension((client) =>
     query: {
       $allModels: {
         async $allOperations({ args, query, model, operation }) {
-          if (!TENANT_MODELS.has(model as string)) {
+          if (!TENANT_MODELS.has(model)) {
             return query(args);
           }
 
@@ -69,4 +69,3 @@ export const tenantExtension = Prisma.defineExtension((client) =>
     },
   }),
 );
-

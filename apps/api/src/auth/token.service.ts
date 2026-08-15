@@ -38,9 +38,7 @@ export class TokenService {
    * - token válido → revoga o antigo e emite um novo.
    * - token já revogado → possível roubo: invalida TODAS as sessões do usuário.
    */
-  async rotateRefreshToken(
-    refreshToken: string,
-  ): Promise<{ usuario: Usuario; newToken: string }> {
+  async rotateRefreshToken(refreshToken: string): Promise<{ usuario: Usuario; newToken: string }> {
     const tokenHash = this.hashToken(refreshToken);
     const stored = await this.prisma.client.refreshToken.findUnique({ where: { tokenHash } });
 

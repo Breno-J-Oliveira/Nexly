@@ -28,4 +28,3 @@ export const Plano = {
 } as const;
 
 export type Plano = (typeof Plano)[keyof typeof Plano];
-

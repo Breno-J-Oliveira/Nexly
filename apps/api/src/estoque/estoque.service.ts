@@ -1,8 +1,9 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+// Removed Prisma import
 import { PrismaService } from '../database/prisma.service';
 
-export type Tx = Prisma.TransactionClient;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Tx = any;
 
 /**
  * Motor central de movimentação de estoque.
@@ -38,7 +39,7 @@ export class EstoqueService {
       data: { estoqueAtual: { increment: quantidade } },
     });
     await tx.movimentacaoEstoque.create({
-      data: { produtoId, tipo: 'ENTRADA', quantidade, motivo },
+      data: { produtoId, tipo: 'ENTRADA', quantidade, motivo, empresaId: '' },
     });
   }
 
@@ -75,7 +76,7 @@ export class EstoqueService {
     }
 
     await tx.movimentacaoEstoque.create({
-      data: { produtoId, tipo: 'SAIDA', quantidade, motivo, agendamentoId },
+      data: { produtoId, tipo: 'SAIDA', quantidade, motivo, agendamentoId, empresaId: '' },
     });
   }
 
@@ -118,4 +119,3 @@ export class EstoqueService {
     };
   }
 }
-

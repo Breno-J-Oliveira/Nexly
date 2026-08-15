@@ -97,7 +97,9 @@ export default function AgendaPage() {
             className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 p-4"
           >
             <div className="flex items-center gap-4">
-              <span className="text-lg font-semibold text-zinc-100">{formatarHora(a.dataHora)}</span>
+              <span className="text-lg font-semibold text-zinc-100">
+                {formatarHora(a.dataHora)}
+              </span>
               <div>
                 <p className="font-medium text-zinc-100">{a.cliente.nome}</p>
                 <p className="text-sm text-zinc-400">

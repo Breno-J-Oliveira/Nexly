@@ -56,4 +56,3 @@ export class AgendamentosController {
     return this.agendamentosService.atualizarStatus(id, 'CANCELADO');
   }
 }
-

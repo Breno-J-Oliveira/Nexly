@@ -53,7 +53,7 @@ export class ClientesService {
 
   criar(dto: CriarClienteDto) {
     return this.prisma.client.cliente.create({
-      data: { nome: dto.nome, telefone: dto.telefone, email: dto.email },
+      data: { empresaId: '', nome: dto.nome, telefone: dto.telefone, email: dto.email },
     });
   }
 

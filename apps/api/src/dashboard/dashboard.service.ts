@@ -112,7 +112,12 @@ export class DashboardService {
     // Alertas de estoque (abaixo do mínimo)
     const alertasEstoque = produtos
       .filter((p) => p.estoqueAtual < p.estoqueMinimo)
-      .map((p) => ({ id: p.id, nome: p.nome, estoqueAtual: p.estoqueAtual, estoqueMinimo: p.estoqueMinimo }));
+      .map((p) => ({
+        id: p.id,
+        nome: p.nome,
+        estoqueAtual: p.estoqueAtual,
+        estoqueMinimo: p.estoqueMinimo,
+      }));
 
     const resultado = {
       agendamentosHoje: { total: agendamentosHoje.length, ...porStatus },

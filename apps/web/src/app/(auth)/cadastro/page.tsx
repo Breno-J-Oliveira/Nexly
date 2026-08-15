@@ -63,12 +63,44 @@ export default function CadastroPage() {
       <p className="mt-1 text-sm text-zinc-400">Crie sua conta e comece a usar o Nexly</p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
-        <Input label="Nome da empresa" placeholder="Salão Beleza Total" error={errors.empresaNome?.message} {...register('empresaNome')} />
-        <Input label="CNPJ" placeholder="00.000.000/0000-00" error={errors.cnpj?.message} {...register('cnpj')} />
-        <Input label="Nome do responsável" placeholder="Seu nome" error={errors.responsavelNome?.message} {...register('responsavelNome')} />
-        <Input label="E-mail" type="email" placeholder="voce@empresa.com" error={errors.email?.message} {...register('email')} />
-        <Input label="Senha" type="password" placeholder="Mínimo 8 caracteres" error={errors.senha?.message} {...register('senha')} />
-        <Input label="Confirmar senha" type="password" error={errors.confirmacaoSenha?.message} {...register('confirmacaoSenha')} />
+        <Input
+          label="Nome da empresa"
+          placeholder="Salão Beleza Total"
+          error={errors.empresaNome?.message}
+          {...register('empresaNome')}
+        />
+        <Input
+          label="CNPJ"
+          placeholder="00.000.000/0000-00"
+          error={errors.cnpj?.message}
+          {...register('cnpj')}
+        />
+        <Input
+          label="Nome do responsável"
+          placeholder="Seu nome"
+          error={errors.responsavelNome?.message}
+          {...register('responsavelNome')}
+        />
+        <Input
+          label="E-mail"
+          type="email"
+          placeholder="voce@empresa.com"
+          error={errors.email?.message}
+          {...register('email')}
+        />
+        <Input
+          label="Senha"
+          type="password"
+          placeholder="Mínimo 8 caracteres"
+          error={errors.senha?.message}
+          {...register('senha')}
+        />
+        <Input
+          label="Confirmar senha"
+          type="password"
+          error={errors.confirmacaoSenha?.message}
+          {...register('confirmacaoSenha')}
+        />
         {error && <p className="text-sm text-red-400">{error}</p>}
         <Button type="submit" loading={isSubmitting} className="w-full">
           Criar conta

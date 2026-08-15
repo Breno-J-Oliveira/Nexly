@@ -9,4 +9,3 @@ import { EstoqueService } from './estoque.service';
   exports: [EstoqueService],
 })
 export class EstoqueModule {}
-

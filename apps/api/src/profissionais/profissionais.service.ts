@@ -33,7 +33,7 @@ export class ProfissionaisService {
 
   criar(dto: CriarProfissionalDto) {
     return this.prisma.client.profissional.create({
-      data: { nome: dto.nome, especialidade: dto.especialidade },
+      data: { empresaId: '', nome: dto.nome, especialidade: dto.especialidade },
     });
   }
 

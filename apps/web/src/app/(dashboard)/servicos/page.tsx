@@ -72,7 +72,6 @@ export default function ServicosPage() {
     p.nome.toLowerCase().includes(buscaProduto.toLowerCase()),
   );
 
-
   return (
     <div>
       <h2 className="text-xl font-semibold text-zinc-100">Serviços</h2>
@@ -177,4 +176,3 @@ export default function ServicosPage() {
     </div>
   );
 }
-

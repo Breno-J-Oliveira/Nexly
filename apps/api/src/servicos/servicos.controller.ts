@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { AssociarInsumoDto } from './dto/associar-insumo.dto';
 import { AtualizarServicoDto } from './dto/atualizar-servico.dto';
 import { CriarServicoDto } from './dto/criar-servico.dto';
@@ -58,4 +50,3 @@ export class ServicosController {
     return this.servicosService.removerInsumo(id, produtoId);
   }
 }
-

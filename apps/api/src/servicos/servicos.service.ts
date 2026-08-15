@@ -30,7 +30,7 @@ export class ServicosService {
 
   criar(dto: CriarServicoDto) {
     return this.prisma.client.servico.create({
-      data: { nome: dto.nome, duracaoMin: dto.duracaoMin, preco: dto.preco },
+      data: { empresaId: '', nome: dto.nome, duracaoMin: dto.duracaoMin, preco: dto.preco },
     });
   }
 

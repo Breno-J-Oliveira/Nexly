@@ -1,4 +1,4 @@
-import { IsInt, IsNumber, IsOptional, IsString, Length, Max, Min } from 'class-validator';
+import { IsInt, IsNumber, Min, IsString, Length, Max } from 'class-validator';
 
 export class CriarServicoDto {
   @IsString()

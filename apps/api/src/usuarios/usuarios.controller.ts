@@ -50,15 +50,10 @@ export class UsuariosController {
   }
 
   @Patch(':id/senha')
-  trocarSenha(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-    @Body() dto: TrocarSenhaDto,
-  ) {
+  trocarSenha(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: TrocarSenhaDto) {
     if (id !== user.id) {
       throw new ForbiddenException('Você só pode alterar a própria senha');
     }
     return this.usuariosService.trocarSenha(user.id, dto);
   }
 }
-

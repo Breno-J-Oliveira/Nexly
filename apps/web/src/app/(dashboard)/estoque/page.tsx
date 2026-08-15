@@ -59,7 +59,6 @@ export default function EstoquePage() {
     return { label: 'OK', color: 'bg-green-100 text-green-700' };
   };
 
-
   return (
     <div>
       <h2 className="text-xl font-semibold text-zinc-100">Estoque</h2>
@@ -67,7 +66,9 @@ export default function EstoquePage() {
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
           <p className="text-sm text-zinc-400">Total de produtos</p>
-          <p className="mt-1 text-2xl font-semibold text-zinc-100">{resumo?.totalProdutos ?? '—'}</p>
+          <p className="mt-1 text-2xl font-semibold text-zinc-100">
+            {resumo?.totalProdutos ?? '—'}
+          </p>
         </div>
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
           <p className="text-sm text-zinc-400">Valor em estoque</p>

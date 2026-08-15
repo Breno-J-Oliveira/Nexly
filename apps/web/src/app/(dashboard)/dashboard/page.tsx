@@ -109,7 +109,11 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dados.topServicos} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#a1a1aa' }} />
+                <XAxis
+                  type="number"
+                  allowDecimals={false}
+                  tick={{ fontSize: 11, fill: '#a1a1aa' }}
+                />
                 <YAxis
                   type="category"
                   dataKey="nome"

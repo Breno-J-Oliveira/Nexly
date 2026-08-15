@@ -17,4 +17,3 @@ export interface AuthUser {
   email: string;
   nome: string;
 }
-

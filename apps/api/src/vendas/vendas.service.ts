@@ -52,7 +52,7 @@ export class VendasService {
     // 3-7. Transação: cria venda + itens + baixa de estoque (rollback em falha).
     const venda = await this.prisma.client.$transaction(async (tx) => {
       const v = await tx.venda.create({
-        data: { clienteId, total },
+        data: { empresaId: '', clienteId, total },
       });
 
       for (const item of itens) {

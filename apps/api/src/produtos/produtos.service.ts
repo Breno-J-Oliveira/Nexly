@@ -59,6 +59,7 @@ export class ProdutosService {
     try {
       return await this.prisma.client.produto.create({
         data: {
+          empresaId: '',
           nome: dto.nome,
           sku: dto.sku,
           preco: dto.preco,
@@ -96,9 +97,7 @@ export class ProdutosService {
       where: { produtoId: id, servico: { ativo: true } },
     });
     if (emUso) {
-      throw new ConflictException(
-        'Não é possível desativar: produto é insumo de um serviço ativo',
-      );
+      throw new ConflictException('Não é possível desativar: produto é insumo de um serviço ativo');
     }
 
     await this.prisma.client.produto.updateMany({
