@@ -1,0 +1,240 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  PROFISSIONAL
+  CAIXA
+}
+
+enum Plano {
+  FREE
+  PRO
+}
+
+enum StatusAgendamento {
+  AGENDADO
+  CONFIRMADO
+  CONCLUIDO
+  CANCELADO
+}
+
+enum TipoMovimentacao {
+  ENTRADA
+  SAIDA
+}
+
+// ─────────────────────────────────────────────────────────────
+// Núcleo (multi-tenant)
+// ─────────────────────────────────────────────────────────────
+
+model Empresa {
+  id        String   @id @default(uuid())
+  nome      String
+  cnpj      String   @unique
+  plano     Plano    @default(FREE)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  usuarios Usuario[]
+
+  @@map("empresas")
+}
+
+model Usuario {
+  id         String   @id @default(uuid())
+  empresaId  String   @map("empresa_id")
+  nome       String
+  email      String   @unique
+  senhaHash  String   @map("senha_hash")
+  role       Role     @default(CAIXA)
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  empresa       Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+
+  @@index([empresaId])
+  @@map("usuarios")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  usuarioId String    @map("usuario_id")
+  tokenHash String    @map("token_hash") @unique
+  expiresAt DateTime  @map("expires_at")
+  revogado  Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("refresh_tokens")
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Módulo Agenda
+// ─────────────────────────────────────────────────────────────
+
+model Cliente {
+  id        String   @id @default(uuid())
+  empresaId String   @map("empresa_id")
+  nome      String
+  telefone  String?
+  email     String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  agendamentos Agendamento[]
+  vendas       Venda[]
+
+  @@index([empresaId])
+  @@map("clientes")
+}
+
+model Profissional {
+  id            String   @id @default(uuid())
+  empresaId     String   @map("empresa_id")
+  nome          String
+  especialidade String?
+  ativo         Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  agendamentos Agendamento[]
+
+  @@index([empresaId])
+  @@map("profissionais")
+}
+
+model Servico {
+  id         String   @id @default(uuid())
+  empresaId  String   @map("empresa_id")
+  nome       String
+  duracaoMin Int      @map("duracao_min")
+  preco      Decimal  @db.Decimal(10, 2)
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  agendamentos Agendamento[]
+  insumos      InsumoServico[]
+
+  @@index([empresaId])
+  @@map("servicos")
+}
+
+model InsumoServico {
+  id         String @id @default(uuid())
+  servicoId  String @map("servico_id")
+  produtoId  String @map("produto_id")
+  quantidade Int
+
+  servico Servico @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  produto Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+
+  @@unique([servicoId, produtoId])
+  @@index([servicoId])
+  @@map("insumos_servico")
+}
+
+model Agendamento {
+  id             String            @id @default(uuid())
+  empresaId      String            @map("empresa_id")
+  clienteId      String            @map("cliente_id")
+  profissionalId String            @map("profissional_id")
+  servicoId      String            @map("servico_id")
+  dataHora       DateTime          @map("data_hora")
+  dataHoraFim    DateTime          @map("data_hora_fim")
+  status         StatusAgendamento @default(AGENDADO)
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  cliente      Cliente      @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+  profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Restrict)
+  servico      Servico      @relation(fields: [servicoId], references: [id], onDelete: Restrict)
+  vendas       Venda[]
+
+  @@index([empresaId, dataHora])
+  @@index([profissionalId, status])
+  @@map("agendamentos")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Módulo Estoque / PDV
+// ─────────────────────────────────────────────────────────────
+
+model Produto {
+  id            String   @id @default(uuid())
+  empresaId     String   @map("empresa_id")
+  nome          String
+  sku           String
+  preco         Decimal  @db.Decimal(10, 2)
+  estoqueAtual  Int      @default(0) @map("estoque_atual")
+  estoqueMinimo Int      @default(5) @map("estoque_minimo")
+  categoria     String?
+  ativo         Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  movimentacoes MovimentacaoEstoque[]
+  itensVenda    ItemVenda[]
+  insumos       InsumoServico[]
+
+  @@unique([empresaId, sku])
+  @@index([empresaId, categoria])
+  @@map("produtos")
+}
+
+model MovimentacaoEstoque {
+  id            String           @id @default(uuid())
+  empresaId     String           @map("empresa_id")
+  produtoId     String           @map("produto_id")
+  tipo          TipoMovimentacao
+  quantidade    Int
+  motivo        String
+  agendamentoId String?          @map("agendamento_id")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  produto Produto @relation(fields: [produtoId], references: [id], onDelete: Restrict)
+
+  @@index([empresaId, produtoId, createdAt])
+  @@map("movimentacoes_estoque")
+}
+
+model Venda {
+  id            String   @id @default(uuid())
+  empresaId     String   @map("empresa_id")
+  clienteId     String?  @map("cliente_id")
+  agendamentoId String?  @map("agendamento_id")
+  total         Decimal  @db.Decimal(10, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  cliente     Cliente?     @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  agendamento Agendamento? @relation(fields: [agendamentoId], references: [id], onDelete: SetNull)
+  itens       ItemVenda[]
+
+  @@index([empresaId, createdAt])
+  @@map("vendas")
+}
+
+model ItemVenda {
+  id            String @id @default(uuid())
+  vendaId       String @map("venda_id")
+  produtoId     String @map("produto_id")
+  quantidade    Int
+  precoUnitario Decimal @db.Decimal(10, 2) @map("preco_unitario")
+
+  venda   Venda   @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  produto Produto @relation(fields: [produtoId], references: [id], onDelete: Restrict)
+
+  @@index([vendaId])
+  @@map("itens_venda")
+}
+

@@ -1,0 +1,41 @@
+{
+  "name": "nexly",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nexly — plataforma SaaS de gestão para pequenos negócios (agenda + estoque/PDV)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:migrate": "npm run migrate --workspace @nexly/api",
+    "db:studio": "npm run studio --workspace @nexly/api",
+    "db:seed": "npm run seed --workspace @nexly/api"
+  },
+  "devDependencies": {
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "turbo": "2.3.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md}": [
+      "prettier --write"
+    ],
+    "*.{ts,tsx}": [
+      "eslint --fix"
+    ]
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "npm@11.16.0",
+  "allowScripts": {}
+}
