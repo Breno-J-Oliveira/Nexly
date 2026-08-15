@@ -64,8 +64,8 @@ export default function AgendaPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Agenda</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-xl font-semibold text-zinc-100">Agenda</h2>
+          <p className="mt-1 text-sm text-zinc-400">
             {data.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
         </div>
@@ -85,22 +85,22 @@ export default function AgendaPage() {
       </div>
 
       <div className="mt-6 space-y-3">
-        {carregando && <p className="text-sm text-gray-500">Carregando…</p>}
+        {carregando && <p className="text-sm text-zinc-400">Carregando…</p>}
         {!carregando && agendamentos.length === 0 && (
-          <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center">
-            <p className="text-sm text-gray-500">Nenhum agendamento para este dia.</p>
+          <div className="rounded-xl border border-dashed border-zinc-700 p-8 text-center">
+            <p className="text-sm text-zinc-400">Nenhum agendamento para este dia.</p>
           </div>
         )}
         {agendamentos.map((a) => (
           <div
             key={a.id}
-            className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4"
+            className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 p-4"
           >
             <div className="flex items-center gap-4">
-              <span className="text-lg font-semibold text-gray-900">{formatarHora(a.dataHora)}</span>
+              <span className="text-lg font-semibold text-zinc-100">{formatarHora(a.dataHora)}</span>
               <div>
-                <p className="font-medium text-gray-900">{a.cliente.nome}</p>
-                <p className="text-sm text-gray-500">
+                <p className="font-medium text-zinc-100">{a.cliente.nome}</p>
+                <p className="text-sm text-zinc-400">
                   {a.servico.nome} · {a.profissional.nome}
                 </p>
               </div>

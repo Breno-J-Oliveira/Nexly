@@ -58,9 +58,9 @@ export default function CadastroPage() {
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-      <h1 className="text-2xl font-bold text-gray-900">Cadastrar empresa</h1>
-      <p className="mt-1 text-sm text-gray-500">Crie sua conta e comece a usar o Nexly</p>
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
+      <h1 className="text-2xl font-bold text-zinc-100">Cadastrar empresa</h1>
+      <p className="mt-1 text-sm text-zinc-400">Crie sua conta e comece a usar o Nexly</p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
         <Input label="Nome da empresa" placeholder="Salão Beleza Total" error={errors.empresaNome?.message} {...register('empresaNome')} />
@@ -69,15 +69,15 @@ export default function CadastroPage() {
         <Input label="E-mail" type="email" placeholder="voce@empresa.com" error={errors.email?.message} {...register('email')} />
         <Input label="Senha" type="password" placeholder="Mínimo 8 caracteres" error={errors.senha?.message} {...register('senha')} />
         <Input label="Confirmar senha" type="password" error={errors.confirmacaoSenha?.message} {...register('confirmacaoSenha')} />
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && <p className="text-sm text-red-400">{error}</p>}
         <Button type="submit" loading={isSubmitting} className="w-full">
           Criar conta
         </Button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-gray-500">
+      <p className="mt-4 text-center text-sm text-zinc-400">
         Já tem conta?{' '}
-        <Link href="/login" className="font-medium text-primary-600 hover:underline">
+        <Link href="/login" className="font-medium text-primary-400 hover:underline">
           Entrar
         </Link>
       </p>

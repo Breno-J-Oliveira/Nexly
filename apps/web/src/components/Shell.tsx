@@ -21,9 +21,12 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-gray-200 bg-white">
-        <div className="flex h-16 items-center gap-2 border-b border-gray-200 px-6">
-          <span className="text-xl font-bold text-primary-600">Nexly</span>
+      <aside className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-zinc-800 bg-zinc-900">
+        <div className="flex h-16 items-center gap-2 border-b border-zinc-800 px-6">
+          <span className="text-lg font-semibold tracking-tight text-primary-400">
+            Nexly
+            <span className="text-zinc-500">.</span>
+          </span>
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-4">
@@ -35,8 +38,8 @@ export function Shell({ children }: { children: ReactNode }) {
                 href={item.href}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
                   active
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-primary-500/10 text-primary-300'
+                    : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
                 }`}
               >
                 <span>{item.icon}</span>
@@ -46,19 +49,19 @@ export function Shell({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-zinc-800 p-4">
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 text-sm font-semibold text-primary-300">
               {user?.nome?.charAt(0).toUpperCase() ?? '?'}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-gray-900">{user?.nome}</p>
-              <p className="truncate text-xs text-gray-500">{user?.email}</p>
+              <p className="truncate text-sm font-medium text-zinc-100">{user?.nome}</p>
+              <p className="truncate text-xs text-zinc-500">{user?.email}</p>
             </div>
           </div>
           <button
             onClick={() => void logout()}
-            className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
+            className="w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
           >
             Sair
           </button>
@@ -66,8 +69,8 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="ml-64 flex-1">
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-8">
-          <h1 className="text-lg font-semibold text-gray-900">Nexly</h1>
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-zinc-800 bg-zinc-950/80 px-8 backdrop-blur">
+          <h1 className="text-base font-medium text-zinc-200">Nexly</h1>
         </header>
         <main className="p-8">{children}</main>
       </div>

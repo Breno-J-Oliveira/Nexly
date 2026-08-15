@@ -38,9 +38,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-      <h1 className="text-2xl font-bold text-gray-900">Entrar</h1>
-      <p className="mt-1 text-sm text-gray-500">Acesse sua conta Nexly</p>
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
+      <h1 className="text-2xl font-bold text-zinc-100">Entrar</h1>
+      <p className="mt-1 text-sm text-zinc-400">Acesse sua conta Nexly</p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
         <Input
@@ -57,15 +57,15 @@ export default function LoginPage() {
           error={errors.senha?.message}
           {...register('senha')}
         />
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && <p className="text-sm text-red-400">{error}</p>}
         <Button type="submit" loading={isSubmitting} className="w-full">
           Entrar
         </Button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-gray-500">
+      <p className="mt-4 text-center text-sm text-zinc-400">
         Não tem conta?{' '}
-        <Link href="/cadastro" className="font-medium text-primary-600 hover:underline">
+        <Link href="/cadastro" className="font-medium text-primary-400 hover:underline">
           Cadastre sua empresa
         </Link>
       </p>

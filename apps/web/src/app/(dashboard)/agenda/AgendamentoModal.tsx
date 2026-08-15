@@ -87,11 +87,11 @@ export function AgendamentoModal({ onClose, onSuccess }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-zinc-900 p-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Novo agendamento</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <h3 className="text-lg font-semibold text-zinc-100">Novo agendamento</h3>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300">
             ✕
           </button>
         </div>
@@ -111,8 +111,8 @@ export function AgendamentoModal({ onClose, onSuccess }: Props) {
                   onClick={() => setClienteId(c.id)}
                   className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
                     clienteId === c.id
-                      ? 'bg-primary-50 text-primary-700'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-primary-500/10 text-primary-300'
+                      : 'text-zinc-200 hover:bg-zinc-800'
                   }`}
                 >
                   {c.nome}
@@ -120,7 +120,7 @@ export function AgendamentoModal({ onClose, onSuccess }: Props) {
               ))}
             </div>
             <div>
-              <p className="mb-1 text-sm font-medium text-gray-700">Ou cadastre novo</p>
+              <p className="mb-1 text-sm font-medium text-zinc-200">Ou cadastre novo</p>
               <Input
                 value={novoClienteNome}
                 onChange={(e) => setNovoClienteNome(e.target.value)}
@@ -137,11 +137,11 @@ export function AgendamentoModal({ onClose, onSuccess }: Props) {
         {step === 2 && (
           <div className="mt-4 space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Profissional</label>
+              <label className="mb-1 block text-sm font-medium text-zinc-200">Profissional</label>
               <select
                 value={profissionalId}
                 onChange={(e) => setProfissionalId(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm"
               >
                 <option value="">Selecione</option>
                 {profissionais.map((p) => (
@@ -152,11 +152,11 @@ export function AgendamentoModal({ onClose, onSuccess }: Props) {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Serviço</label>
+              <label className="mb-1 block text-sm font-medium text-zinc-200">Serviço</label>
               <select
                 value={servicoId}
                 onChange={(e) => setServicoId(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm"
               >
                 <option value="">Selecione</option>
                 {servicos.map((s) => (
@@ -186,11 +186,11 @@ export function AgendamentoModal({ onClose, onSuccess }: Props) {
               onChange={(e) => setDataHora(e.target.value)}
             />
             {servico && (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-zinc-400">
                 Duração: {servico.duracaoMin} min · R$ {Number(servico.preco).toFixed(2)}
               </p>
             )}
-            {erro && <p className="text-sm text-danger">{erro}</p>}
+            {erro && <p className="text-sm text-red-400">{erro}</p>}
             <div className="flex gap-2">
               <Button variant="secondary" onClick={() => setStep(2)}>
                 Voltar
