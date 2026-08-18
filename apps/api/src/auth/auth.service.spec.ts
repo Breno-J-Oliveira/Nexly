@@ -5,6 +5,14 @@ import { PrismaService } from '../database/prisma.service';
 import { AuthService } from './auth.service';
 import { TokenService } from './token.service';
 
+jest.mock('argon2', () => ({
+  argon2id: 'argon2id',
+  hash: jest.fn().mockResolvedValue('hashed'),
+  verify: jest.fn(),
+}));
+
+const verifyMock = jest.mocked(argon2.verify);
+
 describe('AuthService', () => {
   let service: AuthService;
   let prisma: {
@@ -45,7 +53,7 @@ describe('AuthService', () => {
 
   it('login com credenciais válidas retorna token válido', async () => {
     prisma.client.usuario.findUnique.mockResolvedValue(usuarioMock);
-    jest.spyOn(argon2, 'verify').mockResolvedValue(true);
+    verifyMock.mockResolvedValue(true);
 
     const result = await service.login({ email: 'admin@test.com', senha: 'senha123' });
 
@@ -55,7 +63,7 @@ describe('AuthService', () => {
 
   it('login com senha errada retorna 401', async () => {
     prisma.client.usuario.findUnique.mockResolvedValue(usuarioMock);
-    jest.spyOn(argon2, 'verify').mockResolvedValue(false);
+    verifyMock.mockReset().mockResolvedValue(false);
 
     await expect(service.login({ email: 'admin@test.com', senha: 'senha-errada' })).rejects.toThrow(
       UnauthorizedException,
