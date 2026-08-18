@@ -10,6 +10,7 @@ build/
 out/
 .turbo/
 coverage/
+*.tsbuildinfo
 
 # Ambiente
 .env
