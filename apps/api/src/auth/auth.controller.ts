@@ -1,5 +1,6 @@
-import { Body, Controller, HttpCode, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { env } from '../config/env';
 import { AuthService } from './auth.service';
@@ -63,6 +64,16 @@ export class AuthController {
     }
     this.clearRefreshCookie(res);
     return { success: true };
+  }
+
+  /**
+   * Retorna os dados do usuário autenticado (a partir do JWT).
+   * Útil para o front-end carregar nome, role, empresaId sem ter que
+   * decodificar o access token manualmente.
+   */
+  @Get('me')
+  async me(@CurrentUser() user: { sub: string }) {
+    return this.authService.me(user.sub);
   }
 
   private setRefreshCookie(res: Response, token: string): void {

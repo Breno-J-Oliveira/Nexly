@@ -96,6 +96,24 @@ export class AuthService {
     await this.tokenService.revokeRefreshToken(refreshToken);
   }
 
+  /**
+   * Retorna os dados públicos do usuário a partir do `id` contido no JWT.
+   * Lança `UnauthorizedException` se o usuário não existir mais
+   * (ex: foi desativado/excluído depois do token ser emitido).
+   */
+  async me(userId: string): Promise<UsuarioPublico> {
+    const usuario = await this.prisma.client.usuario.findUnique({
+      where: { id: userId },
+    });
+    if (!usuario) {
+      throw new UnauthorizedException({
+        code: 'USER_NOT_FOUND',
+        message: 'Usuário não encontrado',
+      });
+    }
+    return this.toPublic(usuario);
+  }
+
   private async buildAuthResult(usuario: Usuario): Promise<AuthResult> {
     const accessToken = await this.tokenService.generateAccessToken(usuario);
     const refreshToken = await this.tokenService.issueRefreshToken(usuario.id);
