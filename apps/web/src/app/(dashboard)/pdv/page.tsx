@@ -130,6 +130,30 @@ export default function PdvPage() {
                 </p>
               </div>
             ))}
+
+            {/* Empty state: nenhuma busca iniciada */}
+            {busca.trim().length < 2 && (
+              <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950/50 px-4 py-10 text-center">
+                <p className="text-sm text-zinc-400">
+                  Digite o nome ou SKU do produto para começar
+                </p>
+                <p className="mt-1 text-xs text-zinc-600">
+                  A busca inicia automaticamente após 2 caracteres.
+                </p>
+              </div>
+            )}
+
+            {/* Empty state: busca sem resultado */}
+            {busca.trim().length >= 2 && resultados.length === 0 && (
+              <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950/50 px-4 py-10 text-center">
+                <p className="text-sm text-zinc-300">
+                  Nenhum produto encontrado para “{busca.trim()}”
+                </p>
+                <p className="mt-1 text-xs text-zinc-600">
+                  Verifique a grafia ou cadastre o produto em Estoque.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -138,7 +162,12 @@ export default function PdvPage() {
         <h2 className="text-xl font-semibold text-zinc-100">Venda Atual</h2>
         <div className="mt-4 flex-1 overflow-y-auto pr-2">
           {itens.length === 0 ? (
-            <p className="text-center text-sm text-zinc-500">Nenhum produto adicionado</p>
+            <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950/50 px-4 py-10 text-center">
+              <p className="text-sm text-zinc-400">Nenhum produto no carrinho</p>
+              <p className="mt-1 text-xs text-zinc-600">
+                Busque um produto à esquerda para iniciar a venda.
+              </p>
+            </div>
           ) : (
             <div className="space-y-3">
               {itens.map((item) => (
