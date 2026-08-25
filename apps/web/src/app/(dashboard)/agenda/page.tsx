@@ -67,6 +67,9 @@ export default function AgendaPage() {
           <h2 className="text-xl font-semibold text-zinc-100">Agenda</h2>
           <p className="mt-1 text-sm text-zinc-400">
             {data.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {' · '}
+            {agendamentos.length}{' '}
+            {agendamentos.length === 1 ? 'agendamento' : 'agendamentos'}
           </p>
         </div>
         <Button onClick={() => setModalAberto(true)}>+ Novo agendamento</Button>
