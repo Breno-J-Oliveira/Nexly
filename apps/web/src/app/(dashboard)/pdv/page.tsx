@@ -99,10 +99,16 @@ export default function PdvPage() {
   return (
     <div className="flex h-[calc(100vh-8rem)] gap-6">
       <div className="flex flex-1 flex-col rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <h2 className="text-xl font-semibold text-zinc-100">Produtos</h2>
-        <div className="mt-4 flex-1">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-zinc-100">Produtos</h2>
+          <span className="text-xs text-zinc-500" title="Total de produtos carregados">
+            {resultados.length}{' '}
+            {resultados.length === 1 ? 'resultado' : 'resultados'}
+          </span>
+        </div>
+        <div className="mt-4 flex-1 overflow-y-auto">
           <Input
-            placeholder="Buscar por nome ou SKU..."
+            placeholder="Buscar por nome ou SKU... (pressione /)"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
