@@ -217,6 +217,38 @@ nexly/
 
 ---
 
+## Endpoints da API
+
+> Todos os endpoints abaixo são prefixados com `/api`. A documentação
+> interativa do Swagger está disponível em `http://localhost:3001/api/docs`.
+
+### Auth
+- `POST /auth/register` — cria empresa + usuário admin (público)
+- `POST /auth/login` — login com rate limit (público, 5 falhas/15min)
+- `POST /auth/refresh` — rotação do refresh token (público, cookie HttpOnly)
+- `POST /auth/logout` — revoga o refresh token (público)
+- `GET /auth/me` — dados do usuário autenticado (JWT)
+
+### Clientes, Profissionais, Serviços, Produtos, Agendamentos, Vendas
+CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
+
+### Operações especiais
+- `GET /produtos/alerta?limit=20` — produtos com estoque abaixo do mínimo
+- `GET /agendamentos?data=YYYY-MM-DD` — agenda do dia
+- `PATCH /agendamentos/:id/status` — avança status (AGENDADO → CONFIRMADO → CONCLUIDO)
+- `POST /estoque/entrada` — entrada manual de estoque
+- `GET /estoque/historico/:produtoId` — histórico de movimentações
+- `GET /estoque/resumo` — totalizadores
+- `GET /dashboard/agregado` — métricas para o dashboard
+- `GET /relatorios/insumos-por-servico` — insumos consumidos por serviço
+- `GET /relatorios/horarios-pico` — horários mais movimentados
+
+### Health
+- `GET /health` — liveness
+- `GET /health/deep` — testa DB + Redis
+- `GET /health/migrations` — status das migrations Prisma
+- `GET /health/version` — versão + Node + env
+
 ## Status atual
 
 | Categoria | Status |
@@ -224,13 +256,16 @@ nexly/
 | Backend (NestJS + Prisma + PostgreSQL + Redis) | ✅ Implementado e validado |
 | Frontend (Next.js 14 + Tailwind dark + Recharts) | ✅ Implementado e validado |
 | Multi-tenant com Prisma Extension + RLS | ✅ Implementado |
-| Testes (Jest) | ✅ 15/15 passando |
+| Testes (Jest) | ✅ 11 suites / 50 testes passando |
 | Typecheck (TypeScript strict) | ✅ 0 erros |
 | Seed de dados demo | ✅ 30+ agendamentos, 6 produtos, 3 profissionais, 20 vendas |
 | Telas CRUD (Clientes, Profissionais, Produtos, Serviços) | ✅ Implementadas |
 | Baixa automática de estoque | ✅ Implementada |
 | Dashboard com métricas e gráficos | ✅ Implementado |
 | Histórico de vendas com filtro e expansão | ✅ Implementado |
+| Health checks (`/health`, `/health/deep`, `/health/migrations`, `/health/version`) | ✅ Implementados |
+| Login rate limit (5 falhas / 15 min, por email+IP) | ✅ Implementado |
+| Códigos de erro semânticos (BUSY_PROFESSIONAL, OUT_OF_STOCK, etc.) | ✅ Implementados |
 | Deploy (Vercel + Railway) | 🔜 Próximo |
 | Testes E2E (Playwright) | 🔜 Próximo |
 
