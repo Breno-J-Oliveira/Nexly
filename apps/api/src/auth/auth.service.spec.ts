@@ -77,4 +77,30 @@ describe('AuthService', () => {
       'E-mail ou senha incorretos',
     );
   });
+
+  describe('me', () => {
+    it('retorna UsuarioPublico quando o usuário existe', async () => {
+      prisma.client.usuario.findUnique.mockResolvedValue(usuarioMock);
+
+      const result = await service.me('u1');
+
+      expect(result).toEqual({
+        id: 'u1',
+        empresaId: 'e1',
+        nome: 'Admin',
+        email: 'admin@test.com',
+        role: 'ADMIN',
+      });
+      // não devolve senhaHash
+      expect(result).not.toHaveProperty('senhaHash');
+      // busca pelo id correto
+      expect(prisma.client.usuario.findUnique).toHaveBeenCalledWith({ where: { id: 'u1' } });
+    });
+
+    it('lança UnauthorizedException quando o usuário não existe mais', async () => {
+      prisma.client.usuario.findUnique.mockResolvedValue(null);
+
+      await expect(service.me('u-fantasma')).rejects.toThrow(UnauthorizedException);
+    });
+  });
 });
