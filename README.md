@@ -10,6 +10,7 @@
   <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind">
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <br>
+  <img src="https://img.shields.io/badge/tests-15_passing-brightgreen?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/fases-0--4_concluídas-brightgreen?style=flat-square" alt="Fases">
   <img src="https://img.shields.io/badge/licença-educacional-blue?style=flat-square" alt="License">
 </p>
@@ -41,9 +42,11 @@ Projeto desenvolvido como **Trabalho de Conclusão de Curso (TCC)** do técnico 
 
 - **Dashboard** com receita do mês, ticket médio, horários de pico e alertas de estoque
 - **Agenda completa** com validação de conflito de horário e ações rápidas (confirmar, concluir, cancelar)
-- **Cadastro de clientes, profissionais e serviços** (com duração e preço)
+- **CRUD de Clientes, Profissionais, Serviços e Produtos** com busca, edição inline e máscara de CNPJ/telefone
+- **Configuração de insumos por serviço** (qual produto é consumido e em qual quantidade)
 - **Controle de estoque** com badges de status (OK / baixo / zerado) e entrada manual
 - **PDV** com busca de produto por nome/SKU e finalização rápida da venda
+- **Histórico de vendas** com filtro por período e detalhes expandíveis dos itens
 - **⭐ Baixa automática de estoque** ao concluir um atendimento
 - **Relatórios** de insumo consumido por serviço e horários de pico
 
@@ -152,6 +155,22 @@ npm run dev
 - **E-mail:** `admin@nexly.com.br`
 - **Senha:** `nexly123`
 
+O seed cria uma empresa `Salão Beleza Total` com 3 profissionais, 6 produtos (2 com alerta de estoque),
+6 serviços (4 com insumos configurados), 5 clientes, 30 agendamentos passados + 3 hoje + 7 futuros
+e 20 vendas no PDV — dados suficientes para explorar o dashboard e o histórico.
+
+---
+
+## Como rodar os testes
+
+```bash
+# Typecheck (API + Web)
+npm run typecheck
+
+# Testes unitários da API (Jest — 15/15 passando)
+cd apps/api && npm test
+```
+
 ---
 
 ## Estrutura do Projeto
@@ -194,6 +213,25 @@ nexly/
 
 ---
 
+## Status atual
+
+| Categoria | Status |
+|---|---|
+| Backend (NestJS + Prisma + PostgreSQL + Redis) | ✅ Implementado e validado |
+| Frontend (Next.js 14 + Tailwind dark + Recharts) | ✅ Implementado e validado |
+| Multi-tenant com Prisma Extension + RLS | ✅ Implementado |
+| Testes (Jest) | ✅ 15/15 passando |
+| Typecheck (TypeScript strict) | ✅ 0 erros |
+| Seed de dados demo | ✅ 30+ agendamentos, 6 produtos, 3 profissionais, 20 vendas |
+| Telas CRUD (Clientes, Profissionais, Produtos, Serviços) | ✅ Implementadas |
+| Baixa automática de estoque | ✅ Implementada |
+| Dashboard com métricas e gráficos | ✅ Implementado |
+| Histórico de vendas com filtro e expansão | ✅ Implementado |
+| Deploy (Vercel + Railway) | 🔜 Próximo |
+| Testes E2E (Playwright) | 🔜 Próximo |
+
+---
+
 ## Roadmap
 
 | Bloco | Fases | Status |
@@ -203,7 +241,7 @@ nexly/
 | **C — Agenda** | 2: Clientes, profissionais, serviços e agendamentos | ✅ Concluído |
 | **D — Estoque/PDV** | 3: Produtos, movimentações e vendas | ✅ Concluído |
 | **E — Integração** | 4: Baixa automática de estoque + Dashboard | ✅ Concluído |
-| **F — Entrega** | 5: Deploy, testes E2E e documentação | 🔜 Em andamento |
+| **F — Entrega** | 5: Deploy, testes E2E e documentação | 🔜 Próximo |
 | **G — Expansão** | Módulos futuros (eventos, comissões, fidelização, LGPD) | 🔲 Pendente |
 
 ---
