@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../database/prisma.service';
 import { AuthService } from './auth.service';
+import { LoginThrottleService } from './login-throttle.service';
 import { TokenService } from './token.service';
 
 jest.mock('argon2', () => ({
@@ -22,6 +23,13 @@ describe('AuthService', () => {
     generateAccessToken: jest.Mock;
     issueRefreshToken: jest.Mock;
   };
+  let throttle: {
+    isBlocked: jest.Mock;
+    registerFailure: jest.Mock;
+    registerSuccess: jest.Mock;
+    retryAfterSeconds: jest.Mock;
+  };
+  const KEY = 'user@x.com|127.0.0.1';
 
   const usuarioMock = {
     id: 'u1',
@@ -39,12 +47,19 @@ describe('AuthService', () => {
       generateAccessToken: jest.fn().mockResolvedValue('access-token'),
       issueRefreshToken: jest.fn().mockResolvedValue('refresh-token'),
     };
+    throttle = {
+      isBlocked: jest.fn().mockReturnValue(false),
+      registerFailure: jest.fn(),
+      registerSuccess: jest.fn(),
+      retryAfterSeconds: jest.fn().mockReturnValue(0),
+    };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: PrismaService, useValue: prisma },
         { provide: TokenService, useValue: tokenService },
+        { provide: LoginThrottleService, useValue: throttle },
       ],
     }).compile();
 
@@ -55,7 +70,7 @@ describe('AuthService', () => {
     prisma.client.usuario.findUnique.mockResolvedValue(usuarioMock);
     verifyMock.mockResolvedValue(true);
 
-    const result = await service.login({ email: 'admin@test.com', senha: 'senha123' });
+    const result = await service.login({ email: 'admin@test.com', senha: 'senha123' }, KEY);
 
     expect(result.accessToken).toBe('access-token');
     expect(result.usuario.email).toBe('admin@test.com');
@@ -65,17 +80,17 @@ describe('AuthService', () => {
     prisma.client.usuario.findUnique.mockResolvedValue(usuarioMock);
     verifyMock.mockReset().mockResolvedValue(false);
 
-    await expect(service.login({ email: 'admin@test.com', senha: 'senha-errada' })).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(
+      service.login({ email: 'admin@test.com', senha: 'senha-errada' }, KEY),
+    ).rejects.toThrow(UnauthorizedException);
   });
 
   it('login com e-mail inexistente retorna 401 com mensagem genérica', async () => {
     prisma.client.usuario.findUnique.mockResolvedValue(null);
 
-    await expect(service.login({ email: 'nao@existe.com', senha: 'qualquer' })).rejects.toThrow(
-      'E-mail ou senha incorretos',
-    );
+    await expect(
+      service.login({ email: 'nao@existe.com', senha: 'qualquer' }, KEY),
+    ).rejects.toThrow('E-mail ou senha incorretos');
   });
 
   describe('me', () => {

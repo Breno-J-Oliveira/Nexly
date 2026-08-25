@@ -35,8 +35,17 @@ export class AuthController {
   @Public()
   @HttpCode(200)
   @Post('login')
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // A chave do throttle combina email + IP — assim um atacante
+    // distribuindo tentativas em vários IPs não consegue isolar a conta,
+    // e contas diferentes atrás do mesmo NAT não se bloqueiam mutuamente.
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+    const key = `${dto.email.toLowerCase()}|${ip}`;
+    const result = await this.authService.login(dto, key);
     this.setRefreshCookie(res, result.refreshToken);
     return { accessToken: result.accessToken, usuario: result.usuario };
   }

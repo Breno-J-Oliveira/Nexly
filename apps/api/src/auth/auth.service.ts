@@ -10,6 +10,7 @@ import { Role, UsuarioPublico, validarCnpj } from '@nexly/shared';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../database/prisma.service';
 import { LoginDto } from './dto/login.dto';
+import { LoginThrottleService } from './login-throttle.service';
 import { RegisterDto } from './dto/register.dto';
 import { TokenService } from './token.service';
 
@@ -24,6 +25,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tokenService: TokenService,
+    private readonly throttle: LoginThrottleService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResult> {
@@ -68,20 +70,33 @@ export class AuthService {
     return this.buildAuthResult(usuario);
   }
 
-  async login(dto: LoginDto): Promise<AuthResult> {
+  async login(dto: LoginDto, throttleKey: string): Promise<AuthResult> {
+    // Checagem de throttle ANTES de bater no DB / hash de senha.
+    if (this.throttle.isBlocked(throttleKey)) {
+      const retry = this.throttle.retryAfterSeconds(throttleKey);
+      throw new UnauthorizedException({
+        code: 'LOGIN_TOO_MANY_ATTEMPTS',
+        message: `Muitas tentativas. Tente novamente em ${retry}s.`,
+      });
+    }
+
     const usuario = await this.prisma.client.usuario.findUnique({
       where: { email: dto.email },
     });
 
     // Mensagem genérica para não revelar se o e-mail existe
     if (!usuario || !usuario.ativo) {
+      this.throttle.registerFailure(throttleKey);
       throw new UnauthorizedException('E-mail ou senha incorretos');
     }
 
     const senhaValida = await argon2.verify(usuario.senhaHash, dto.senha);
     if (!senhaValida) {
+      this.throttle.registerFailure(throttleKey);
       throw new UnauthorizedException('E-mail ou senha incorretos');
     }
+
+    this.throttle.registerSuccess(throttleKey);
 
     return this.buildAuthResult(usuario);
   }
