@@ -33,6 +33,11 @@ export class ProdutosController {
     });
   }
 
+  @Get('alerta')
+  listarEmAlerta(@Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number) {
+    return this.produtosService.listarEmAlerta(limit);
+  }
+
   @Get(':id')
   obter(@Param('id') id: string) {
     return this.produtosService.obter(id);

@@ -105,4 +105,24 @@ export class ProdutosService {
     });
     return { success: true };
   }
+
+  /**
+   * Lista produtos cujo estoque atual está **abaixo do mínimo**
+   * configurado para cada produto. Usado para alertas de "comprar mais".
+   *
+   * Retorna ordenado por criticidade (menor estoque primeiro) e limitado
+   * a `limit` itens — útil para o dashboard exibir "Top N em risco".
+   */
+  async listarEmAlerta(limit = 20) {
+    const data = await this.prisma.client.produto.findMany({
+      where: {
+        ativo: true,
+        estoqueMinimo: { gt: 0 },
+      },
+      orderBy: { estoqueAtual: 'asc' },
+      take: limit,
+    });
+    const emAlerta = data.filter((p) => p.estoqueAtual < p.estoqueMinimo);
+    return { data: emAlerta, total: emAlerta.length };
+  }
 }
