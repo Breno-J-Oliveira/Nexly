@@ -1,4 +1,4 @@
-import { IsEmail, IsString, Length } from 'class-validator';
+import { IsEmail, IsString, Length, MaxLength } from 'class-validator';
 
 export class RegisterDto {
   @IsString()
@@ -14,6 +14,7 @@ export class RegisterDto {
   responsavelNome!: string;
 
   @IsEmail()
+  @MaxLength(254) // RFC 5321
   email!: string;
 
   @IsString()
