@@ -18,9 +18,16 @@ async function bootstrap(): Promise<void> {
 
   app.useGlobalPipes(
     new ValidationPipe({
+      // Remove campos não declarados no DTO (defesa contra injection de campos extras).
       whitelist: true,
-      transform: true,
+      // Retorna 400 quando o cliente envia campo não declarado.
       forbidNonWhitelisted: true,
+      // Converte primitivos automaticamente (ex: string -> number em @IsNumber).
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+      // Mensagens em pt-BR — descritivas para o front-end exibir no campo certo.
+      errorHttpStatusCode: 400,
+      stopAtFirstError: false,
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
