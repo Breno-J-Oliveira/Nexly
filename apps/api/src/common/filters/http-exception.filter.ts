@@ -7,7 +7,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { env } from '../../config/env';
 
 /**
  * Extrai o `code` semântico (ex: `SCHEDULE_CONFLICT`, `PRODUCT_OUT_OF_STOCK`)
@@ -40,7 +39,6 @@ function extractCode(res: unknown): string | undefined {
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
-  private readonly isDev = env.NODE_ENV !== 'production';
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
@@ -84,7 +82,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (requestId) body.requestId = requestId;
     if (code) body.code = code;
     if (errors) body.errors = errors;
-    if (status >= 500 && this.isDev && exception instanceof Error) {
+    if (status >= 500 && process.env.NODE_ENV !== 'production' && exception instanceof Error) {
       // Em dev, inclui o stack para facilitar o debug.
       body.stack = exception.stack;
     }
