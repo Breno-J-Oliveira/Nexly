@@ -95,4 +95,60 @@ describe('LoggingInterceptor', () => {
       },
     });
   });
+
+  it('em produção, emite log no formato JSON', (done) => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const res = { setHeader: jest.fn(), statusCode: 200 };
+      const req: MockRequest = { headers: {}, method: 'POST', originalUrl: '/api/agendamentos' };
+      const next: CallHandler = { handle: () => of({ id: 1 }) };
+
+      interceptor.intercept(makeContext(req, res), next).subscribe(() => {
+        expect(logSpy).toHaveBeenCalled();
+        const mensagem = logSpy.mock.calls[0][0] as string;
+        const parsed = JSON.parse(mensagem) as Record<string, unknown>;
+        expect(parsed).toMatchObject({
+          level: 'info',
+          kind: 'http',
+          method: 'POST',
+          path: '/api/agendamentos',
+          status: 200,
+        });
+        expect(typeof parsed.durationMs).toBe('number');
+        expect(typeof parsed.requestId).toBe('string');
+        done();
+      });
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+
+  it('em produção, emite erro no formato JSON com a mensagem', (done) => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const res = { setHeader: jest.fn(), statusCode: 500 };
+      const req: MockRequest = { headers: {}, method: 'GET', originalUrl: '/x' };
+      const next: CallHandler = { handle: () => throwError(() => new Error('boom')) };
+
+      interceptor.intercept(makeContext(req, res), next).subscribe({
+        error: () => {
+          const mensagem = errorSpy.mock.calls[0][0] as string;
+          const parsed = JSON.parse(mensagem) as Record<string, unknown>;
+          expect(parsed).toMatchObject({
+            level: 'error',
+            kind: 'http',
+            method: 'GET',
+            path: '/x',
+            status: 500,
+            message: 'boom',
+          });
+          done();
+        },
+      });
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
 });
