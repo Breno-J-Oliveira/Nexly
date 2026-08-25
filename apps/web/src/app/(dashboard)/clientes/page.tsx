@@ -157,7 +157,9 @@ export default function ClientesPage() {
             {!carregando && clientes.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-6 text-center text-zinc-500">
-                  Nenhum cliente encontrado.
+                  {busca
+                    ? `Nenhum cliente encontrado para "${busca}".`
+                    : 'Nenhum cliente cadastrado ainda. Clique em "+ Novo cliente" para começar.'}
                 </td>
               </tr>
             )}
