@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/lib/auth';
+import { ErrorCodes, parseApiError } from '@/lib/errors';
 
 const schema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -32,8 +33,15 @@ export default function LoginPage() {
     try {
       await login(data.email, data.senha);
       router.push('/dashboard');
-    } catch {
-      setError('E-mail ou senha incorretos');
+    } catch (e) {
+      const err = parseApiError(e);
+      if (err.code === ErrorCodes.LOGIN_TOO_MANY_ATTEMPTS) {
+        setError('Muitas tentativas de login. Aguarde alguns minutos e tente novamente.');
+      } else if (err.code === 'USER_NOT_FOUND') {
+        setError('E-mail ou senha incorretos');
+      } else {
+        setError(err.message || 'E-mail ou senha incorretos');
+      }
     }
   };
 
