@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
+import { ErrorCodes, parseApiError } from '@/lib/errors';
 
 interface Cliente {
   id: string;
@@ -79,8 +80,16 @@ export function AgendamentoModal({ onClose, onSuccess }: Props) {
       });
       onSuccess();
     } catch (e) {
-      const err = e as { response?: { data?: { message?: string } } };
-      setErro(err?.response?.data?.message ?? 'Erro ao criar agendamento');
+      const err = parseApiError(e);
+      // Tratamento programático: código BUSY_PROFESSIONAL dá mensagem
+      // específica e sugere outro horário. Sem o code, cai no message genérico.
+      if (err.code === ErrorCodes.BUSY_PROFESSIONAL) {
+        setErro('Profissional já tem agendamento nesse horário. Escolha outro horário.');
+      } else if (err.code === ErrorCodes.DATETIME_IN_PAST) {
+        setErro('Escolha um horário no futuro.');
+      } else {
+        setErro(err.message || 'Erro ao criar agendamento');
+      }
     } finally {
       setSalvando(false);
     }
