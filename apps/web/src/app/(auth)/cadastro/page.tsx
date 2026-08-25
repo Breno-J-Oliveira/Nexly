@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api, setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { ErrorCodes, parseApiError } from '@/lib/errors';
 import { maskCnpj, soDigitos } from '@/lib/format';
 
 const schema = z
@@ -54,8 +55,18 @@ export default function CadastroPage() {
       // Atualiza o contexto de auth sem passar pelo login (que exige senha).
       await login(data.email, data.senha).catch(() => undefined);
       router.push('/dashboard');
-    } catch {
-      setError('Não foi possível concluir o cadastro. Verifique os dados.');
+    } catch (e) {
+      const err = parseApiError(e);
+      if (err.code === ErrorCodes.EMAIL_TAKEN) {
+        setError('Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.');
+      } else if (err.code === ErrorCodes.INVALID_DATETIME) {
+        setError('Data/hora inválida.');
+      } else if (err.errors && err.errors.length > 0) {
+        // Erros de validação do class-validator: mostra a primeira mensagem
+        setError(err.errors[0] ?? 'Dados inválidos');
+      } else {
+        setError(err.message || 'Não foi possível concluir o cadastro. Verifique os dados.');
+      }
     }
   };
 
