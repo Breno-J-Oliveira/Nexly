@@ -68,14 +68,16 @@ export default function ProdutosPage() {
   const [historicoProduto, setHistoricoProduto] = useState<Produto | null>(null);
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
+  const [totalProdutos, setTotalProdutos] = useState(0);
 
   const carregar = useCallback(async (search?: string) => {
     setCarregando(true);
     try {
-      const res = await api.get<{ data: Produto[] }>('/produtos', {
+      const res = await api.get<{ data: Produto[]; total: number }>('/produtos', {
         params: { limit: 100, search },
       });
       setProdutos(res.data.data);
+      setTotalProdutos(res.data.total);
     } finally {
       setCarregando(false);
     }
@@ -165,7 +167,10 @@ export default function ProdutosPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-zinc-100">Produtos</h2>
-          <p className="mt-1 text-sm text-zinc-400">Controle de produtos e estoque</p>
+          <p className="mt-1 text-sm text-zinc-400">
+            Controle de produtos e estoque · {totalProdutos}{' '}
+            {totalProdutos === 1 ? 'cadastrado' : 'cadastrados'}
+          </p>
         </div>
         <Button onClick={abrirNovo}>+ Novo produto</Button>
       </div>

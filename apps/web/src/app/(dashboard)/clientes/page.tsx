@@ -30,14 +30,16 @@ export default function ClientesPage() {
   const [form, setForm] = useState<FormState>(vazio);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [totalClientes, setTotalClientes] = useState(0);
 
   const carregar = useCallback(async (search?: string) => {
     setCarregando(true);
     try {
-      const res = await api.get<{ data: Cliente[] }>('/clientes', {
+      const res = await api.get<{ data: Cliente[]; total: number }>('/clientes', {
         params: { limit: 100, search },
       });
       setClientes(res.data.data);
+      setTotalClientes(res.data.total);
     } finally {
       setCarregando(false);
     }
@@ -101,7 +103,10 @@ export default function ClientesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-zinc-100">Clientes</h2>
-          <p className="mt-1 text-sm text-zinc-400">Gerencie os clientes do seu negócio</p>
+          <p className="mt-1 text-sm text-zinc-400">
+            Gerencie os clientes do seu negócio · {totalClientes}{' '}
+            {totalClientes === 1 ? 'registrado' : 'registrados'}
+          </p>
         </div>
         <Button onClick={abrirNovo}>+ Novo cliente</Button>
       </div>
