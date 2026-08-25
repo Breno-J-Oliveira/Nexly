@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
@@ -31,6 +31,22 @@ export default function ClientesPage() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [totalClientes, setTotalClientes] = useState(0);
+  const buscaRef = useRef<HTMLInputElement | null>(null);
+
+  // Atalho de teclado: `/` foca o campo de busca (padrão de várias UIs).
+  // Ignora quando o foco já está em outro input/textarea para não atrapalhar.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/') return;
+      const t = e.target as HTMLElement | null;
+      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+      if (t && t.isContentEditable) return;
+      e.preventDefault();
+      buscaRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const carregar = useCallback(async (search?: string) => {
     setCarregando(true);
@@ -113,7 +129,8 @@ export default function ClientesPage() {
 
       <div className="mt-6 max-w-md">
         <Input
-          placeholder="Buscar por nome ou telefone..."
+          ref={buscaRef}
+          placeholder="Buscar por nome ou telefone... (pressione /)"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
