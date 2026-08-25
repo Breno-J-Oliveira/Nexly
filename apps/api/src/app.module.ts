@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthGuard } from './common/guards/auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { TenantInterceptor } from './common/interceptors/tenant.interceptor';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { env } from './config/env';
 import { getJwtKeys } from './config/jwt-keys';
 import { DatabaseModule } from './database/database.module';
@@ -54,7 +55,10 @@ import { RedisModule } from './redis/redis.module';
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    // Ordem: o NestJS executa interceptors na ordem inversa de registro.
+    // Tenant deve rodar antes do Logging para que os logs incluam contexto de tenant.
     { provide: APP_INTERCEPTOR, useClass: TenantInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
   ],
 })
 export class AppModule {}
