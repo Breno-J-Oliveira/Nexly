@@ -1,6 +1,6 @@
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { getTenantContext } from '../database/tenant-context';
+import { getTenantIdOrFail } from '../database/tenant-context';
 import { PrismaService } from '../database/prisma.service';
 
 export type Tx = Prisma.TransactionClient;
@@ -178,10 +178,6 @@ export class EstoqueService {
    * de runtime esperada.
    */
   private tenantIdOrFail(): string {
-    const empresaId = getTenantContext()?.tenantId;
-    if (!empresaId) {
-      throw new InternalServerErrorException('Contexto de tenant não definido');
-    }
-    return empresaId;
+    return getTenantIdOrFail();
   }
 }
