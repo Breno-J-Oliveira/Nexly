@@ -157,29 +157,35 @@ export default function PdvPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        className="h-6 w-6 p-0 text-zinc-400"
-                        onClick={() => mudarQuantidade(item.produto.id, -1)}
-                      >
-                        -
-                      </Button>
+                      <Tooltip text="Diminuir quantidade">
+                        <Button
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-zinc-400"
+                          onClick={() => mudarQuantidade(item.produto.id, -1)}
+                        >
+                          -
+                        </Button>
+                      </Tooltip>
                       <span className="text-sm text-zinc-100">{item.quantidade}</span>
-                      <Button
-                        variant="ghost"
-                        className="h-6 w-6 p-0 text-zinc-400"
-                        onClick={() => mudarQuantidade(item.produto.id, 1)}
-                      >
-                        +
-                      </Button>
+                      <Tooltip text="Aumentar quantidade">
+                        <Button
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-zinc-400"
+                          onClick={() => mudarQuantidade(item.produto.id, 1)}
+                        >
+                          +
+                        </Button>
+                      </Tooltip>
                     </div>
-                    <Button
-                      variant="danger"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => remover(item.produto.id)}
-                    >
-                      Remover
-                    </Button>
+                    <Tooltip text="Remover item do carrinho">
+                      <Button
+                        variant="danger"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => remover(item.produto.id)}
+                      >
+                        Remover
+                      </Button>
+                    </Tooltip>
                   </div>
                 </div>
               ))}
