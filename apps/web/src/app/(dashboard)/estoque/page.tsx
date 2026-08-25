@@ -18,21 +18,31 @@ interface Resumo {
   produtosAbaixoDoMinimo: number;
   valorTotalEstoque: number;
 }
+interface AlertaItem {
+  id: string;
+  nome: string;
+  sku: string;
+  estoqueAtual: number;
+  estoqueMinimo: number;
+}
 
 export default function EstoquePage() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [resumo, setResumo] = useState<Resumo | null>(null);
+  const [alertas, setAlertas] = useState<AlertaItem[]>([]);
   const [entradaProduto, setEntradaProduto] = useState<Produto | null>(null);
   const [quantidade, setQuantidade] = useState('');
   const [motivo, setMotivo] = useState('');
 
   const carregar = useCallback(async (): Promise<void> => {
-    const [p, r] = await Promise.all([
+    const [p, r, a] = await Promise.all([
       api.get<{ data: Produto[] }>('/produtos', { params: { limit: 100 } }),
       api.get<Resumo>('/estoque/resumo'),
+      api.get<{ data: AlertaItem[] }>('/produtos/alerta', { params: { limit: 5 } }),
     ]);
     setProdutos(p.data.data);
     setResumo(r.data);
+    setAlertas(a.data.data);
   }, []);
 
   useEffect(() => {
@@ -62,6 +72,55 @@ export default function EstoquePage() {
   return (
     <div>
       <h2 className="text-xl font-semibold text-zinc-100">Estoque</h2>
+
+      {/* Banner de produtos em alerta */}
+      {alertas.length > 0 && (
+        <div
+          className="mt-6 rounded-xl border border-red-900/50 bg-red-950/30 p-5"
+          role="alert"
+          aria-live="polite"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-red-300">
+                {alertas.length} {alertas.length === 1 ? 'produto precisa' : 'produtos precisam'}{' '}
+                de reposição
+              </p>
+              <p className="mt-1 text-xs text-red-400/80">
+                Estoque atual abaixo do mínimo configurado.
+              </p>
+            </div>
+          </div>
+          <ul className="mt-4 divide-y divide-red-900/40">
+            {alertas.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between py-2 text-sm"
+              >
+                <div>
+                  <p className="font-medium text-zinc-100">{a.nome}</p>
+                  <p className="text-xs text-zinc-500">{a.sku}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-red-300">
+                    {a.estoqueAtual} <span className="text-xs font-normal text-zinc-500">/ mín. {a.estoqueMinimo}</span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const full = produtos.find((p) => p.id === a.id);
+                      if (full) setEntradaProduto(full);
+                    }}
+                    className="mt-1 text-xs text-red-400 hover:text-red-300 hover:underline"
+                  >
+                    Dar entrada
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
