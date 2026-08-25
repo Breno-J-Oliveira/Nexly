@@ -28,20 +28,49 @@ export class LoggingInterceptor implements NestInterceptor {
 
     const start = Date.now();
     const { method, originalUrl } = req;
+    const isProd = process.env.NODE_ENV === 'production';
 
     return next.handle().pipe(
       tap({
         next: () => {
           const ms = Date.now() - start;
-          this.logger.log(`${method} ${originalUrl} ${res.statusCode} ${ms}ms [${requestId}]`);
+          if (isProd) {
+            this.logger.log(
+              JSON.stringify({
+                level: 'info',
+                kind: 'http',
+                requestId,
+                method,
+                path: originalUrl,
+                status: res.statusCode,
+                durationMs: ms,
+              }),
+            );
+          } else {
+            this.logger.log(`${method} ${originalUrl} ${res.statusCode} ${ms}ms [${requestId}]`);
+          }
         },
         error: (error) => {
           const ms = Date.now() - start;
-          // Status code pode já ter sido setado pelo HttpExceptionFilter.
           const status = res.statusCode || 500;
-          this.logger.error(
-            `${method} ${originalUrl} ${status} ${ms}ms [${requestId}] ${error?.message ?? ''}`,
-          );
+          if (isProd) {
+            this.logger.error(
+              JSON.stringify({
+                level: 'error',
+                kind: 'http',
+                requestId,
+                method,
+                path: originalUrl,
+                status,
+                durationMs: ms,
+                message: error?.message ?? 'unknown',
+              }),
+            );
+          } else {
+            this.logger.error(
+              `${method} ${originalUrl} ${status} ${ms}ms [${requestId}] ${error?.message ?? ''}`,
+            );
+          }
         },
       }),
     );
