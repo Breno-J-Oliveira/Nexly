@@ -9,6 +9,7 @@ describe('VendasService', () => {
     client: {
       produto: { findMany: jest.Mock };
       $transaction: jest.Mock;
+      venda: { findFirst: jest.Mock };
     };
   };
   let estoque: { registrarSaidaTx: jest.Mock };
