@@ -157,4 +157,27 @@ apps/api/src/
 | **Argon2id** | Hash de senha com resistência a GPU/ASIC |
 | **Cache em Redis (5 min)** | O dashboard é o endpoint mais lido e os dados só mudam com ações |
 | **Zod (frontend) + class-validator (backend)** | DTOs validados na borda — defesa em camadas |
+
+## Códigos de erro semânticos
+
+Toda `HttpException` lançada pelo backend pode carregar um `code` no corpo
+da resposta (`{ code, message, statusCode, ... }`). O front-end usa
+`parseApiError` (em `apps/web/src/lib/errors.ts`) para fazer tratamento
+programático — ex: `if (err.code === 'BUSY_PROFESSIONAL') { mostrar "escolha outro horário" }`.
+
+| Code | Status | Onde é lançado | Mensagem |
+|---|---|---|---|
+| `BUSY_PROFESSIONAL` | 409 | `agendamentos.service.ts` (validação de conflito) | Profissional já tem agendamento nesse horário |
+| `INVALID_DATETIME` | 400 | `agendamentos.service.ts` | Data/hora inválida |
+| `DATETIME_IN_PAST` | 400 | `agendamentos.service.ts` | O horário do agendamento deve ser no futuro |
+| `OUT_OF_STOCK` | 409 | `estoque.service.ts` | Saldo insuficiente em estoque |
+| `EMAIL_TAKEN` | 409 | `auth.service.ts` (register) | E-mail já cadastrado |
+| `USER_NOT_FOUND` | 401 | `auth.service.ts` (`me`) | Usuário não encontrado |
+
+## Endpoints públicos de saúde
+
+- `GET /health` — liveness, sempre 200 enquanto o processo Node estiver vivo.
+- `GET /health/deep` — testa DB + Redis; retorna `degraded` se algo falhar.
+- `GET /health/migrations` — status das migrations Prisma aplicadas.
+- `GET /health/version` — versão do `package.json` + Node + env.
 Se a primeira falhar, a segunda segura.
