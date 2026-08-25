@@ -55,9 +55,23 @@ export function Shell({ children }: { children: ReactNode }) {
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 text-sm font-semibold text-primary-300">
               {user?.nome?.charAt(0).toUpperCase() ?? '?'}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-zinc-100">{user?.nome}</p>
-              <p className="truncate text-xs text-zinc-500">{user?.email}</p>
+              <div className="mt-0.5 flex items-center gap-2">
+                <p className="truncate text-xs text-zinc-500">{user?.email}</p>
+                {user?.role && (
+                  <span
+                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                      user.role === 'ADMIN'
+                        ? 'bg-primary-500/15 text-primary-300'
+                        : 'bg-zinc-800 text-zinc-400'
+                    }`}
+                    title={`Papel: ${user.role}`}
+                  >
+                    {user.role}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <button
