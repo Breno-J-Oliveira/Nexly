@@ -9,6 +9,13 @@ import { PrismaService } from '../database/prisma.service';
 import { EstoqueService, Tx } from '../estoque/estoque.service';
 import { ItemVendaDto } from './dto/criar-venda.dto';
 
+/**
+ * Motor do PDV: orquestra a criação de uma venda completa em uma única
+ * transação, integrando Venda, ItemVenda, MovimentacaoEstoque e Produto.
+ *
+ * Se qualquer etapa falhar (ex: perda de corrida no estoque, FK inválida),
+ * o rollback é automático — o estoque não é alterado e a venda não é criada.
+ */
 @Injectable()
 export class VendasService {
   constructor(
@@ -17,9 +24,24 @@ export class VendasService {
   ) {}
 
   /**
-   * Motor do PDV: orquestra a criação de uma venda completa em uma única
-   * transação. Se qualquer etapa falhar, o rollback é automático — o
-   * estoque não é alterado e a venda não é criada.
+   * Cria uma venda completa a partir dos itens do PDV.
+   *
+   * Fluxo:
+   *  1. Valida todos os produtos (existem? há saldo?).
+   *  2. Calcula o total com os preços **atuais** do banco.
+   *  3. Em uma única transação:
+   *     a. Cria a Venda.
+   *     b. Cria cada ItemVenda com o preço unitário congelado.
+   *     c. Chama `EstoqueService.registrarSaidaTx` para baixar o estoque
+   *        e registrar a MovimentacaoEstoque.
+   *
+   * @param clienteId - Opcional. Quando `null`, é uma venda avulsa.
+   * @param itens - Lista de `{ produtoId, quantidade }`. Pode repetir
+   *   o mesmo produto (cada item é uma linha no `ItemVenda`).
+   * @returns A venda criada com `itens` e `cliente` carregados.
+   * @throws BadRequestException se `itens` estiver vazio.
+   * @throws NotFoundException se algum produto não existir.
+   * @throws ConflictException se algum produto não tiver saldo suficiente.
    */
   async criar(clienteId: string | undefined, itens: ItemVendaDto[]) {
     if (itens.length === 0) {
@@ -79,6 +101,16 @@ export class VendasService {
     return this.obter(venda.id);
   }
 
+  /**
+   * Lista vendas com paginação e filtros opcionais.
+   *
+   * @param page - Página (1-indexed).
+   * @param limit - Quantidade por página.
+   * @param filtros.dataInicio - ISO 8601. Vendas criadas a partir desta data.
+   * @param filtros.dataFim - ISO 8601. Vendas criadas até esta data.
+   * @param filtros.clienteId - Filtra vendas de um cliente específico.
+   * @returns `{ data, total, page, limit }` ordenado por `createdAt desc`.
+   */
   async listar(
     page: number,
     limit: number,
@@ -110,6 +142,10 @@ export class VendasService {
     return { data, total, page, limit };
   }
 
+  /**
+   * Retorna uma venda específica com cliente e itens (cada item com produto).
+   * @throws NotFoundException se a venda não existir no tenant.
+   */
   async obter(id: string) {
     const venda = await this.prisma.client.venda.findFirst({
       where: { id },

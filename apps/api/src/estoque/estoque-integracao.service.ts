@@ -9,12 +9,16 @@ interface AgendamentoConcluidoPayload {
 }
 
 /**
- * ⭐ Feature central do Nexly: baixa automática de estoque ao concluir um
- * serviço. Escuta o evento `agendamento.concluido` (emitido pelo módulo de
- * agendamentos) e dá baixa nos insumos configurados para o serviço.
+ * ⭐ Feature central do Nexly: **baixa automática de estoque** ao concluir um
+ * serviço. Escuta o evento `agendamento.concluido` (emitido pelo
+ * `AgendamentosService.atualizarStatus` quando o status vira `CONCLUIDO`) e
+ * dá baixa nos insumos configurados para o serviço.
  *
- * Se algum insumo não tiver saldo suficiente, o erro é registrado no log
- * mas NÃO bloqueia a conclusão do agendamento (a baixa fica pendente).
+ * **Comportamento de falha**: se algum insumo não tiver saldo suficiente,
+ * o erro é registrado no log mas **NÃO** bloqueia a conclusão do
+ * agendamento. Isso evita que um problema de estoque impeça o atendimento
+ * de ser registrado — a equipe de operações pode regularizar o saldo
+ * depois (entrada manual + devolução).
  */
 @Injectable()
 export class EstoqueIntegracaoService {
@@ -25,6 +29,11 @@ export class EstoqueIntegracaoService {
     private readonly estoqueService: EstoqueService,
   ) {}
 
+  /**
+   * Handler do evento `agendamento.concluido`. Para cada insumo do
+   * serviço, registra uma SAÍDA no estoque com a quantidade configurada
+   * e referencia o agendamento original.
+   */
   @OnEvent('agendamento.concluido')
   async handleAgendamentoConcluido(payload: AgendamentoConcluidoPayload): Promise<void> {
     const insumos = await this.prisma.client.insumoServico.findMany({
