@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { AssociarInsumoDto } from './dto/associar-insumo.dto';
 import { AtualizarServicoDto } from './dto/atualizar-servico.dto';
@@ -30,7 +31,11 @@ export class ServicosService {
 
   criar(dto: CriarServicoDto) {
     return this.prisma.client.servico.create({
-      data: { empresaId: '', nome: dto.nome, duracaoMin: dto.duracaoMin, preco: dto.preco },
+      data: {
+        nome: dto.nome,
+        duracaoMin: dto.duracaoMin,
+        preco: dto.preco,
+      } as Prisma.ServicoUncheckedCreateInput,
     });
   }
 

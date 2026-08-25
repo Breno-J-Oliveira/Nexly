@@ -97,13 +97,12 @@ export class AgendamentosService {
 
     return this.prisma.client.agendamento.create({
       data: {
-        empresaId: '',
         clienteId: dto.clienteId,
         profissionalId: dto.profissionalId,
         servicoId: dto.servicoId,
         dataHora,
         dataHoraFim,
-      },
+      } as Prisma.AgendamentoUncheckedCreateInput,
       include: includeCompleto,
     });
   }

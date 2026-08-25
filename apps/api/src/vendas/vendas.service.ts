@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
-import { EstoqueService } from '../estoque/estoque.service';
+import { EstoqueService, Tx } from '../estoque/estoque.service';
 import { ItemVendaDto } from './dto/criar-venda.dto';
 
 @Injectable()
@@ -52,7 +52,7 @@ export class VendasService {
     // 3-7. Transação: cria venda + itens + baixa de estoque (rollback em falha).
     const venda = await this.prisma.client.$transaction(async (tx) => {
       const v = await tx.venda.create({
-        data: { empresaId: '', clienteId, total },
+        data: { clienteId, total } as Prisma.VendaUncheckedCreateInput,
       });
 
       for (const item of itens) {
@@ -63,10 +63,10 @@ export class VendasService {
             produtoId: item.produtoId,
             quantidade: item.quantidade,
             precoUnitario: produto?.preco ?? 0,
-          },
+          } as Prisma.ItemVendaUncheckedCreateInput,
         });
         await this.estoqueService.registrarSaidaTx(
-          tx,
+          tx as unknown as Tx,
           item.produtoId,
           item.quantidade,
           `Venda #${v.id}`,

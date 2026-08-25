@@ -59,14 +59,13 @@ export class ProdutosService {
     try {
       return await this.prisma.client.produto.create({
         data: {
-          empresaId: '',
           nome: dto.nome,
           sku: dto.sku,
           preco: dto.preco,
           estoqueAtual: dto.estoqueAtual ?? 0,
           estoqueMinimo: dto.estoqueMinimo ?? 5,
           categoria: dto.categoria,
-        },
+        } as Prisma.ProdutoUncheckedCreateInput,
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {

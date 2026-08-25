@@ -1,9 +1,9 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-// Removed Prisma import
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { getTenantContext } from '../database/tenant-context';
 import { PrismaService } from '../database/prisma.service';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Tx = any;
+export type Tx = Prisma.TransactionClient;
 
 /**
  * Motor central de movimentação de estoque.
@@ -13,6 +13,10 @@ export type Tx = any;
  * As variantes `*Tx` operam sobre um transaction client fornecido,
  * permitindo que o motor do PDV (VendasService) reutilize a lógica
  * dentro de uma transação única.
+ *
+ * IMPORTANTE: o transaction client do Prisma NÃO passa pela Prisma
+ * Extension. As variantes `*Tx` leem o `empresaId` do AsyncLocalStorage
+ * e gravam-no explicitamente no `data` para manter o isolamento.
  */
 @Injectable()
 export class EstoqueService {
@@ -20,7 +24,7 @@ export class EstoqueService {
 
   async registrarEntrada(produtoId: string, quantidade: number, motivo: string): Promise<void> {
     await this.prisma.client.$transaction((tx) =>
-      this.registrarEntradaTx(tx, produtoId, quantidade, motivo),
+      this.registrarEntradaTx(tx as unknown as Tx, produtoId, quantidade, motivo),
     );
   }
 
@@ -34,12 +38,14 @@ export class EstoqueService {
       throw new BadRequestException('Quantidade deve ser maior que zero');
     }
 
+    const empresaId = getTenantContext()?.tenantId;
+    if (!empresaId) throw new InternalServerErrorException("Contexto de tenant não definido");
     await tx.produto.updateMany({
       where: { id: produtoId },
       data: { estoqueAtual: { increment: quantidade } },
     });
     await tx.movimentacaoEstoque.create({
-      data: { produtoId, tipo: 'ENTRADA', quantidade, motivo, empresaId: '' },
+      data: { produtoId, tipo: 'ENTRADA', quantidade, motivo, empresaId },
     });
   }
 
@@ -50,7 +56,7 @@ export class EstoqueService {
     agendamentoId?: string,
   ): Promise<void> {
     await this.prisma.client.$transaction((tx) =>
-      this.registrarSaidaTx(tx, produtoId, quantidade, motivo, agendamentoId),
+      this.registrarSaidaTx(tx as unknown as Tx, produtoId, quantidade, motivo, agendamentoId),
     );
   }
 
@@ -65,6 +71,8 @@ export class EstoqueService {
       throw new BadRequestException('Quantidade deve ser maior que zero');
     }
 
+    const empresaId = getTenantContext()?.tenantId;
+    if (!empresaId) throw new InternalServerErrorException("Contexto de tenant não definido");
     // Decremento atômico: só aplica se houver saldo suficiente.
     const result = await tx.produto.updateMany({
       where: { id: produtoId, estoqueAtual: { gte: quantidade } },
@@ -76,7 +84,7 @@ export class EstoqueService {
     }
 
     await tx.movimentacaoEstoque.create({
-      data: { produtoId, tipo: 'SAIDA', quantidade, motivo, agendamentoId, empresaId: '' },
+      data: { produtoId, tipo: 'SAIDA', quantidade, motivo, agendamentoId, empresaId },
     });
   }
 

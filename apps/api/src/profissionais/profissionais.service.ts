@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { AtualizarProfissionalDto } from './dto/atualizar-profissional.dto';
 import { CriarProfissionalDto } from './dto/criar-profissional.dto';
@@ -33,7 +34,10 @@ export class ProfissionaisService {
 
   criar(dto: CriarProfissionalDto) {
     return this.prisma.client.profissional.create({
-      data: { empresaId: '', nome: dto.nome, especialidade: dto.especialidade },
+      data: {
+        nome: dto.nome,
+        especialidade: dto.especialidade,
+      } as Prisma.ProfissionalUncheckedCreateInput,
     });
   }
 
