@@ -34,6 +34,12 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+    env:
+      DATABASE_URL: postgresql://nexly:nexly_test_password@localhost:5432/nexly_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
+      JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,6 +53,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma client
+        run: npx prisma generate --schema apps/api/prisma/schema.prisma
+
+      - name: Sync DB schema
+        # Projeto usa db push (schema-first) — sem migrations commitadas.
+        run: npx prisma db push --schema apps/api/prisma/schema.prisma --skip-generate
+
       - name: Lint
         run: npm run lint
 
@@ -55,8 +68,4 @@ jobs:
 
       - name: Test
         run: npm run test
-        env:
-          DATABASE_URL: postgresql://nexly:nexly_test_password@localhost:5432/nexly_test?schema=public
-          REDIS_URL: redis://localhost:6379
-          JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
-          JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
+
