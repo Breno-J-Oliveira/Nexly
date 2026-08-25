@@ -85,10 +85,13 @@ export class AgendamentosService {
 
     const dataHora = new Date(dto.dataHora);
     if (Number.isNaN(dataHora.getTime())) {
-      throw new BadRequestException('Data/hora inválida');
+      throw new BadRequestException({ code: 'INVALID_DATETIME', message: 'Data/hora inválida' });
     }
     if (dataHora < new Date()) {
-      throw new BadRequestException('O horário do agendamento deve ser no futuro');
+      throw new BadRequestException({
+        code: 'DATETIME_IN_PAST',
+        message: 'O horário do agendamento deve ser no futuro',
+      });
     }
 
     const dataHoraFim = new Date(dataHora.getTime() + servico.duracaoMin * 60_000);
@@ -151,7 +154,10 @@ export class AgendamentosService {
     });
 
     if (conflito) {
-      throw new ConflictException('Profissional já tem agendamento nesse horário');
+      throw new ConflictException({
+        code: 'BUSY_PROFESSIONAL',
+        message: 'Profissional já tem agendamento nesse horário',
+      });
     }
   }
 }

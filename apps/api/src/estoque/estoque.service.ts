@@ -108,7 +108,10 @@ export class EstoqueService {
     });
 
     if (result.count === 0) {
-      throw new ConflictException('Saldo insuficiente em estoque');
+      throw new ConflictException({
+        code: 'OUT_OF_STOCK',
+        message: 'Saldo insuficiente em estoque',
+      });
     }
 
     await tx.movimentacaoEstoque.create({

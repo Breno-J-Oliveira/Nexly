@@ -36,7 +36,10 @@ export class AuthService {
       where: { email: dto.email },
     });
     if (existing) {
-      throw new ConflictException('E-mail já cadastrado');
+      throw new ConflictException({
+        code: 'EMAIL_TAKEN',
+        message: 'E-mail já cadastrado',
+      });
     }
 
     const senhaHash = await argon2.hash(dto.senha, { type: argon2.argon2id });
