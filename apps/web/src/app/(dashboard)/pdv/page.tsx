@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
 
@@ -204,15 +205,25 @@ export default function PdvPage() {
               {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}
             </span>
           </div>
-          <Button
-            className="mt-4 w-full"
-            loading={finalizando}
-            disabled={itens.length === 0}
-            onClick={finalizar}
-            variant="primary"
+          <Tooltip
+            text={
+              itens.length === 0
+                ? 'Adicione produtos ao carrinho primeiro'
+                : sucesso
+                  ? 'Venda registrada com sucesso'
+                  : `Finaliza a venda dos ${itens.length} ${itens.length === 1 ? 'item' : 'itens'}`
+            }
           >
-            {sucesso ? 'Venda Finalizada!' : 'Finalizar Venda'}
-          </Button>
+            <Button
+              className="mt-4 w-full"
+              loading={finalizando}
+              disabled={itens.length === 0}
+              onClick={finalizar}
+              variant="primary"
+            >
+              {sucesso ? 'Venda Finalizada!' : 'Finalizar Venda'}
+            </Button>
+          </Tooltip>
         </div>
       </div>
     </div>
