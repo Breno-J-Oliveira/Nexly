@@ -20,6 +20,24 @@ function getCookie(req: Request, name: string): string | undefined {
   return entry ? decodeURIComponent(entry.slice(name.length + 1)) : undefined;
 }
 
+/**
+ * Extrai o IP do cliente de headers de proxy, na ordem de confiança:
+ * 1. `X-Forwarded-For` (primeiro hop)
+ * 2. `req.ip` (do Express — já considera `app.set('trust proxy', ...)`)
+ * 3. fallback `'unknown'`
+ *
+ * Se o app estiver atrás de um proxy, garanta que `app.set('trust proxy', ...)`
+ * está configurado corretamente — caso contrário, todo mundo aparece com
+ * o IP do proxy e o throttle pode bloquear usuários legítimos juntos.
+ */
+function getClientIp(req: Request): string {
+  const xff = req.headers['x-forwarded-for'];
+  if (typeof xff === 'string' && xff.length > 0) {
+    return xff.split(',')[0]?.trim() ?? 'unknown';
+  }
+  return req.ip ?? 'unknown';
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -43,7 +61,7 @@ export class AuthController {
     // A chave do throttle combina email + IP — assim um atacante
     // distribuindo tentativas em vários IPs não consegue isolar a conta,
     // e contas diferentes atrás do mesmo NAT não se bloqueiam mutuamente.
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+    const ip = getClientIp(req);
     const key = `${dto.email.toLowerCase()}|${ip}`;
     const result = await this.authService.login(dto, key);
     this.setRefreshCookie(res, result.refreshToken);
