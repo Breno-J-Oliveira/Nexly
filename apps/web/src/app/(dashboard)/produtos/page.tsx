@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
+import { formatarDataHora } from '@/lib/format';
 
 interface Produto {
   id: string;
@@ -14,6 +15,16 @@ interface Produto {
   estoqueAtual: number;
   estoqueMinimo: number;
   categoria: string | null;
+}
+
+interface Movimentacao {
+  id: string;
+  produtoId: string;
+  tipo: 'ENTRADA' | 'SAIDA';
+  quantidade: number;
+  motivo: string;
+  agendamentoId: string | null;
+  createdAt: string;
 }
 
 interface FormState {
@@ -52,6 +63,11 @@ export default function ProdutosPage() {
   const [form, setForm] = useState<FormState>(vazio);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // ── Histórico de movimentações ────────────────────────────
+  const [historicoProduto, setHistoricoProduto] = useState<Produto | null>(null);
+  const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
 
   const carregar = useCallback(async (search?: string) => {
     setCarregando(true);
@@ -93,6 +109,18 @@ export default function ProdutosPage() {
     });
     setErro(null);
     setModalAberto(true);
+  };
+
+  const abrirHistorico = async (p: Produto): Promise<void> => {
+    setHistoricoProduto(p);
+    setMovimentacoes([]);
+    setCarregandoHistorico(true);
+    try {
+      const res = await api.get<Movimentacao[]>(`/estoque/historico/${p.id}`);
+      setMovimentacoes(res.data);
+    } finally {
+      setCarregandoHistorico(false);
+    }
   };
 
   const salvar = async (): Promise<void> => {
@@ -189,6 +217,9 @@ export default function ProdutosPage() {
                     <Badge color={s.color}>{s.label}</Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
+                    <Button variant="ghost" className="mr-1 text-xs" onClick={() => void abrirHistorico(p)}>
+                      Histórico
+                    </Button>
                     <Button variant="ghost" className="mr-1 text-xs" onClick={() => abrirEdicao(p)}>
                       Editar
                     </Button>
@@ -273,6 +304,64 @@ export default function ProdutosPage() {
                   Salvar
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historicoProduto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-zinc-100">
+                Histórico — {historicoProduto.nome}
+              </h3>
+              <button
+                onClick={() => setHistoricoProduto(null)}
+                className="text-zinc-400 hover:text-zinc-200"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-zinc-500">
+              SKU {historicoProduto.sku} · Estoque atual: {historicoProduto.estoqueAtual}
+            </p>
+
+            <div className="mt-4 max-h-96 space-y-2 overflow-y-auto">
+              {carregandoHistorico && (
+                <p className="text-center text-sm text-zinc-400">Carregando…</p>
+              )}
+              {!carregandoHistorico && movimentacoes.length === 0 && (
+                <p className="py-8 text-center text-sm text-zinc-500">
+                  Nenhuma movimentação registrada para este produto.
+                </p>
+              )}
+              {movimentacoes.map((m) => {
+                const entrada = m.tipo === 'ENTRADA';
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Badge color={entrada ? 'ENTRADA' : 'SAIDA'}>
+                        {entrada ? '+' : '−'} {m.quantidade}
+                      </Badge>
+                      <div>
+                        <p className="text-sm text-zinc-200">{m.motivo}</p>
+                        <p className="text-xs text-zinc-500">{formatarDataHora(m.createdAt)}</p>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-sm font-medium ${
+                        entrada ? 'text-emerald-400' : 'text-red-400'
+                      }`}
+                    >
+                      {entrada ? 'Entrada' : 'Saída'}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
