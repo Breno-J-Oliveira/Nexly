@@ -93,6 +93,60 @@ describe('AuthService', () => {
     ).rejects.toThrow('E-mail ou senha incorretos');
   });
 
+  describe('login com throttle', () => {
+    it('lança LOGIN_TOO_MANY_ATTEMPTS quando o throttle indica bloqueado', async () => {
+      throttle.isBlocked.mockReturnValue(true);
+      throttle.retryAfterSeconds.mockReturnValue(120);
+
+      await expect(
+        service.login({ email: 'x@y.com', senha: 'qualquer' }, KEY),
+      ).rejects.toMatchObject({
+        // O body do UnauthorizedException carrega o code semântico
+      });
+
+      // Tenta de novo capturando o code
+      try {
+        await service.login({ email: 'x@y.com', senha: 'qualquer' }, KEY);
+        fail('esperava UnauthorizedException');
+      } catch (e) {
+        const err = e as UnauthorizedException;
+        const body = err.getResponse() as { code: string; message: string };
+        expect(body.code).toBe('LOGIN_TOO_MANY_ATTEMPTS');
+        expect(body.message).toContain('120s');
+      }
+
+      // DB nunca é tocado quando está bloqueado
+      expect(prisma.client.usuario.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('chama registerFailure em usuário inexistente', async () => {
+      prisma.client.usuario.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.login({ email: 'fantasma@x.com', senha: 'qualquer' }, KEY),
+      ).rejects.toThrow('E-mail ou senha incorretos');
+      expect(throttle.registerFailure).toHaveBeenCalledWith(KEY);
+    });
+
+    it('chama registerFailure em senha errada', async () => {
+      prisma.client.usuario.findUnique.mockResolvedValue(usuarioMock);
+      verifyMock.mockReset().mockResolvedValue(false);
+
+      await expect(
+        service.login({ email: 'admin@test.com', senha: 'errada' }, KEY),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(throttle.registerFailure).toHaveBeenCalledWith(KEY);
+    });
+
+    it('chama registerSuccess em login bem-sucedido', async () => {
+      prisma.client.usuario.findUnique.mockResolvedValue(usuarioMock);
+      verifyMock.mockReset().mockResolvedValue(true);
+
+      await service.login({ email: 'admin@test.com', senha: 'ok' }, KEY);
+      expect(throttle.registerSuccess).toHaveBeenCalledWith(KEY);
+    });
+  });
+
   describe('me', () => {
     it('retorna UsuarioPublico quando o usuário existe', async () => {
       prisma.client.usuario.findUnique.mockResolvedValue(usuarioMock);
