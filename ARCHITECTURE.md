@@ -119,6 +119,21 @@ Refresh token reutilizado (roubo)?
   └─── TokenService.rotateRefreshToken() detecta e invalida TODAS as sessões
 ```
 
+## Rate limiting de login
+
+Defesa contra brute-force no `POST /auth/login` — implementada em
+`apps/api/src/auth/login-throttle.service.ts`.
+
+- **Limite**: 5 falhas por par (email normalizado + IP) em uma janela de 15 min.
+- **Bloqueio**: após o limite, novas tentativas para o mesmo par são rejeitadas
+  com `401 + code: LOGIN_TOO_MANY_ATTEMPTS` por mais 15 min.
+- **Reset**: um login bem-sucedido limpa o contador.
+- **Storage**: em memória (Map). Single-instance apenas — para produção
+  multi-instância, trocar por Redis (`INCR` + `EXPIRE`) com a mesma
+  interface de `LoginThrottleService`.
+- **Chave do throttle**: `${email}|${ip}` (lowercase). Combinar com IP
+  evita que contas diferentes atrás do mesmo NAT se bloqueiem mutuamente.
+
 ## Estrutura de pastas (backend)
 
 ```
