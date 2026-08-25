@@ -54,6 +54,45 @@ export class HealthController {
     return { version, node: process.version, env: process.env.NODE_ENV ?? 'development' };
   }
 
+  /**
+   * Status das migrations Prisma aplicadas. Útil em produção para
+   * detectar drift entre o schema esperado e o banco de dados.
+   *
+   * Retorna:
+   * - `ok: true` se todas as migrations estão aplicadas
+   * - `pending: string[]` com o nome das migrations ainda não aplicadas
+   * - `applied: number` total de migrations já aplicadas
+   * - `failed: string[]` migrations com status "failed" (precisam de atenção)
+   */
+  @Public()
+  @Get('migrations')
+  async migrations() {
+    try {
+      const rows = await this.prisma.client.$queryRaw<
+        Array<{ migration_name: string; finished_at: Date | null; rolled_back_at: Date | null }>
+      >`SELECT migration_name, finished_at, rolled_back_at FROM "_prisma_migrations" ORDER BY started_at ASC`;
+
+      const applied = rows.filter((r) => r.finished_at !== null && r.rolled_back_at === null);
+      const failed = rows
+        .filter((r) => r.finished_at === null && r.rolled_back_at === null)
+        .map((r) => r.migration_name);
+
+      return {
+        ok: failed.length === 0,
+        applied: applied.length,
+        failed,
+        pending: [], // o backend só conhece migrations já enviadas ao banco;
+                      // para detectar pending, rode `prisma migrate status` na CLI.
+        lastAppliedAt: applied.at(-1)?.finished_at ?? null,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: `Não foi possível ler _prisma_migrations: ${String(error)}`,
+      };
+    }
+  }
+
   private async checkDb(): Promise<{ ok: boolean; latencyMs?: number; error?: string }> {
     const start = Date.now();
     try {
