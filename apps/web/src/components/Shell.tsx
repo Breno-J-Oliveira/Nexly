@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/servicos', label: 'Serviços', icon: '✨' },
   { href: '/estoque', label: 'Estoque', icon: '📦' },
   { href: '/pdv', label: 'PDV', icon: '🛒' },
+  { href: '/vendas', label: 'Vendas', icon: '💰' },
 ];
 
 export function Shell({ children }: { children: ReactNode }) {

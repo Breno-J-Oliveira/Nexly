@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
+import { maskTelefone, soDigitos } from '@/lib/format';
 
 interface Cliente {
   id: string;
@@ -69,10 +70,15 @@ export default function ClientesPage() {
     setSalvando(true);
     setErro(null);
     try {
+      const payload = {
+        nome: form.nome,
+        telefone: form.telefone ? soDigitos(form.telefone) : '',
+        email: form.email,
+      };
       if (editandoId) {
-        await api.put(`/clientes/${editandoId}`, form);
+        await api.put(`/clientes/${editandoId}`, payload);
       } else {
-        await api.post('/clientes', form);
+        await api.post('/clientes', payload);
       }
       setModalAberto(false);
       await carregar(busca || undefined);
@@ -172,7 +178,7 @@ export default function ClientesPage() {
               <Input
                 label="Telefone"
                 value={form.telefone}
-                onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+                onChange={(e) => setForm({ ...form, telefone: maskTelefone(e.target.value) })}
                 placeholder="(00) 00000-0000"
               />
               <Input

@@ -4,18 +4,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { formatarCnpj, validarCnpj } from '@nexly/shared';
+import { validarCnpj } from '@nexly/shared';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api, setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { maskCnpj, soDigitos } from '@/lib/format';
 
 const schema = z
   .object({
     empresaNome: z.string().min(2, 'Nome da empresa obrigatório'),
-    cnpj: z.string().refine((v) => validarCnpj(v), 'CNPJ inválido'),
+    cnpj: z.string().refine((v) => validarCnpj(soDigitos(v)), 'CNPJ inválido'),
     responsavelNome: z.string().min(2, 'Nome do responsável obrigatório'),
     email: z.string().email('E-mail inválido'),
     senha: z.string().min(8, 'Senha deve ter ao menos 8 caracteres'),
@@ -34,6 +35,7 @@ export default function CadastroPage() {
   const [error, setError] = useState<string | null>(null);
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
@@ -43,7 +45,7 @@ export default function CadastroPage() {
     try {
       const res = await api.post<{ accessToken: string; usuario: unknown }>('/auth/register', {
         empresaNome: data.empresaNome,
-        cnpj: formatarCnpj(data.cnpj),
+        cnpj: soDigitos(data.cnpj),
         responsavelNome: data.responsavelNome,
         email: data.email,
         senha: data.senha,
@@ -69,11 +71,19 @@ export default function CadastroPage() {
           error={errors.empresaNome?.message}
           {...register('empresaNome')}
         />
-        <Input
-          label="CNPJ"
-          placeholder="00.000.000/0000-00"
-          error={errors.cnpj?.message}
-          {...register('cnpj')}
+        <Controller
+          name="cnpj"
+          control={control}
+          render={({ field }) => (
+            <Input
+              label="CNPJ"
+              placeholder="00.000.000/0000-00"
+              error={errors.cnpj?.message}
+              value={field.value ?? ''}
+              onChange={(e) => field.onChange(maskCnpj(e.target.value))}
+              onBlur={field.onBlur}
+            />
+          )}
         />
         <Input
           label="Nome do responsável"
