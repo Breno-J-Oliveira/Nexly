@@ -90,6 +90,10 @@ Projeto desenvolvido como **Trabalho de Conclusão de Curso (TCC)** do técnico 
 1. **RLS no PostgreSQL** — mesmo que o código esqueça de filtrar por `empresa_id`, o banco bloqueia o acesso.
 2. **Prisma Extension** — injeta o `empresaId` automaticamente em todas as queries dos modelos de negócio.
 
+Para um mergulho profundo (fluxo de baixa automática event-driven, JWT + refresh rotation, decisões arquiteturais), veja o **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+
+---
+
 ## Guia de instalação
 
 ### 1. Pré-requisitos
