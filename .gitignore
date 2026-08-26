@@ -41,3 +41,10 @@ comunictionIA.md
 configuracao.md
 planejamento.md
 *.pem
+
+# Instaladores baixados (não versionar)
+pg-installer.exe
+install-pg.bat
+*.msi
+*.exe.bak
+
