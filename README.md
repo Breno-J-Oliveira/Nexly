@@ -121,7 +121,7 @@ O principal conceito visual trabalhado foi o de um **Nexly modular**, permitindo
 ### 🎥 Apresentação do protótipo
 
 <p align="center">
-  <video src="capturas/video_figma.mp4" controls width="100%">
+  <video src="capturas/video_figma.mp4" controls width="900">
     Seu navegador não suporta a reprodução deste vídeo.
   </video>
 </p>
