@@ -134,15 +134,15 @@ O principal conceito visual trabalhado foi o de um **Nexly modular**, permitindo
       <img src="capturas/captura1.png" alt="Captura 1 do Nexly" width="100%">
     </td>
     <td width="50%">
-      <img src="capturas/captura2.png" alt="Captura 2 do Nexly" width="100%">
+      <img src="capturas/capturas2.png" alt="Captura 2 do Nexly" width="100%">
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <img src="capturas/captura3.png" alt="Captura 3 do Nexly" width="100%">
+      <img src="capturas/capturas3.png" alt="Captura 3 do Nexly" width="100%">
     </td>
     <td width="50%">
-      <img src="capturas/captura4.png" alt="Captura 4 do Nexly" width="100%">
+      <img src="capturas/capturas4.png" alt="Captura 4 do Nexly" width="100%">
     </td>
   </tr>
 </table>
