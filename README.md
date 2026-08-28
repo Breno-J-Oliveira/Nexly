@@ -94,6 +94,61 @@ Para um mergulho profundo (fluxo de baixa automática event-driven, JWT + refres
 
 ---
 
+## 🎨 Design & Protótipo
+
+Antes de partir para a implementação, desenvolvemos o **protótipo visual do Nexly no Figma**, estruturando a experiência do produto e definindo sua identidade visual.
+
+Nesta etapa, trabalhamos em conjunto **Breno J. Oliveira, Felipe Bertaco e Gustavo Barreto**, transformando a proposta do Nexly em um fluxo de produto completo.
+
+O protótipo contempla:
+
+- 🔐 **Login e cadastro**
+- 🏢 **Configuração inicial da empresa**
+- 🧩 **Personalização e seleção de módulos**
+- 💳 **Planos e período de teste**
+- 📋 **Termos de Uso**
+- 📊 **Dashboard e navegação da plataforma**
+- ⚙️ **Configurações e gerenciamento**
+- 🎨 **Sistema visual, componentes e estados de interface**
+- 📱 **Experiência responsiva e organização dos fluxos**
+
+O principal conceito visual trabalhado foi o de um **Nexly modular**, permitindo que cada empresa monte sua experiência de acordo com suas necessidades.
+
+### 🔗 Figma
+
+**[Acessar o protótipo completo no Figma](https://www.figma.com/design/nZXYARpSTmoeK3Gg7P0apb/Nexly?node-id=0-1&t=MS9eze0C2z5yJnzS-1)**
+
+### 🎥 Apresentação do protótipo
+
+<p align="center">
+  <video src="capturas/video_figma.mp4" controls width="100%">
+    Seu navegador não suporta a reprodução deste vídeo.
+  </video>
+</p>
+
+### 🖼️ Telas do projeto
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="capturas/captura1.png" alt="Captura 1 do Nexly" width="100%">
+    </td>
+    <td width="50%">
+      <img src="capturas/captura2.png" alt="Captura 2 do Nexly" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="capturas/captura3.png" alt="Captura 3 do Nexly" width="100%">
+    </td>
+    <td width="50%">
+      <img src="capturas/captura4.png" alt="Captura 4 do Nexly" width="100%">
+    </td>
+  </tr>
+</table>
+
+---
+
 ## Guia de instalação
 
 ### 1. Pré-requisitos
