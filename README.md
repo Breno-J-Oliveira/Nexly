@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind">
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <br>
-  <img src="https://img.shields.io/badge/tests-15_passing-brightgreen?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-93_passing-brightgreen?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/fases-0--4_concluídas-brightgreen?style=flat-square" alt="Fases">
   <img src="https://img.shields.io/badge/licença-educacional-blue?style=flat-square" alt="License">
 </p>
@@ -224,7 +224,7 @@ e 20 vendas no PDV — dados suficientes para explorar o dashboard e o históric
 # Typecheck (API + Web)
 npm run typecheck
 
-# Testes unitários da API (Jest — 15/15 passando)
+# Testes unitários da API (Jest — 15 suites / 93 testes passando)
 cd apps/api && npm test
 ```
 
@@ -309,7 +309,7 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | Backend (NestJS + Prisma + PostgreSQL + Redis) | ✅ Implementado e validado |
 | Frontend (Next.js 14 + Tailwind dark + Recharts) | ✅ Implementado e validado |
 | Multi-tenant com Prisma Extension + RLS | ✅ Implementado |
-| Testes (Jest) | ✅ 11 suites / 50 testes passando |
+| Testes (Jest) | ✅ 15 suites / 93 testes passando |
 | Typecheck (TypeScript strict) | ✅ 0 erros |
 | Seed de dados demo | ✅ 30+ agendamentos, 6 produtos, 3 profissionais, 20 vendas |
 | Telas CRUD (Clientes, Profissionais, Produtos, Serviços) | ✅ Implementadas |
@@ -319,6 +319,8 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | Health checks (`/health`, `/health/deep`, `/health/migrations`, `/health/version`) | ✅ Implementados |
 | Login rate limit (5 falhas / 15 min, por email+IP) | ✅ Implementado |
 | Códigos de erro semânticos (BUSY_PROFESSIONAL, OUT_OF_STOCK, etc.) | ✅ Implementados |
+| Protótipo Figma + identidade visual definidos | ✅ Ver [`/capturas`](./capturas/) e vídeo acima |
+| Documentação visual (4 capturas + 1 vídeo do protótipo) | ✅ Em [`/capturas`](./capturas/) |
 | Deploy (Vercel + Railway) | 🔜 Próximo |
 | Testes E2E (Playwright) | 🔜 Próximo |
 
