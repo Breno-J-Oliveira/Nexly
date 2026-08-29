@@ -1,4 +1,9 @@
+import { config as dotenvConfig } from 'dotenv';
 import { z } from 'zod';
+
+// Garante que as variáveis de ambiente estejam carregadas antes da validação.
+// Necessário porque o `env` é importado em muitos lugares (incluindo testes).
+dotenvConfig();
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),

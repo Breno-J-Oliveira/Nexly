@@ -25,7 +25,9 @@ function minutosDepois(base: Date, minutos: number): Date {
 }
 
 async function main(): Promise<void> {
+  console.log('[seed] iniciando...');
   const existente = await prisma.usuario.findUnique({ where: { email: EMAIL_DEMO } });
+  console.log('[seed] usuario existente:', existente?.email ?? 'nenhum');
   if (existente) {
     console.log('Seed: empresa demo já existe, ignorando.');
     return;
@@ -288,3 +290,12 @@ main()
   console.log('  Login: ' + EMAIL_DEMO + ' / ' + SENHA_DEMO);
   console.log('────────────────────────────────────────');
 }
+
+main()
+  .catch((e) => {
+    console.error('Seed falhou:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

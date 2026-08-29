@@ -20,7 +20,7 @@
     "rls:apply": "psql \"$DATABASE_URL\" -f prisma/seed-rls.sql"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node --require dotenv/config prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.6",

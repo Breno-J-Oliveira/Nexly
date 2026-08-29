@@ -48,3 +48,7 @@ install-pg.bat
 *.msi
 *.exe.bak
 
+# JWT keys (geradas localmente)
+jwt-*.pem
+jwt-*.key
+
