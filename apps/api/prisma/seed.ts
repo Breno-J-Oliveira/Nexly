@@ -238,6 +238,9 @@ main()
       { empresaId: empresa.id, produtoId: shampoo.id, tipo: TipoMovimentacao.ENTRADA, quantidade: 50, motivo: 'Compra fornecedor Beauty' },
       { empresaId: empresa.id, produtoId: tinta.id, tipo: TipoMovimentacao.ENTRADA, quantidade: 30, motivo: 'Compra fornecedor Color' },
       { empresaId: empresa.id, produtoId: base.id, tipo: TipoMovimentacao.ENTRADA, quantidade: 80, motivo: 'Compra fornecedor Nails' },
+      { empresaId: empresa.id, produtoId: oleo.id, tipo: TipoMovimentacao.ENTRADA, quantidade: 40, motivo: 'Compra fornecedor Beauty' },
+      { empresaId: empresa.id, produtoId: esmalte.id, tipo: TipoMovimentacao.ENTRADA, quantidade: 100, motivo: 'Compra fornecedor Nails' },
+      { empresaId: empresa.id, produtoId: acetona.id, tipo: TipoMovimentacao.ENTRADA, quantidade: 60, motivo: 'Compra fornecedor Nails' },
     ],
   });
 
