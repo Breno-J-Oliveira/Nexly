@@ -92,6 +92,14 @@ export default function VendasPage() {
         >
           Limpar
         </Button>
+          <a
+            href={(process.env.NEXT_PUBLIC_API_URL||"http://localhost:3001")+"/api/export/vendas/csv?dataInicio="+(dataInicio||"")+"&dataFim="+(dataFim||"")}
+            target="_blank" rel="noopener"
+            className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all"
+            style={{backgroundColor:"#111116",border:"none",color:"#22C55E"}}
+          >
+            CSV
+          </a>
       </div>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
