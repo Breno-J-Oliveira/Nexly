@@ -52,3 +52,8 @@ install-pg.bat
 jwt-*.pem
 jwt-*.key
 
+
+services/nexusauth/.env
+services/nexusauth/keys/
+services/nexusauth/node_modules/
+services/nexusauth/dist/

@@ -21,6 +21,7 @@ import { EstoqueModule } from './estoque/estoque.module';
 import { VendasModule } from './vendas/vendas.module';
 import { RelatoriosModule } from './relatorios/relatorios.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { RedisModule } from './redis/redis.module';
 
 @Module({
@@ -50,6 +51,7 @@ import { RedisModule } from './redis/redis.module';
     VendasModule,
     RelatoriosModule,
     DashboardModule,
+    WhatsAppModule,
   ],
   controllers: [HealthController],
   providers: [
