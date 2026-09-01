@@ -187,6 +187,8 @@ model Produto {
   estoqueMinimo Int      @default(5) @map("estoque_minimo")
   categoria     String?
   ativo         Boolean  @default(true)
+  dataVencimento DateTime? @map("data_vencimento")
+  lote          String?
   createdAt     DateTime @default(now()) @map("created_at")
 
   movimentacoes MovimentacaoEstoque[]

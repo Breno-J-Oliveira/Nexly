@@ -326,6 +326,12 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | PageTransition fade-in (framer-motion) | ✅ Implementado |
 | Responsive sidebar (colapsa em mobile <768px) | ✅ Implementado |
 | Deploy configs (Vercel + Railway + CI build) | ✅ Configurado |
+| Agendamento online publico (booking page 4-step) | ✅ Implementado |
+| Comissao de profissionais (faturamento + %) | ✅ Implementado |
+| PDV com forma de pagamento (Dinheiro/Cartao/PIX) | ✅ Implementado |
+| PDV com desconto | ✅ Implementado |
+| Vencimento de produtos (data + lote) | ✅ Adicionado ao schema |
+| Configuracoes da empresa | ✅ Implementado (API + frontend) |
 | WhatsApp integration (Evolution/Twilio/Meta + lembretes) | ✅ Implementado |
 | NexusAuth bridge (auth delegation + fallback local) | ✅ Integrado (services/nexusauth/) |
 | Relatorio financeiro (faturamento/CMV/margem) | ✅ Implementado |
@@ -352,10 +358,11 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | **D — Estoque/PDV** | 3: Produtos, movimentações e vendas | ✅ Concluído |
 | **E — Integração** | 4: Baixa automática de estoque + Dashboard | ✅ Concluído |
 | **F — Visual** | 0: DS, sidebar, skeleton, toast, empty states, animations, micro-interactions, responsive | ✅ Concluído |
-| **G — Financeiro** | 2: Relatorios (faturamento/CMV/margem) + Configuracoes | ✅ Concluído |
-| **H — Comunicação** | 2: WhatsApp + NexusAuth bridge + lembretes | ✅ Concluído |
-| **I — Entrega** | 1: CI + deploy configs (Vercel, Railway) | ✅ Concluído |
-| **J — Entrega final** | 5: Deploy real, testes E2E Playwright, documentação TCC | 🔜 Próximo |
+| **G — Financeiro** | 2-3: Relatorios + Comissoes + Booking publico | ✅ Concluído |
+| **H — PDV** | 3: Forma pagamento + desconto + vencimento produtos | ✅ Concluído |
+| **I — Comunicação** | 2: WhatsApp + NexusAuth bridge + lembretes | ✅ Concluído |
+| **J — Entrega** | 1: CI + deploy configs (Vercel, Railway) | ✅ Concluído |
+| **K — Entrega final** | 5: Deploy real, testes E2E Playwright, documentação TCC | 🔜 Próximo |
 | **K — Expansão** | Módulos futuros (eventos, comissões, fidelização, LGPD) | 🔲 Pendente |
 
 ---

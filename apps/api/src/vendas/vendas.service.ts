@@ -66,9 +66,11 @@ export class VendasService {
     }
 
     // 2. Calcula o total com base nos preços atuais.
-    const total = itens.reduce((acc, item) => {
+    const totalBruto = itens.reduce((acc, item) => {
       const produto = produtoMap.get(item.produtoId);
       return acc + Number(produto?.preco ?? 0) * item.quantidade;
+    }, 0);
+    const total = Math.max(0, totalBruto - (desconto || 0));
     }, 0);
 
     // 3-7. Transação: cria venda + itens + baixa de estoque (rollback em falha).
