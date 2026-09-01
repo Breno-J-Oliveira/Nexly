@@ -322,6 +322,9 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | Design System (tokens de cor, tipografia Inter, SVG Lucide) | ✅ Aplicado (sidebar + componente) |
 | Skeleton loading global (5 variantes) | ✅ Implementado |
 | Toast system (sonner, tema DS) | ✅ Implementado |
+| Empty states padronizados (5 variantes, c/ CTA) | ✅ Implementado |
+| PageTransition fade-in (framer-motion) | ✅ Implementado |
+| Micro-interacoes (Button active:scale, hover transitions) | ✅ Implementado |
 | Códigos de erro semânticos (BUSY_PROFESSIONAL, OUT_OF_STOCK, etc.) | ✅ Implementados |
 | Protótipo Figma + identidade visual definidos | ✅ Ver [`/capturas`](./capturas/) e vídeo acima |
 | Documentação visual (4 capturas + 1 vídeo do protótipo) | ✅ Em [`/capturas`](./capturas/) |
@@ -339,7 +342,7 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | **C — Agenda** | 2: Clientes, profissionais, serviços e agendamentos | ✅ Concluído |
 | **D — Estoque/PDV** | 3: Produtos, movimentações e vendas | ✅ Concluído |
 | **E — Integração** | 4: Baixa automática de estoque + Dashboard | ✅ Concluído |
-| **F — Visual** | 0: Design System + sidebar redesign + skeleton/toast | ✅ Concluído |
+| **F — Visual** | 0: Design System, empty states, animations, micro-interactions | ✅ Concluído |
 | **G — Entrega** | 5: Deploy, testes E2E e documentação | 🔜 Próximo |
 | **H — Expansão** | Módulos futuros (eventos, comissões, fidelização, LGPD) | 🔲 Pendente |
 
