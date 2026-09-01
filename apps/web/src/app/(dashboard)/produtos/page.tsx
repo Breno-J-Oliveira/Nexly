@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
 import { toastSuccess } from '@/components/ui/Toaster';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { formatarDataHora } from '@/lib/format';
 
 interface Produto {
