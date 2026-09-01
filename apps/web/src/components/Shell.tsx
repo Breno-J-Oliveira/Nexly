@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 
 function SvgIcon({ d, active }: { d: string; active: boolean }) {
@@ -51,7 +51,7 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen" style={{ backgroundColor: '#0C0C10' }}>
       <aside
-        className="fixed inset-y-0 left-0 flex w-60 flex-col"
+        className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col transition-transform duration-200 max-md:-translate-x-full md:translate-x-0"
         style={{ borderRight: '1px solid rgba(255,255,255,0.06)', backgroundColor: '#111116' }}
       >
         <div className="flex h-14 items-center gap-2.5 px-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
