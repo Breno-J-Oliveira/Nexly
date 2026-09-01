@@ -326,6 +326,13 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | PageTransition fade-in (framer-motion) | ✅ Implementado |
 | Responsive sidebar (colapsa em mobile <768px) | ✅ Implementado |
 | Deploy configs (Vercel + Railway + CI build) | ✅ Configurado |
+| WhatsApp integration (Evolution/Twilio/Meta + lembretes) | ✅ Implementado |
+| NexusAuth bridge (auth delegation + fallback local) | ✅ Integrado (services/nexusauth/) |
+| Relatorio financeiro (faturamento/CMV/margem) | ✅ Implementado |
+| Configuracoes da empresa | ✅ Implementado (API + frontend) |
+| Toast feedback global (sonner, 6 telas) | ✅ Implementado |
+| Filtro por profissional na Agenda | ✅ Implementado |
+| Seed enriquecido (6 entradas estoque, 40 agendamentos, 20 vendas) | ✅ Atualizado |
 | Micro-interacoes (Button active:scale, hover transitions) | ✅ Implementado |
 | Códigos de erro semânticos (BUSY_PROFESSIONAL, OUT_OF_STOCK, etc.) | ✅ Implementados |
 | Protótipo Figma + identidade visual definidos | ✅ Ver [`/capturas`](./capturas/) e vídeo acima |
@@ -345,9 +352,11 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | **D — Estoque/PDV** | 3: Produtos, movimentações e vendas | ✅ Concluído |
 | **E — Integração** | 4: Baixa automática de estoque + Dashboard | ✅ Concluído |
 | **F — Visual** | 0: DS, sidebar, skeleton, toast, empty states, animations, micro-interactions, responsive | ✅ Concluído |
-| **G — Entrega** | 1: CI + deploy configs (Vercel, Railway) | ✅ Concluído |
-| **H — Entrega** | 5: Deploy real, testes E2E e documentação final | 🔜 Próximo |
-| **I — Expansão** | Módulos futuros (eventos, comissões, fidelização, LGPD) | 🔲 Pendente |
+| **G — Financeiro** | 2: Relatorios (faturamento/CMV/margem) + Configuracoes | ✅ Concluído |
+| **H — Comunicação** | 2: WhatsApp + NexusAuth bridge + lembretes | ✅ Concluído |
+| **I — Entrega** | 1: CI + deploy configs (Vercel, Railway) | ✅ Concluído |
+| **J — Entrega final** | 5: Deploy real, testes E2E Playwright, documentação TCC | 🔜 Próximo |
+| **K — Expansão** | Módulos futuros (eventos, comissões, fidelização, LGPD) | 🔲 Pendente |
 
 ---
 
