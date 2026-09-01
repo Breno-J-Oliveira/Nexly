@@ -326,6 +326,14 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | PageTransition fade-in (framer-motion) | ✅ Implementado |
 | Responsive sidebar (colapsa em mobile <768px) | ✅ Implementado |
 | Deploy configs (Vercel + Railway + CI build) | ✅ Configurado |
+| useApi hook (loading/error/refetch) | ✅ Implementado |
+| PageHeader padronizado | ✅ Implementado |
+| ErrorState com retry | ✅ Implementado |
+| Modal animado (slide-up, click-outside) | ✅ Implementado |
+| DTO de paginacao padronizado | ✅ Implementado |
+| Componente DataTable reutilizavel | ✅ Implementado |
+| Alertas de produtos vencendo (30 dias) | ✅ Implementado |
+| CSV export de vendas (download com filtro por periodo) | ✅ Implementado |
 | Agendamento online publico (booking page 4-step) | ✅ Implementado |
 | Comissao de profissionais (faturamento + %) | ✅ Implementado |
 | PDV com forma de pagamento (Dinheiro/Cartao/PIX) | ✅ Implementado |
@@ -359,8 +367,9 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | **E — Integração** | 4: Baixa automática de estoque + Dashboard | ✅ Concluído |
 | **F — Visual** | 0: DS, sidebar, skeleton, toast, empty states, animations, micro-interactions, responsive | ✅ Concluído |
 | **G — Financeiro** | 2-3: Relatorios + Comissoes + Booking publico | ✅ Concluído |
-| **H — PDV** | 3: Forma pagamento + desconto + vencimento produtos | ✅ Concluído |
+| **H — PDV** | 3: Forma pagamento + desconto + vencimento produtos + export CSV | ✅ Concluído |
 | **I — Comunicação** | 2: WhatsApp + NexusAuth bridge + lembretes | ✅ Concluído |
+| **— UI Components** | 0: DataTable, Modal, PageHeader, ErrorState, Skeleton, Toast, EmptyState | ✅ Concluído |
 | **J — Entrega** | 1: CI + deploy configs (Vercel, Railway) | ✅ Concluído |
 | **K — Entrega final** | 5: Deploy real, testes E2E Playwright, documentação TCC | 🔜 Próximo |
 | **K — Expansão** | Módulos futuros (eventos, comissões, fidelização, LGPD) | 🔲 Pendente |
