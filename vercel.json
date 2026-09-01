@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd ../.. && npx turbo run build --filter=@nexly/web",
+  "outputDirectory": "../../apps/web/.next",
+  "installCommand": "npm ci",
+  "framework": "nextjs",
+  "regions": ["gru1"]
+}
