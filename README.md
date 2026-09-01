@@ -11,7 +11,8 @@
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <br>
   <img src="https://img.shields.io/badge/tests-93_passing-brightgreen?style=flat-square" alt="Tests">
-  <img src="https://img.shields.io/badge/fases-0--4_concluídas-brightgreen?style=flat-square" alt="Fases">
+  <img src="https://img.shields.io/badge/suites-14-7B61FF?style=flat-square" alt="Suites">
+  <img src="https://img.shields.io/badge/fases-0-a-4_+_DS_concluídas-brightgreen?style=flat-square" alt="Fases">
   <img src="https://img.shields.io/badge/licença-educacional-blue?style=flat-square" alt="License">
 </p>
 
@@ -318,6 +319,9 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | Histórico de vendas com filtro e expansão | ✅ Implementado |
 | Health checks (`/health`, `/health/deep`, `/health/migrations`, `/health/version`) | ✅ Implementados |
 | Login rate limit (5 falhas / 15 min, por email+IP) | ✅ Implementado |
+| Design System (tokens de cor, tipografia Inter, SVG Lucide) | ✅ Aplicado (sidebar + componente) |
+| Skeleton loading global (5 variantes) | ✅ Implementado |
+| Toast system (sonner, tema DS) | ✅ Implementado |
 | Códigos de erro semânticos (BUSY_PROFESSIONAL, OUT_OF_STOCK, etc.) | ✅ Implementados |
 | Protótipo Figma + identidade visual definidos | ✅ Ver [`/capturas`](./capturas/) e vídeo acima |
 | Documentação visual (4 capturas + 1 vídeo do protótipo) | ✅ Em [`/capturas`](./capturas/) |
@@ -335,8 +339,9 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | **C — Agenda** | 2: Clientes, profissionais, serviços e agendamentos | ✅ Concluído |
 | **D — Estoque/PDV** | 3: Produtos, movimentações e vendas | ✅ Concluído |
 | **E — Integração** | 4: Baixa automática de estoque + Dashboard | ✅ Concluído |
-| **F — Entrega** | 5: Deploy, testes E2E e documentação | 🔜 Próximo |
-| **G — Expansão** | Módulos futuros (eventos, comissões, fidelização, LGPD) | 🔲 Pendente |
+| **F — Visual** | 0: Design System + sidebar redesign + skeleton/toast | ✅ Concluído |
+| **G — Entrega** | 5: Deploy, testes E2E e documentação | 🔜 Próximo |
+| **H — Expansão** | Módulos futuros (eventos, comissões, fidelização, LGPD) | 🔲 Pendente |
 
 ---
 
