@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
+import { toastSuccess } from '@/components/ui/Toaster';
 import { formatarDataHora } from '@/lib/format';
 
 interface Produto {
@@ -147,6 +148,7 @@ export default function ProdutosPage() {
         });
       }
       setModalAberto(false);
+    toastSuccess(editandoId ? 'Produto atualizado!' : 'Produto criado!');
       await carregar(busca || undefined);
     } catch (e) {
       const err = e as { response?: { data?: { message?: string } } };

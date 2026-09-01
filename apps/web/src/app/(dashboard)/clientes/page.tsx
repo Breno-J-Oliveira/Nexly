@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
 import { maskTelefone, soDigitos } from '@/lib/format';
+import { toastSuccess } from '@/components/ui/Toaster';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 interface Cliente {
@@ -100,6 +101,7 @@ export default function ClientesPage() {
         await api.post('/clientes', payload);
       }
       setModalAberto(false);
+      toastSuccess(editandoId ? 'Cliente atualizado!' : 'Cliente criado!');
       await carregar(busca || undefined);
     } catch (e) {
       const err = e as { response?: { data?: { message?: string } } };
@@ -112,6 +114,7 @@ export default function ClientesPage() {
   const excluir = async (c: Cliente): Promise<void> => {
     if (!confirm(`Excluir o cliente "${c.nome}"?`)) return;
     await api.delete(`/clientes/${c.id}`);
+    toastSuccess('Cliente excluído!');
     await carregar(busca || undefined);
   };
 

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
+import { toastSuccess } from '@/components/ui/Toaster';
 import { AgendamentoModal } from './AgendamentoModal';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -60,6 +61,7 @@ export default function AgendaPage() {
 
   const mudarStatus = async (id: string, status: StatusAgendamento): Promise<void> => {
     await api.patch(`/agendamentos/${id}/status`, { status });
+    toastSuccess(status === 'CONCLUIDO' ? 'Serviço concluído!' : status === 'CANCELADO' ? 'Agendamento cancelado' : 'Status atualizado!');
     await carregar();
   };
 

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
+import { toastSuccess, toastError } from '@/components/ui/Toaster';
 
 interface Produto {
   id: string;
@@ -90,6 +91,7 @@ export default function PdvPage() {
       setItens([]);
       setClienteId('');
       setSucesso(true);
+    toastSuccess('Venda concluída!');
       setTimeout(() => setSucesso(false), 3000);
     } finally {
       setFinalizando(false);

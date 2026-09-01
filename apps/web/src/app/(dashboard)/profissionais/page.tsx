@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
+import { toastSuccess } from '@/components/ui/Toaster';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 
@@ -66,6 +67,7 @@ export default function ProfissionaisPage() {
         await api.post('/profissionais', payload);
       }
       setModalAberto(false);
+    toastSuccess(editandoId ? 'Profissional atualizado!' : 'Profissional cadastrado!');
       await carregar();
     } catch (e) {
       const err = e as { response?: { data?: { message?: string } } };
