@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
-import { PageHeader } from '@/components/ui/PageHeader';
 
 interface Servico {
   id: string;
@@ -75,7 +74,52 @@ export default function ServicosPage() {
 
   return (
     <div>
-      <PageHeader title="Servicos" description="Gerencie os servicos e seus insumos" />
+      <h2 className="text-xl font-semibold text-zinc-100">Serviços</h2>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-2">
+          {servicos.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => void selecionar(s)}
+              className={`w-full rounded-lg border p-4 text-left ${
+                selecionado?.id === s.id
+                  ? 'border-primary-500 bg-primary-500/10'
+                  : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700'
+              }`}
+            >
+              <p className="font-medium text-zinc-100">{s.nome}</p>
+              <p className="text-sm text-zinc-400">
+                {s.duracaoMin} min · R$ {Number(s.preco).toFixed(2)}
+              </p>
+            </button>
+          ))}
+        </div>
+
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+          {selecionado ? (
+            <>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-zinc-100">Insumos — {selecionado.nome}</h3>
+                <Button onClick={() => setModalAberto(true)}>+ Insumo</Button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {insumos.length === 0 && (
+                  <p className="text-sm text-zinc-400">Nenhum insumo configurado.</p>
+                )}
+                {insumos.map((i) => (
+                  <div
+                    key={i.produtoId}
+                    className="flex items-center justify-between rounded-lg border border-zinc-800 px-3 py-2"
+                  >
+                    <span className="text-sm font-medium text-zinc-100">{i.produto.nome}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-zinc-400">{i.quantidade} un.</span>
+                      <button onClick={() => void remover(i.produtoId)} className="text-red-400">
+                        ✕
+                      </button>
+                    </div>
+                  </div>
                 ))}
               </div>
             </>
