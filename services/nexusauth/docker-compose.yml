@@ -1,0 +1,113 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: nexusauth
+    # M4 fix: do not expose DB port to host — only accessible within nexus-net
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus -d nexusauth"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - nexus-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    restart: unless-stopped
+    # M4 fix: do not expose Redis port to host — only accessible within nexus-net
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+    environment:
+      # SECURITY: Use REDISCLI_AUTH env var instead of passing password as CLI argument.
+      # CLI arguments are visible in docker inspect, /proc/<pid>/cmdline, and container logs.
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexus-net
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nexus-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      # M4 fix: override REDIS_URL to include password (matches redis service requirepass)
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379
+      # M4 fix: override DATABASE_URL to include password (matches postgres service)
+      DATABASE_URL: postgresql://nexus:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/nexusauth
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - keys_data:/app/keys
+    networks:
+      - nexus-net
+
+  test-app:
+    build:
+      context: ./docker/test-app
+      dockerfile: Dockerfile
+    container_name: nexus-test-app
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      API_URL: http://api:3000
+    depends_on:
+      - api
+    networks:
+      - nexus-net
+
+  jest-runner:
+    build:
+      context: .
+      dockerfile: docker/jest-runner/Dockerfile
+    container_name: nexus-jest-runner
+    restart: "no"
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://nexus:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/nexusauth
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379
+      TRUST_PROXY_HOPS: 0
+      JWT_ISSUER: nexusauth
+      REQUIRE_EMAIL_VERIFIED: 'false'
+      REQUEST_BODY_LIMIT: 100kb
+      JWT_PRIVATE_KEY_PATH: ./keys/private.pem
+      JWT_PUBLIC_KEY_PATH: ./keys/public.pem
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nexus-net
+
+
+volumes:
+  postgres_data:
+  redis_data:
+  keys_data:
+
+networks:
+  nexus-net:
+    driver: bridge

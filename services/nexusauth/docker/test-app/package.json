@@ -1,0 +1,9 @@
+{
+  "name": "nexusauth-test-app",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

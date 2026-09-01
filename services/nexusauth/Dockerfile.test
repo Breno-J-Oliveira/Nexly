@@ -1,0 +1,21 @@
+FROM node:20-alpine AS test
+
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY prisma ./prisma
+RUN npx prisma generate
+
+COPY tsconfig.json tsconfig.build.json nest-cli.json ./
+COPY src ./src
+COPY test ./test
+
+RUN mkdir -p /app/keys && \
+    openssl genrsa -out /app/keys/private.pem 2048 && \
+    openssl rsa -in /app/keys/private.pem -pubout -out /app/keys/public.pem
+
+CMD ["npx", "jest", "--config", "test/jest-e2e.config.ts", "--forceExit", "--verbose"]

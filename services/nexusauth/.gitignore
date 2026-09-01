@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+keys/
+*.pem
+*.log
+.DS_Store
+coverage/
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# Temp test files
+tmp_*.json
+test_*.json
+req_*.json

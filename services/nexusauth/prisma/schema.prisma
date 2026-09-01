@@ -1,0 +1,275 @@
+// ============================================================
+// NexusAuth — Prisma Schema (Fase 1: Fundação)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum AuditAction {
+  LOGIN
+  LOGIN_FAILED
+  LOGOUT
+  REGISTER
+  PASSWORD_CHANGED
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_RESET_COMPLETED
+  EMAIL_VERIFIED
+  TWO_FACTOR_ENABLED
+  TWO_FACTOR_DISABLED
+  TWO_FACTOR_CHALLENGE
+  SESSION_REVOKED
+  GLOBAL_LOGOUT
+  IMPERSONATION_STARTED
+  IMPERSONATION_ENDED
+  API_KEY_CREATED
+  API_KEY_REVOKED
+  TENANT_USER_INVITED
+  TENANT_USER_REMOVED
+  REFRESH_TOKEN_REUSE_DETECTED
+}
+
+// ============================================================
+// Models
+// ============================================================
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  password         String?  // bcrypt hash (null se OAuth2-only)
+  name             String
+  emailVerified    Boolean  @default(false)
+  role             Role     @default(USER)
+  tenantId         String?  // null = usuário global
+  tenant           Tenant?  @relation(fields: [tenantId], references: [id])
+  permissions      String[] @default([]) // permissões granulares: users:read, billing:manage, etc.
+
+  // 2FA
+  twoFactorEnabled Boolean  @default(false)
+  twoFactorSecret  String?  // TOTP secret (criptografado)
+
+  // OAuth2
+  googleId         String?
+  githubId         String?
+
+  // Password history (últimos 5 hashes)
+  passwordHistory  String[]
+
+  // 2FA backup codes (hashed, consumed on use)
+  backupCodes      String[]
+
+  // Relacionamentos
+  refreshTokens      RefreshToken[]
+  sessions           Session[]
+  auditLogs          AuditLog[]
+  apiKeys            ApiKey[]
+  webhooks           Webhook[]
+  passwordResets     PasswordReset[]
+  emailVerifications EmailVerification[]
+  magicLinks         MagicLink[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([googleId])
+  @@index([githubId])
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  plan      Plan     @default(FREE)
+  users     User[]
+  invitations TenantInvitation[]
+  apiKeys   ApiKey[]
+  webhooks  Webhook[]
+  createdAt DateTime @default(now())
+}
+
+model TenantInvitation {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  email     String   // email do convidado
+  role      Role     @default(USER)
+  token     String   @unique
+  invitedBy String   // userId de quem convidou
+  accepted  Boolean  @default(false)
+  expiresAt DateTime // 7 dias
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id])
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@index([revoked])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  // Informações do dispositivo
+  device       String   // "Chrome on Windows", "Safari on iPhone"
+  ipAddress    String
+  location     String?  // "São Paulo, BR" (geolocalização por IP)
+  userAgent    String
+  // Controle
+  active       Boolean  @default(true)
+  lastActiveAt DateTime @default(now())
+  refreshTokens RefreshToken[]
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([active])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  // null para eventos anônimos (login falhado)
+  user      User?    @relation(fields: [userId], references: [id])
+  action    AuditAction
+  // Metadados
+  ipAddress String?
+  userAgent String?
+  location  String?
+  // Detalhes
+  metadata  Json?    // dados extras do evento
+  success   Boolean  @default(true) // false para tentativas falhadas
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model ApiKey {
+  id          String   @id @default(uuid())
+  name        String   // nome identificador da chave
+  key         String   @unique // hash da chave (prefixo nexus_xxx...)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  permissions String[] // permissões específicas da chave
+  active      Boolean  @default(true)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model Webhook {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  url       String   // endpoint do app que recebe o webhook
+  events    String[] // ["user.login", "user.registered", ...]
+  secret    String   // segredo para assinar o payload (HMAC)
+  active    Boolean  @default(true)
+  deliveries WebhookDelivery[]
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model WebhookDelivery {
+  id          String   @id @default(uuid())
+  webhookId   String
+  webhook     Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event       String   // nome do evento disparado
+  payload     Json     // payload enviado
+  statusCode  Int?     // HTTP status code da resposta (null se não respondeu)
+  attempt     Int      // número da tentativa (1, 2, 3)
+  success     Boolean  @default(false)
+  errorMessage String? // erro se falhou
+  createdAt   DateTime @default(now())
+
+  @@index([webhookId])
+  @@index([event])
+  @@index([createdAt])
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime // 15 minutos
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime // 24 horas
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model MagicLink {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  email     String
+  token     String   @unique
+  expiresAt DateTime // 15 minutos
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([expiresAt])
+}
