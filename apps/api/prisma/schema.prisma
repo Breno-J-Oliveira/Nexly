@@ -228,6 +228,8 @@ model Venda {
   total         Decimal  @db.Decimal(10, 2)
   formaPagamento String? @default("DINHEIRO") @map("forma_pagamento")
   desconto       Decimal? @default(0) @db.Decimal(10, 2)
+  valorPago      Decimal? @db.Decimal(10, 2) @map("valor_pago")
+  troco          Decimal? @default(0) @db.Decimal(10, 2)
   createdAt     DateTime @default(now()) @map("created_at")
 
   cliente     Cliente?     @relation(fields: [clienteId], references: [id], onDelete: SetNull)

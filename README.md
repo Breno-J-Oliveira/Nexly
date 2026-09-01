@@ -326,6 +326,11 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | PageTransition fade-in (framer-motion) | ✅ Implementado |
 | Responsive sidebar (colapsa em mobile <768px) | ✅ Implementado |
 | Deploy configs (Vercel + Railway + CI build) | ✅ Configurado |
+| Top produtos por faturamento | ✅ Implementado |
+| Pagina de Usuarios (CRUD completo) | ✅ Implementado |
+| Pagina de Relatorios (DRE + Fluxo de Caixa) | ✅ Implementado |
+| Gestao de usuarios com RBAC (ADMIN/GESTOR/CAIXA) | ✅ Implementado |
+| Modulo Financeiro (DRE, CMV, margem, fluxo de caixa) | ✅ Implementado |
 | useApi hook (loading/error/refetch) | ✅ Implementado |
 | PageHeader padronizado | ✅ Implementado |
 | ErrorState com retry | ✅ Implementado |
@@ -370,8 +375,9 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | **H — PDV** | 3: Forma pagamento + desconto + vencimento produtos + export CSV | ✅ Concluído |
 | **I — Comunicação** | 2: WhatsApp + NexusAuth bridge + lembretes | ✅ Concluído |
 | **— UI Components** | 0: DataTable, Modal, PageHeader, ErrorState, Skeleton, Toast, EmptyState | ✅ Concluído |
-| **J — Entrega** | 1: CI + deploy configs (Vercel, Railway) | ✅ Concluído |
-| **K — Entrega final** | 5: Deploy real, testes E2E Playwright, documentação TCC | 🔜 Próximo |
+| **J — Financeiro** | 4: DRE + Fluxo de Caixa + RBAC Usuarios | ✅ Concluído |
+| **K — Entrega** | 1: CI + deploy configs (Vercel, Railway) | ✅ Concluído |
+| **L — Entrega final** | 5: Deploy real, testes E2E Playwright, documentação TCC | 🔜 Próximo |
 | **K — Expansão** | Módulos futuros (eventos, comissões, fidelização, LGPD) | 🔲 Pendente |
 
 ---

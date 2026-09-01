@@ -13,6 +13,7 @@ import {
   YAxis,
 } from 'recharts';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { VencimentoAlert } from '@/components/ui/VencimentoAlert';
 import { api } from '@/lib/api';
 
 interface DashboardData {
