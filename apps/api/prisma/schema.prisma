@@ -43,6 +43,10 @@ model Empresa {
   nome      String
   cnpj      String   @unique
   plano     Plano    @default(FREE)
+  bookingToken String? @unique @map("booking_token")
+  horarioAbertura   String? @default("08:00") @map("horario_abertura")
+  horarioFechamento String? @default("20:00") @map("horario_fechamento")
+  diasFuncionamento String? @default("1,2,3,4,5,6") @map("dias_funcionamento")
   createdAt DateTime @default(now()) @map("created_at")
 
   usuarios Usuario[]
@@ -107,6 +111,8 @@ model Profissional {
   empresaId     String   @map("empresa_id")
   nome          String
   especialidade String?
+  comissaoPercentual Float @default(0) @map("comissao_percentual")
+  fotoUrl   String? @map("foto_url")
   ativo         Boolean  @default(true)
   createdAt     DateTime @default(now()) @map("created_at")
 
@@ -214,6 +220,8 @@ model Venda {
   clienteId     String?  @map("cliente_id")
   agendamentoId String?  @map("agendamento_id")
   total         Decimal  @db.Decimal(10, 2)
+  formaPagamento String? @default("DINHEIRO") @map("forma_pagamento")
+  desconto       Decimal? @default(0) @db.Decimal(10, 2)
   createdAt     DateTime @default(now()) @map("created_at")
 
   cliente     Cliente?     @relation(fields: [clienteId], references: [id], onDelete: SetNull)

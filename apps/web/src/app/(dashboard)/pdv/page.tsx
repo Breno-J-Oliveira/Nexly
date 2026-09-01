@@ -31,6 +31,7 @@ export default function PdvPage() {
   const [clienteId, setClienteId] = useState('');
   const [finalizando, setFinalizando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
+  const [formaPgto, setFormaPgto] = useState(DINHEIRO);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -242,7 +243,7 @@ export default function PdvPage() {
               ))}
             </select>
           </div>
-          <div className="flex justify-between text-lg font-bold text-zinc-100">
+          <div className="mb-3"><label className="mb-1 block text-sm font-medium" style={{color:'#A1A1AA'}}>Forma de pagamento</label><select value={formaPgto} onChange={(e)=>setFormaPgto(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-[13px]" style={{backgroundColor:'#111116',borderColor:'rgba(255,255,255,0.10)',color:'#FAFAFA'}}><option value="DINHEIRO">Dinheiro</option><option value="CARTAO_CREDITO">Cartao de Credito</option><option value="CARTAO_DEBITO">Cartao de Debito</option><option value="PIX">PIX</option></select></div><div className="flex justify-between text-lg font-bold text-zinc-100">
             <span>Total</span>
             <span>
               {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}
