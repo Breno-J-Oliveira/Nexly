@@ -43,7 +43,7 @@ export class VendasService {
    * @throws NotFoundException se algum produto não existir.
    * @throws ConflictException se algum produto não tiver saldo suficiente.
    */
-  async criar(clienteId: string | undefined, itens: ItemVendaDto[]) {
+  async criar(clienteId: string | undefined, itens: ItemVendaDto[], opcoes?: { formaPagamento?: string; desconto?: number }) {
     if (itens.length === 0) {
       throw new BadRequestException('A venda deve ter ao menos um item');
     }
@@ -66,15 +66,16 @@ export class VendasService {
     }
 
     // 2. Calcula o total com base nos preços atuais.
-    const total = itens.reduce((acc, item) => {
+    const totalBruto = itens.reduce((acc, item) => {
       const produto = produtoMap.get(item.produtoId);
       return acc + Number(produto?.preco ?? 0) * item.quantidade;
     }, 0);
+    const total = Math.max(0, totalBruto - (opcoes?.desconto || 0));
 
     // 3-7. Transação: cria venda + itens + baixa de estoque (rollback em falha).
     const venda = await this.prisma.client.$transaction(async (tx) => {
       const v = await tx.venda.create({
-        data: { clienteId, total } as Prisma.VendaUncheckedCreateInput,
+        data: { clienteId, total, formaPagamento: opcoes?.formaPagamento || undefined, desconto: opcoes?.desconto || 0 } as Prisma.VendaUncheckedCreateInput,
       });
 
       for (const item of itens) {

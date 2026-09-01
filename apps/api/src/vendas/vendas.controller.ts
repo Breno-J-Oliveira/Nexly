@@ -17,7 +17,7 @@ export class VendasController {
 
   @Post()
   criar(@Body() dto: CriarVendaDto & { formaPagamento?: string; desconto?: number }) {
-    return this.vendasService.criar(dto.clienteId, dto.itens);
+    return this.vendasService.criar(dto.clienteId, dto.itens, { formaPagamento: (dto as any).formaPagamento, desconto: (dto as any).desconto });
   }
 
   @Get()
