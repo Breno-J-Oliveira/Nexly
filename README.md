@@ -324,11 +324,13 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | Toast system (sonner, tema DS) | ✅ Implementado |
 | Empty states padronizados (5 variantes, c/ CTA) | ✅ Implementado |
 | PageTransition fade-in (framer-motion) | ✅ Implementado |
+| Responsive sidebar (colapsa em mobile <768px) | ✅ Implementado |
+| Deploy configs (Vercel + Railway + CI build) | ✅ Configurado |
 | Micro-interacoes (Button active:scale, hover transitions) | ✅ Implementado |
 | Códigos de erro semânticos (BUSY_PROFESSIONAL, OUT_OF_STOCK, etc.) | ✅ Implementados |
 | Protótipo Figma + identidade visual definidos | ✅ Ver [`/capturas`](./capturas/) e vídeo acima |
 | Documentação visual (4 capturas + 1 vídeo do protótipo) | ✅ Em [`/capturas`](./capturas/) |
-| Deploy (Vercel + Railway) | 🔜 Próximo |
+| Deploy (Vercel + Railway) | ✅ Configurado (vercel.json, Procfile) |
 | Testes E2E (Playwright) | 🔜 Próximo |
 
 ---
@@ -342,9 +344,10 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | **C — Agenda** | 2: Clientes, profissionais, serviços e agendamentos | ✅ Concluído |
 | **D — Estoque/PDV** | 3: Produtos, movimentações e vendas | ✅ Concluído |
 | **E — Integração** | 4: Baixa automática de estoque + Dashboard | ✅ Concluído |
-| **F — Visual** | 0: Design System, empty states, animations, micro-interactions | ✅ Concluído |
-| **G — Entrega** | 5: Deploy, testes E2E e documentação | 🔜 Próximo |
-| **H — Expansão** | Módulos futuros (eventos, comissões, fidelização, LGPD) | 🔲 Pendente |
+| **F — Visual** | 0: DS, sidebar, skeleton, toast, empty states, animations, micro-interactions, responsive | ✅ Concluído |
+| **G — Entrega** | 1: CI + deploy configs (Vercel, Railway) | ✅ Concluído |
+| **H — Entrega** | 5: Deploy real, testes E2E e documentação final | 🔜 Próximo |
+| **I — Expansão** | Módulos futuros (eventos, comissões, fidelização, LGPD) | 🔲 Pendente |
 
 ---
 

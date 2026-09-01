@@ -34,18 +34,25 @@ export default function AgendaPage() {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
   const [carregando, setCarregando] = useState(true);
+  const [profissionais, setProfissionais] = useState<{ id: string; nome: string }[]>([]);
+  const [profissionalId, setProfissionalId] = useState<string>('');
 
   const carregar = useCallback(async () => {
     setCarregando(true);
     try {
       const res = await api.get<{ data: Agendamento[] }>('/agendamentos', {
-        params: { data: dataISO(data), limit: 100 },
+        params: { data: dataISO(data), limit: 100, profissionalId: profissionalId || undefined },
       });
       setAgendamentos(res.data.data);
     } finally {
       setCarregando(false);
     }
-  }, [data]);
+  }, [data, profissionalId]);
+
+  useEffect(() => {
+    api.get<{ data: { id: string; nome: string }[] }>('/profissionais').then(r => 
+      setProfissionais(r.data.data || r.data)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     void carregar();
@@ -147,3 +154,4 @@ export default function AgendaPage() {
     </div>
   );
 }
+
