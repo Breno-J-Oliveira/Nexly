@@ -39,6 +39,7 @@
   "packageManager": "npm@11.16.0",
   "allowScripts": {},
   "dependencies": {
+    "framer-motion": "^13.1.1",
     "sonner": "^2.0.8"
   }
 }

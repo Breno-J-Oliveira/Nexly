@@ -1,5 +1,6 @@
+import { PageTransition } from '@/components/PageTransition';
 import { Shell } from '@/components/Shell';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <Shell>{children}</Shell>;
+  return <Shell><PageTransition>{children}</PageTransition></Shell>;
 }

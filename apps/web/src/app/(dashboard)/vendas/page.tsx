@@ -3,6 +3,8 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
+import { EmptyState } from '@/components/ui/EmptyState';
+
 import { formatarDataHora, formatarMoeda } from '@/lib/format';
 
 interface ItemVenda {
@@ -112,12 +114,14 @@ export default function VendasPage() {
               </tr>
             )}
             {!carregando && vendas.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-zinc-500">
-                  Nenhuma venda encontrada.
-                </td>
-              </tr>
-            )}
+                <tr><td colSpan={5} className="px-4 py-16">
+                  <EmptyState
+                    icon="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    title="Nenhuma venda encontrada"
+                    description="As vendas realizadas no PDV aparecerao aqui"
+                  />
+                </td></tr>
+              )}
             {vendas.map((v) => {
               const aberto = expandida === v.id;
               return (

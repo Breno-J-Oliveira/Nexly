@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
+import { EmptyState } from '@/components/ui/EmptyState';
+
 
 interface Profissional {
   id: string;
@@ -92,9 +94,12 @@ export default function ProfissionaisPage() {
       {carregando ? (
         <p className="mt-8 text-sm text-zinc-400">Carregando…</p>
       ) : profissionais.length === 0 ? (
-        <div className="mt-8 rounded-xl border border-dashed border-zinc-800 p-8 text-center">
-          <p className="text-sm text-zinc-500">Nenhum profissional cadastrado.</p>
-        </div>
+        <EmptyState
+          icon="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+          title="Equipe vazia"
+          description="Adicione os profissionais do seu negocio para comecar a agendar"
+          action={<Button onClick={abrirNovo}>+ Novo profissional</Button>}
+        />
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {profissionais.map((p) => (

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
 import { maskTelefone, soDigitos } from '@/lib/format';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface Cliente {
   id: string;
@@ -156,10 +157,13 @@ export default function ClientesPage() {
             )}
             {!carregando && clientes.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-zinc-500">
-                  {busca
-                    ? `Nenhum cliente encontrado para "${busca}".`
-                    : 'Nenhum cliente cadastrado ainda. Clique em "+ Novo cliente" para começar.'}
+                <td colSpan={4} className="px-4 py-16">
+                  <EmptyState
+                    icon="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    title={busca ? `Nenhum cliente encontrado para "${busca}"` : "Nenhum cliente cadastrado"}
+                    description={busca ? "Verifique a grafia ou cadastre um novo cliente" : "Adicione clientes para comecar a agendar servicos"}
+                    action={!busca ? <Button onClick={abrirNovo}>+ Novo cliente</Button> : undefined}
+                  />
                 </td>
               </tr>
             )}

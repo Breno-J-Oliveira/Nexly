@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
 import { AgendamentoModal } from './AgendamentoModal';
+import { EmptyState } from '@/components/ui/EmptyState';
+
 
 interface Agendamento {
   id: string;
@@ -90,9 +92,12 @@ export default function AgendaPage() {
       <div className="mt-6 space-y-3">
         {carregando && <p className="text-sm text-zinc-400">Carregando…</p>}
         {!carregando && agendamentos.length === 0 && (
-          <div className="rounded-xl border border-dashed border-zinc-700 p-8 text-center">
-            <p className="text-sm text-zinc-400">Nenhum agendamento para este dia.</p>
-          </div>
+          <EmptyState
+            icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            title="Nenhum agendamento para este dia"
+            description="Crie o primeiro agendamento para comecar a atender"
+            action={<Button onClick={() => setModalAberto(true)}>+ Novo agendamento</Button>}
+          />
         )}
         {agendamentos.map((a) => (
           <div
