@@ -63,6 +63,44 @@ export class RelatoriosService {
    * Agendamentos concluídos agrupados por faixa de horário (a cada hora)
    * nos últimos 30 dias.
    */
+
+  /* Faturamento diario com CMV e margem no periodo */
+  async faturamento(dataInicio: string, dataFim: string) {
+    const inicio = new Date(dataInicio); inicio.setHours(0,0,0,0);
+    const fim = new Date(dataFim); fim.setHours(23,59,59,999);
+
+    const [vendas, custos] = await Promise.all([
+      this.prisma.client.venda.findMany({ where: { createdAt: { gte: inicio, lte: fim } }, select: { total: true, createdAt: true } }),
+      this.prisma.client.movimentacaoEstoque.findMany({
+        where: { tipo: 'SAIDA', agendamentoId: { not: null }, createdAt: { gte: inicio, lte: fim } },
+        include: { produto: { select: { preco: true } } },
+      }),
+    ]);
+
+    let faturamentoTotal = 0, custoTotal = 0;
+    for (const v of vendas) faturamentoTotal += Number(v.total);
+    for (const m of custos) custoTotal += Number(m.produto.preco) * m.quantidade;
+
+    const porDia = new Map<string, number>();
+    for (const v of vendas) {
+      const d = v.createdAt.toISOString().slice(0, 10);
+      porDia.set(d, (porDia.get(d) ?? 0) + Number(v.total));
+    }
+
+    const dias = [...porDia.entries()]
+      .map(([data, fat]) => ({ data, faturamento: fat }))
+      .sort((a, b) => a.data.localeCompare(b.data));
+
+    return {
+      faturamentoTotal,
+      custoTotal,
+      margemBruta: faturamentoTotal - custoTotal,
+      margemPercentual: faturamentoTotal === 0 ? 0 : ((faturamentoTotal - custoTotal) / faturamentoTotal) * 100,
+      totalVendas: vendas.length,
+      ticketMedio: vendas.length === 0 ? 0 : faturamentoTotal / vendas.length,
+      porDia: dias,
+    };
+  }
   async horariosPico() {
     const inicio = new Date();
     inicio.setDate(inicio.getDate() - 30);

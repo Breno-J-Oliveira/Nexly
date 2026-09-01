@@ -10,6 +10,11 @@ export class RelatoriosController {
     return this.relatoriosService.insumosPorServico(dataInicio, dataFim);
   }
 
+  @Get('faturamento')
+  faturamento(@Query('dataInicio') dataInicio: string, @Query('dataFim') dataFim: string) {
+    return this.relatoriosService.faturamento(dataInicio, dataFim);
+  }
+
   @Get('horarios-pico')
   horariosPico() {
     return this.relatoriosService.horariosPico();

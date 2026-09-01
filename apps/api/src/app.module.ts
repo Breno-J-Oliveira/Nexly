@@ -22,6 +22,7 @@ import { VendasModule } from './vendas/vendas.module';
 import { RelatoriosModule } from './relatorios/relatorios.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
+import { ConfiguracoesModule } from './configuracoes/configuracoes.module';
 import { RedisModule } from './redis/redis.module';
 
 @Module({
@@ -52,6 +53,7 @@ import { RedisModule } from './redis/redis.module';
     RelatoriosModule,
     DashboardModule,
     WhatsAppModule,
+    ConfiguracoesModule,
   ],
   controllers: [HealthController],
   providers: [
