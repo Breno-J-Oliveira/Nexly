@@ -100,6 +100,10 @@ model Cliente {
   createdAt DateTime @default(now()) @map("created_at")
 
   agendamentos Agendamento[]
+  pontosFidelidade Int @default(0) @map("pontos_fidelidade")
+  totalGasto        Decimal? @default(0) @db.Decimal(10,2) @map("total_gasto")
+  ultimaVisita      DateTime? @map("ultima_visita")
+  tag               String?
   vendas       Venda[]
 
   @@index([empresaId])
@@ -248,3 +252,28 @@ model ItemVenda {
   @@map("itens_venda")
 }
 
+
+model Avaliacao {
+  id            String   @id @default(uuid())
+  empresaId     String   @map("empresa_id")
+  agendamentoId String   @unique @map("agendamento_id")
+  nota          Int      // 0-10 NPS
+  comentario    String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  agendamento   Agendamento @relation(fields: [agendamentoId], references: [id], onDelete: Cascade)
+  @@index([empresaId])
+  @@map("avaliacoes")
+}
+
+model Notificacao {
+  id        String   @id @default(uuid())
+  empresaId String   @map("empresa_id")
+  usuarioId String   @map("usuario_id")
+  titulo    String
+  mensagem  String
+  lida      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([empresaId, usuarioId, lida])
+  @@map("notificacoes")
+}

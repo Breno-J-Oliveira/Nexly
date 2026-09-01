@@ -95,6 +95,8 @@ async function main(): Promise<void> {
       preco: 12.0, estoqueAtual: 50, estoqueMinimo: 10, categoria: 'Manicure',
     },
   });
+  const acetona = await prisma.produto.create({ data: { empresaId: empresa.id, nome: "Acetona 500ml", sku: "ACE-001", preco: 12.00, estoqueAtual: 60, estoqueMinimo: 10, categoria: "Removedores" } });
+
   const esmalte = await prisma.produto.create({
     data: {
       empresaId: empresa.id, nome: 'Esmalte Vermelho 8ml', sku: 'ES-006',

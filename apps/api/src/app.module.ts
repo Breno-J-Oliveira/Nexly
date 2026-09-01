@@ -24,6 +24,9 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { ConfiguracoesModule } from './configuracoes/configuracoes.module';
 import { BookingModule } from './booking/booking.module';
+import { AvaliacoesModule } from './avaliacoes/avaliacoes.module';
+import { FidelidadeModule } from './fidelidade/fidelidade.module';
+import { NotificacoesModule } from './notificacoes/notificacoes.module';
 import { ComissaoModule } from './comissao/comissao.module';
 import { RedisModule } from './redis/redis.module';
 
@@ -58,6 +61,9 @@ import { RedisModule } from './redis/redis.module';
     ConfiguracoesModule,
     BookingModule,
     ComissaoModule,
+    AvaliacoesModule,
+    FidelidadeModule,
+    NotificacoesModule,
   ],
   controllers: [HealthController],
   providers: [
