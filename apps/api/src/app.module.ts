@@ -28,6 +28,8 @@ import { AvaliacoesModule } from './avaliacoes/avaliacoes.module';
 import { FidelidadeModule } from './fidelidade/fidelidade.module';
 import { NotificacoesModule } from './notificacoes/notificacoes.module';
 import { ComissaoModule } from './comissao/comissao.module';
+import { ExportModule } from './export/export.module';
+import { FinanceiroModule } from './financeiro/financeiro.module';
 import { RedisModule } from './redis/redis.module';
 
 @Module({
@@ -61,6 +63,8 @@ import { RedisModule } from './redis/redis.module';
     ConfiguracoesModule,
     BookingModule,
     ComissaoModule,
+    ExportModule,
+    FinanceiroModule,
     AvaliacoesModule,
     FidelidadeModule,
     NotificacoesModule,

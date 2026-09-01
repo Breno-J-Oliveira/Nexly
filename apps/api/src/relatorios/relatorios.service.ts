@@ -5,70 +5,50 @@ import { PrismaService } from '../database/prisma.service';
 export class RelatoriosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Lista de serviços com os insumos configurados e a quantidade total
-   * consumida no período (via baixa automática de estoque em agendamentos).
-   */
   async insumosPorServico(dataInicio: string, dataFim: string) {
     const inicio = new Date(dataInicio);
     const fim = new Date(dataFim);
-
     const servicos = await this.prisma.client.servico.findMany({
       where: { ativo: true },
       include: { insumos: { include: { produto: true } } },
       orderBy: { nome: 'asc' },
     });
-
-    const movimentacoes = await this.prisma.client.movimentacaoEstoque.findMany({
-      where: {
-        tipo: 'SAIDA',
-        agendamentoId: { not: null },
-        createdAt: { gte: inicio, lte: fim },
-      },
+    const movs = await this.prisma.client.movimentacaoEstoque.findMany({
+      where: { tipo: 'SAIDA', agendamentoId: { not: null }, createdAt: { gte: inicio, lte: fim } },
     });
-
-    const agendamentoIds = movimentacoes
-      .map((m) => m.agendamentoId)
-      .filter((x): x is string => x !== null);
-
-    const agendamentos = await this.prisma.client.agendamento.findMany({
-      where: { id: { in: agendamentoIds } },
-      select: { id: true, servicoId: true },
+    const agIds = movs.map((m) => m.agendamentoId).filter((x): x is string => x !== null);
+    const ags = await this.prisma.client.agendamento.findMany({
+      where: { id: { in: agIds } }, select: { id: true, servicoId: true },
     });
-    const servicoPorAgendamento = new Map(agendamentos.map((a) => [a.id, a.servicoId]));
-
-    const consumoMap = new Map<string, Map<string, number>>();
-    for (const m of movimentacoes) {
+    const svPorAg = new Map(ags.map((a) => [a.id, a.servicoId]));
+    const consumo = new Map<string, Map<string, number>>();
+    for (const m of movs) {
       if (!m.agendamentoId) continue;
-      const servicoId = servicoPorAgendamento.get(m.agendamentoId);
-      if (!servicoId) continue;
-      const porProduto = consumoMap.get(servicoId) ?? new Map<string, number>();
-      porProduto.set(m.produtoId, (porProduto.get(m.produtoId) ?? 0) + m.quantidade);
-      consumoMap.set(servicoId, porProduto);
+      const sid = svPorAg.get(m.agendamentoId); if (!sid) continue;
+      const pp = consumo.get(sid) ?? new Map();
+      pp.set(m.produtoId, (pp.get(m.produtoId) ?? 0) + m.quantidade);
+      consumo.set(sid, pp);
     }
-
-    return servicos.map((s) => ({
-      id: s.id,
-      nome: s.nome,
-      insumos: s.insumos.map((i) => ({
-        produtoId: i.produtoId,
-        produtoNome: i.produto.nome,
-        quantidadeConfigurada: i.quantidade,
-        quantidadeConsumida: consumoMap.get(s.id)?.get(i.produtoId) ?? 0,
-      })),
-    }));
+    return servicos.map((s) => ({ id: s.id, nome: s.nome, insumos: s.insumos.map((i) => ({ produtoId: i.produtoId, produtoNome: i.produto.nome, quantidadeConfigurada: i.quantidade, quantidadeConsumida: consumo.get(s.id)?.get(i.produtoId) ?? 0 })) }));
   }
 
-  /**
-   * Agendamentos concluídos agrupados por faixa de horário (a cada hora)
-   * nos últimos 30 dias.
-   */
+  async horariosPico() {
+    const inicio = new Date(); inicio.setDate(inicio.getDate() - 30);
+    const ags = await this.prisma.client.agendamento.findMany({
+      where: { status: 'CONCLUIDO', dataHora: { gte: inicio } }, select: { dataHora: true },
+    });
+    const porHora = new Map<string, number>();
+    for (const a of ags) {
+      const h = String(a.dataHora.getHours()).padStart(2, '0');
+      const chave = h + ':00';
+      porHora.set(chave, (porHora.get(chave) ?? 0) + 1);
+    }
+    return [...porHora.entries()].map(([hora, total]) => ({ hora, total })).sort((a, b) => a.hora.localeCompare(b.hora));
+  }
 
-  /* Faturamento diario com CMV e margem no periodo */
   async faturamento(dataInicio: string, dataFim: string) {
     const inicio = new Date(dataInicio); inicio.setHours(0,0,0,0);
     const fim = new Date(dataFim); fim.setHours(23,59,59,999);
-
     const [vendas, custos] = await Promise.all([
       this.prisma.client.venda.findMany({ where: { createdAt: { gte: inicio, lte: fim } }, select: { total: true, createdAt: true } }),
       this.prisma.client.movimentacaoEstoque.findMany({
@@ -76,49 +56,32 @@ export class RelatoriosService {
         include: { produto: { select: { preco: true } } },
       }),
     ]);
-
-    let faturamentoTotal = 0, custoTotal = 0;
-    for (const v of vendas) faturamentoTotal += Number(v.total);
-    for (const m of custos) custoTotal += Number(m.produto.preco) * m.quantidade;
-
+    let ft = 0, ct = 0;
+    for (const v of vendas) ft += Number(v.total);
+    for (const m of custos) ct += Number(m.produto.preco) * m.quantidade;
     const porDia = new Map<string, number>();
     for (const v of vendas) {
       const d = v.createdAt.toISOString().slice(0, 10);
       porDia.set(d, (porDia.get(d) ?? 0) + Number(v.total));
     }
-
-    const dias = [...porDia.entries()]
-      .map(([data, fat]) => ({ data, faturamento: fat }))
-      .sort((a, b) => a.data.localeCompare(b.data));
-
+    const dias = [...porDia.entries()].map(([data, fat]) => ({ data, faturamento: fat })).sort((a, b) => a.data.localeCompare(b.data));
     return {
-      faturamentoTotal,
-      custoTotal,
-      margemBruta: faturamentoTotal - custoTotal,
-      margemPercentual: faturamentoTotal === 0 ? 0 : ((faturamentoTotal - custoTotal) / faturamentoTotal) * 100,
+      faturamentoTotal: ft, custoTotal: ct, margemBruta: ft - ct,
+      margemPercentual: ft === 0 ? 0 : ((ft - ct) / ft) * 100,
       totalVendas: vendas.length,
-      ticketMedio: vendas.length === 0 ? 0 : faturamentoTotal / vendas.length,
+      ticketMedio: vendas.length === 0 ? 0 : ft / vendas.length,
       porDia: dias,
     };
   }
-  async horariosPico() {
-    const inicio = new Date();
-    inicio.setDate(inicio.getDate() - 30);
 
-    const agendamentos = await this.prisma.client.agendamento.findMany({
-      where: { status: 'CONCLUIDO', dataHora: { gte: inicio } },
-      select: { dataHora: true },
-    });
-
-    const porHora = new Map<string, number>();
-    for (const a of agendamentos) {
-      const hora = String(a.dataHora.getHours()).padStart(2, '0');
-      const chave = `${hora}:00`;
-      porHora.set(chave, (porHora.get(chave) ?? 0) + 1);
-    }
-
-    return [...porHora.entries()]
-      .map(([hora, total]) => ({ hora, total }))
-      .sort((a, b) => a.hora.localeCompare(b.hora));
+  /* Novo: resumo geral do periodo */
+  async resumoGeral(dataInicio: string, dataFim: string) {
+    const [fat, clientes, ags, produtos] = await Promise.all([
+      this.faturamento(dataInicio, dataFim),
+      this.prisma.client.cliente.count({ where: { createdAt: { gte: new Date(dataInicio), lte: new Date(dataFim) } } }),
+      this.prisma.client.agendamento.count({ where: { dataHora: { gte: new Date(dataInicio), lte: new Date(dataFim) } } }),
+      this.prisma.client.produto.count({ where: { ativo: true } }),
+    ]);
+    return { ...fat, novosClientes: clientes, totalAgendamentos: ags, totalProdutosAtivos: produtos };
   }
 }

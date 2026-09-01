@@ -3,20 +3,17 @@ import { RelatoriosService } from './relatorios.service';
 
 @Controller('relatorios')
 export class RelatoriosController {
-  constructor(private readonly relatoriosService: RelatoriosService) {}
+  constructor(private readonly service: RelatoriosService) {}
 
   @Get('insumos-por-servico')
-  insumosPorServico(@Query('dataInicio') dataInicio: string, @Query('dataFim') dataFim: string) {
-    return this.relatoriosService.insumosPorServico(dataInicio, dataFim);
-  }
-
-  @Get('faturamento')
-  faturamento(@Query('dataInicio') dataInicio: string, @Query('dataFim') dataFim: string) {
-    return this.relatoriosService.faturamento(dataInicio, dataFim);
-  }
+  insumos(@Query('dataInicio') di: string, @Query('dataFim') df: string) { return this.service.insumosPorServico(di, df); }
 
   @Get('horarios-pico')
-  horariosPico() {
-    return this.relatoriosService.horariosPico();
-  }
+  horariosPico() { return this.service.horariosPico(); }
+
+  @Get('faturamento')
+  faturamento(@Query('dataInicio') di: string, @Query('dataFim') df: string) { return this.service.faturamento(di, df); }
+
+  @Get('resumo')
+  resumo(@Query('dataInicio') di: string, @Query('dataFim') df: string) { return this.service.resumoGeral(di, df); }
 }
