@@ -37,5 +37,8 @@
     "node": ">=20"
   },
   "packageManager": "npm@11.16.0",
-  "allowScripts": {}
+  "allowScripts": {},
+  "dependencies": {
+    "sonner": "^2.0.8"
+  }
 }

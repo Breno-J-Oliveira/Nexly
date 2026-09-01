@@ -4,27 +4,62 @@
 
 :root {
   color-scheme: dark;
+  --bg-base: #0C0C10;
+  --bg-surface: #111116;
+  --bg-elevated: #18181F;
+  --bg-overlay: #1F1F2A;
+  --brand-500: #6366F1;
+  --brand-400: #818CF8;
+  --brand-600: #4F46E5;
+  --text-primary: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-default: rgba(255,255,255,0.10);
+  --success: #22C55E;
+  --warning: #EAB308;
+  --danger: #EF4444;
+  --info: #3B82F6;
 }
 
 body {
-  @apply bg-zinc-950 text-zinc-100 antialiased;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  @apply bg-primary-500/40 text-white;
+  background: rgba(99,102,241,0.30);
+  color: #FAFAFA;
 }
 
 /* Scrollbar minimalista */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  @apply rounded-full bg-zinc-700;
+  background: rgba(255,255,255,0.08);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-zinc-600;
+  background: rgba(255,255,255,0.14);
+}
+
+/* Skeleton shimmer */
+@layer utilities {
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255,255,255,0.04) 25%,
+      rgba(255,255,255,0.08) 50%,
+      rgba(255,255,255,0.04) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid rgba(99,102,241,0.50);
+  outline-offset: 2px;
 }

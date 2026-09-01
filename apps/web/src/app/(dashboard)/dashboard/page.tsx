@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { api } from '@/lib/api';
 
 interface DashboardData {
@@ -48,8 +49,21 @@ export default function DashboardPage() {
   if (!dados) {
     return (
       <div>
-        <h2 className="text-xl font-semibold text-zinc-100">Dashboard</h2>
-        <p className="mt-4 text-sm text-zinc-400">Carregando…</p>
+        <h2 className="text-xl font-semibold" style={{color:'#FAFAFA'}}>Dashboard</h2>
+        <p className="mt-1 text-sm" style={{color:'#71717A'}}>Visao geral do seu negocio</p>
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Skeleton variant="kpi" count={4} />
+        </div>
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="rounded-xl p-5" style={{backgroundColor:'#111116',border:'1px solid rgba(255,255,255,0.06)'}}>
+            <div className="h-5 w-2/5 rounded skeleton-shimmer" />
+            <div className="mt-4 h-64 rounded skeleton-shimmer" />
+          </div>
+          <div className="rounded-xl p-5" style={{backgroundColor:'#111116',border:'1px solid rgba(255,255,255,0.06)'}}>
+            <div className="h-5 w-2/5 rounded skeleton-shimmer" />
+            <div className="mt-4 h-64 rounded skeleton-shimmer" />
+          </div>
+        </div>
       </div>
     );
   }
