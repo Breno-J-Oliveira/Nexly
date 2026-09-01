@@ -3,6 +3,7 @@
 import { StatusAgendamento } from '@nexly/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
 import { toastSuccess } from '@/components/ui/Toaster';
