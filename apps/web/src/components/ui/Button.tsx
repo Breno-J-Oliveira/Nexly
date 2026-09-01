@@ -16,12 +16,12 @@ export function Button({
   ...props
 }: ButtonProps) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50';
   const variants: Record<string, string> = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-500',
-    secondary: 'border border-zinc-700 bg-zinc-800 text-zinc-100 hover:bg-zinc-700',
-    ghost: 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100',
-    danger: 'bg-red-600 text-white hover:bg-red-500',
+    primary: 'text-[#09090B] hover:opacity-90' style={{backgroundColor:'#6366F1'}},
+    secondary: 'border text-[#FAFAFA] hover:opacity-80' style={{borderColor:'rgba(255,255,255,0.10)',backgroundColor:'#111116'}},
+    ghost: 'text-[#A1A1AA] hover:text-[#FAFAFA]' style={{backgroundColor:'transparent'}},
+    danger: 'bg-[#EF4444] text-white hover:opacity-90',
   };
 
   return (
