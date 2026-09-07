@@ -34,7 +34,7 @@ export class ExportService {
   async produtosVencendo(dias = 30) {
     const limite = new Date();
     limite.setDate(limite.getDate() + dias);
-    return (this.prisma.client as any).produto.findMany({
+    return this.prisma.client.produto.findMany({
       where: { ativo: true, dataVencimento: { not: null, lte: limite, gte: new Date() } },
       select: { id: true, nome: true, sku: true, estoqueAtual: true, dataVencimento: true, lote: true },
       orderBy: { dataVencimento: 'asc' },

@@ -20,7 +20,7 @@ export class FinanceiroService {
 
     const [vendas, custos, despesas] = await Promise.all([
       this.prisma.client.venda.aggregate({ where: { createdAt: { gte: inicio, lte: fim } }, _sum: { total: true, desconto: true } }),
-      (this.prisma.client as any).movimentacaoEstoque.aggregate({
+      this.prisma.client.movimentacaoEstoque.aggregate({
         where: { tipo: 'SAIDA', createdAt: { gte: inicio, lte: fim } },
         _sum: { quantidade: true },
       }),
@@ -32,7 +32,7 @@ export class FinanceiroService {
     const receitaLiquida = receitaBruta - descontos;
 
     // CMV (Custo das Mercadorias Vendidas): soma dos precos dos produtos vendidos
-    const itensVendidos = await (this.prisma.client as any).itemVenda.findMany({
+    const itensVendidos = await this.prisma.client.itemVenda.findMany({
       where: { venda: { createdAt: { gte: inicio, lte: fim } } },
       select: { quantidade: true, precoUnitario: true, produto: { select: { nome: true } } },
     });
@@ -87,7 +87,7 @@ export class FinanceiroService {
     const inicio = new Date(dataInicio); inicio.setHours(0,0,0,0);
     const fim = new Date(dataFim); fim.setHours(23,59,59,999);
 
-    const itens = await (this.prisma.client as any).itemVenda.findMany({
+    const itens = await this.prisma.client.itemVenda.findMany({
       where: { venda: { createdAt: { gte: inicio, lte: fim } } },
       select: { quantidade: true, precoUnitario: true, produto: { select: { id: true, nome: true, sku: true } } },
     });

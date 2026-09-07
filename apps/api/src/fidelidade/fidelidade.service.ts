@@ -6,15 +6,15 @@ export class FidelidadeService {
   constructor(private readonly prisma: PrismaService) {}
 
   async adicionarPontos(clienteId: string, pontos: number) {
-    return (this.prisma.client as any).cliente.update({ where: { id: clienteId }, data: { pontosFidelidade: { increment: pontos }, ultimaVisita: new Date() } });
+    return this.prisma.client.cliente.update({ where: { id: clienteId }, data: { pontosFidelidade: { increment: pontos }, ultimaVisita: new Date() } });
   }
 
   async ranking(empresaId: string, limit = 10) {
-    return (this.prisma.client as any).cliente.findMany({ where: { empresaId }, select: { id: true, nome: true, pontosFidelidade: true, totalGasto: true, ultimaVisita: true, tag: true }, orderBy: { pontosFidelidade: 'desc' }, take: limit });
+    return this.prisma.client.cliente.findMany({ where: { empresaId }, select: { id: true, nome: true, pontosFidelidade: true, totalGasto: true, ultimaVisita: true, tag: true }, orderBy: { pontosFidelidade: 'desc' }, take: limit });
   }
 
   async segmentar(empresaId: string) {
-    const clientes = await (this.prisma.client as any).cliente.findMany({ where: { empresaId }, select: { id: true, nome: true, totalGasto: true, ultimaVisita: true } });
+    const clientes = await this.prisma.client.cliente.findMany({ where: { empresaId }, select: { id: true, nome: true, totalGasto: true, ultimaVisita: true } });
     const agora = Date.now(); const dias30 = 30 * 86400000;
     return clientes.map((c:any) => ({
       id: c.id, nome: c.nome,

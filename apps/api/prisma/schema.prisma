@@ -171,6 +171,7 @@ model Agendamento {
   profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Restrict)
   servico      Servico      @relation(fields: [servicoId], references: [id], onDelete: Restrict)
   vendas       Venda[]
+  avaliacoes   Avaliacao[]
 
   @@index([empresaId, dataHora])
   @@index([profissionalId, status])
