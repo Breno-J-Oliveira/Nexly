@@ -16,8 +16,11 @@ export class VendasController {
   constructor(private readonly vendasService: VendasService) {}
 
   @Post()
-  criar(@Body() dto: CriarVendaDto & { formaPagamento?: string; desconto?: number }) {
-    return this.vendasService.criar(dto.clienteId, dto.itens, { formaPagamento: (dto as any).formaPagamento, desconto: (dto as any).desconto });
+  criar(@Body() dto: CriarVendaDto) {
+    return this.vendasService.criar(dto.clienteId, dto.itens, {
+      formaPagamento: dto.formaPagamento,
+      desconto: dto.desconto,
+    });
   }
 
   @Get()

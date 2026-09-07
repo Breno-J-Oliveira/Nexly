@@ -104,6 +104,7 @@ model Cliente {
   totalGasto        Decimal? @default(0) @db.Decimal(10,2) @map("total_gasto")
   ultimaVisita      DateTime? @map("ultima_visita")
   tag               String?
+  observacoes       String?
   vendas       Venda[]
 
   @@index([empresaId])

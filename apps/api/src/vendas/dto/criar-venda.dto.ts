@@ -1,5 +1,14 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 
 export class ItemVendaDto {
   @IsString()
@@ -19,4 +28,14 @@ export class CriarVendaDto {
   @ValidateNested({ each: true })
   @Type(() => ItemVendaDto)
   itens!: ItemVendaDto[];
+
+  @IsOptional()
+  @IsString()
+  formaPagamento?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(999999999)
+  desconto?: number;
 }

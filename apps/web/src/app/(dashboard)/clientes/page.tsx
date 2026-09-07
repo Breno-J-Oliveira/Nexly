@@ -7,12 +7,15 @@ import { api } from '@/lib/api';
 import { maskTelefone, soDigitos } from '@/lib/format';
 import { toastSuccess } from '@/components/ui/Toaster';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ClienteDrawer } from './ClienteDrawer';
 
 interface Cliente {
   id: string;
   nome: string;
   telefone: string | null;
   email: string | null;
+  createdAt?: string;
+  observacoes?: string | null;
 }
 
 interface FormState {
@@ -33,6 +36,7 @@ export default function ClientesPage() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [totalClientes, setTotalClientes] = useState(0);
+  const [clienteDrawer, setClienteDrawer] = useState<Cliente | null>(null);
   const buscaRef = useRef<HTMLInputElement | null>(null);
 
   // Atalho de teclado: `/` foca o campo de busca (padrão de várias UIs).
@@ -172,10 +176,24 @@ export default function ClientesPage() {
             )}
             {clientes.map((c) => (
               <tr key={c.id} className="hover:bg-zinc-800/30">
-                <td className="px-4 py-3 font-medium text-zinc-100">{c.nome}</td>
+                <td className="px-4 py-3">
+                  <button
+                    className="font-medium text-zinc-100 hover:text-primary-400"
+                    onClick={() => setClienteDrawer(c)}
+                  >
+                    {c.nome}
+                  </button>
+                </td>
                 <td className="px-4 py-3 text-zinc-300">{c.telefone ?? '—'}</td>
                 <td className="px-4 py-3 text-zinc-300">{c.email ?? '—'}</td>
                 <td className="px-4 py-3 text-right">
+                  <Button
+                    variant="ghost"
+                    className="mr-1 text-xs"
+                    onClick={() => setClienteDrawer(c)}
+                  >
+                    Histórico
+                  </Button>
                   <Button variant="ghost" className="mr-1 text-xs" onClick={() => abrirEdicao(c)}>
                     Editar
                   </Button>
@@ -192,6 +210,12 @@ export default function ClientesPage() {
           </tbody>
         </table>
       </div>
+
+      <ClienteDrawer
+        cliente={clienteDrawer}
+        onClose={() => setClienteDrawer(null)}
+        onAtualizar={() => void carregar(busca || undefined)}
+      />
 
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">

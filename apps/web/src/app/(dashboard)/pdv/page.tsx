@@ -31,6 +31,10 @@ export default function PdvPage() {
   const [clienteId, setClienteId] = useState('');
   const [finalizando, setFinalizando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
+  const [mostrarPagamento, setMostrarPagamento] = useState(false);
+  const [formaPagamento, setFormaPagamento] = useState('PIX');
+  const [descontoTipo, setDescontoTipo] = useState<'R$' | '%'>('R$');
+  const [descontoValor, setDescontoValor] = useState('');
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -81,17 +85,31 @@ export default function PdvPage() {
 
   const total = itens.reduce((acc, i) => acc + Number(i.produto.preco) * i.quantidade, 0);
 
+  // Cálculo do desconto (máximo: $ total, nunca negativo).
+  const descontoNumerico = Number(String(descontoValor).replace(',', '.')) || 0;
+  const descontoAplicado =
+    descontoTipo === '%'
+      ? Math.min(total * (Math.min(descontoNumerico, 100) / 100), total)
+      : Math.min(descontoNumerico, total);
+  const totalFinal = Math.max(0, total - descontoAplicado);
+
   const finalizar = async (): Promise<void> => {
     setFinalizando(true);
     try {
       await api.post('/vendas', {
         clienteId: clienteId || undefined,
         itens: itens.map((i) => ({ produtoId: i.produto.id, quantidade: i.quantidade })),
+        formaPagamento,
+        desconto: descontoAplicado > 0 ? Number(descontoAplicado.toFixed(2)) : undefined,
       });
       setItens([]);
       setClienteId('');
       setSucesso(true);
-    toastSuccess('Venda concluída!');
+      setMostrarPagamento(false);
+      setFormaPagamento('PIX');
+      setDescontoTipo('R$');
+      setDescontoValor('');
+      toastSuccess(`Venda finalizada! R$ ${totalFinal.toFixed(2)} no ${formaPagamento}`);
       setTimeout(() => setSucesso(false), 3000);
     } finally {
       setFinalizando(false);
@@ -245,28 +263,112 @@ export default function PdvPage() {
           <div className="flex justify-between text-lg font-bold text-zinc-100">
             <span>Total</span>
             <span>
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                totalFinal,
+              )}
             </span>
           </div>
-          <Tooltip
-            text={
-              itens.length === 0
-                ? 'Adicione produtos ao carrinho primeiro'
-                : sucesso
-                  ? 'Venda registrada com sucesso'
-                  : `Finaliza a venda dos ${itens.length} ${itens.length === 1 ? 'item' : 'itens'}`
-            }
-          >
+
+          {/* Seção de pagamento — aparece após clique em "Continuar" */}
+          {mostrarPagamento && (
+            <div className="mt-4 rounded-lg border border-zinc-800 p-3">
+              <p className="mb-2 text-sm font-semibold text-zinc-200">Forma de pagamento</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  ['Dinheiro', '💰'],
+                  ['Pix', '⚡'],
+                  ['Débito', '💳'],
+                  ['Crédito', '💳'],
+                ] as const).map(([label, icon]) => {
+                  const selecionado = formaPagamento === label;
+                  return (
+                    <button
+                      key={label}
+                      onClick={() => setFormaPagamento(label)}
+                      className="flex h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors"
+                      style={
+                        selecionado
+                          ? { backgroundColor: 'rgba(99,102,241,0.15)', border: '1px solid #6366F1', color: '#818CF8' }
+                          : { backgroundColor: '#18181F', border: '1px solid rgba(255,255,255,0.10)', color: '#A1A1AA' }
+                      }
+                    >
+                      <span>{icon}</span>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-3">
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="text-sm font-medium text-zinc-300">Desconto</label>
+                  <div className="flex overflow-hidden rounded-md border border-zinc-700 text-xs">
+                    {(['R$', '%'] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setDescontoTipo(t)}
+                        className="px-2.5 py-1 transition-colors"
+                        style={
+                          descontoTipo === t
+                            ? { backgroundColor: '#6366F1', color: '#FFFFFF' }
+                            : { color: '#A1A1AA' }
+                        }
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <input
+                  type="number"
+                  min={0}
+                  value={descontoValor}
+                  onChange={(e) => setDescontoValor(e.target.value)}
+                  placeholder={descontoTipo === '%' ? '0' : '0,00'}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                {descontoAplicado > 0 && (
+                  <p className="mt-1 text-sm font-semibold text-red-400">
+                    - {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(descontoAplicado)}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!mostrarPagamento ? (
             <Button
               className="mt-4 w-full"
-              loading={finalizando}
               disabled={itens.length === 0}
-              onClick={finalizar}
+              onClick={() => setMostrarPagamento(true)}
               variant="primary"
             >
-              {sucesso ? 'Venda Finalizada!' : 'Finalizar Venda'}
+              Finalizar Venda
             </Button>
-          </Tooltip>
+          ) : (
+            <Tooltip
+              text={
+                sucesso
+                  ? 'Venda registrada com sucesso'
+                  : `Finaliza a venda no ${formaPagamento} · ${itens.length} ${itens.length === 1 ? 'item' : 'itens'}`
+              }
+            >
+              <Button
+                className="mt-4 w-full"
+                loading={finalizando}
+                disabled={itens.length === 0 || !formaPagamento}
+                onClick={() => void finalizar()}
+                variant="primary"
+              >
+                {sucesso
+                  ? 'Venda Finalizada!'
+                  : `Finalizar — ${new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL',
+                    }).format(totalFinal)}`}
+              </Button>
+            </Tooltip>
+          )}
         </div>
       </div>
     </div>

@@ -14,4 +14,9 @@ export class AtualizarClienteDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 2000)
+  observacoes?: string;
 }

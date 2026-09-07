@@ -24,15 +24,24 @@ interface Servico {
 interface Props {
   onClose: () => void;
   onSuccess: () => void;
+  /** Cliente pré-selecionado (ex: vindo do drawer de histórico). */
+  clienteIdInicial?: string;
+  /** Nome do cliente pré-selecionado (para exibição). */
+  clienteNomeInicial?: string;
 }
 
-export function AgendamentoModal({ onClose, onSuccess }: Props) {
-  const [step, setStep] = useState(1);
+export function AgendamentoModal({
+  onClose,
+  onSuccess,
+  clienteIdInicial,
+  clienteNomeInicial,
+}: Props) {
+  const [step, setStep] = useState(clienteIdInicial ? 2 : 1);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
 
-  const [clienteId, setClienteId] = useState('');
+  const [clienteId, setClienteId] = useState(clienteIdInicial ?? '');
   const [novoClienteNome, setNovoClienteNome] = useState('');
   const [buscaCliente, setBuscaCliente] = useState('');
   const [profissionalId, setProfissionalId] = useState('');
@@ -104,6 +113,13 @@ export function AgendamentoModal({ onClose, onSuccess }: Props) {
             ✕
           </button>
         </div>
+
+        {clienteNomeInicial && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg border border-primary-500/30 bg-primary-500/10 px-3 py-2">
+            <span className="text-sm font-medium text-primary-300">Cliente:</span>
+            <span className="text-sm text-zinc-100">{clienteNomeInicial}</span>
+          </div>
+        )}
 
         {step === 1 && (
           <div className="mt-4 space-y-4">
