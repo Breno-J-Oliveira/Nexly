@@ -47,6 +47,14 @@ model Empresa {
   horarioAbertura   String? @default("08:00") @map("horario_abertura")
   horarioFechamento String? @default("20:00") @map("horario_fechamento")
   diasFuncionamento String? @default("1,2,3,4,5,6") @map("dias_funcionamento")
+  telefone       String?
+  emailContato   String? @map("email_contato")
+  endereco       String?
+  descricao      String?
+  instagram      String?
+  whatsapp       String?
+  horarios       Json?   @map("horarios")
+  notificacoes   Json?   @map("notificacoes")
   createdAt DateTime @default(now()) @map("created_at")
 
   usuarios Usuario[]

@@ -57,3 +57,6 @@ services/nexusauth/.env
 services/nexusauth/keys/
 services/nexusauth/node_modules/
 services/nexusauth/dist/
+
+# Logos de exemplo (assets locais não versionados)
+img/

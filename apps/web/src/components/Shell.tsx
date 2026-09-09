@@ -70,7 +70,7 @@ const NAV_GROUPS: NavGroup[] = [
     { label: 'PDV', href: '/pdv', icon: ICONS.pdv! },
     { label: 'Vendas', href: '/vendas', icon: ICONS.vendas! },
   ]},
-  { label: 'GESTÃO', items: [
+  { label: 'ANÁLISES', items: [
     { label: 'Relatórios', href: '/relatorios', icon: ICONS.relatorios! },
     { label: 'Comissões', href: '/comissao', icon: ICONS.comissao! },
     { label: 'Fidelidade', href: '/fidelidade', icon: ICONS.fidelidade! },
@@ -218,14 +218,14 @@ export function Shell({ children }: { children: ReactNode }) {
           </button>
 
           {/* Breadcrumb */}
-          <h1 className="text-[15px] font-semibold tracking-tight" style={{ color: '#FAFAFA' }}>
+          <h1 className="text-[14px]" style={{ color: '#A1A1AA' }}>
             {pageLabel || 'Nexly'}
           </h1>
 
           <div className="ml-auto flex items-center gap-1">
             {/* Bell (visual) */}
             <button className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/5" style={{ color: '#A1A1AA' }} aria-label="Notificações">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#71717A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
             </button>
@@ -237,14 +237,17 @@ export function Shell({ children }: { children: ReactNode }) {
                 className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/5"
                 aria-label="Menu do usuário"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg text-[12px] font-semibold" style={{ backgroundColor: 'rgba(99,102,241,0.15)', color: '#818CF8' }}>
+                <div className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold" style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}>
                   {iniciais}
                 </div>
-                <span className="hidden text-[13px] font-medium sm:block" style={{ color: '#E4E4E7' }}>{nome}</span>
+                <span className="hidden text-[13px] font-medium sm:block" style={{ color: '#A1A1AA' }}>{nome}</span>
               </button>
 
               {menuAberto && (
-                <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-lg border" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}>
+                <div
+                  className="absolute right-0 mt-2 w-48 overflow-hidden rounded-lg border"
+                  style={{ backgroundColor: '#18181F', borderColor: 'rgba(255,255,255,0.10)', borderRadius: 8, boxShadow: '0 10px 30px rgba(0,0,0,0.4)', zIndex: 50 }}
+                >
                   <Link
                     href="/configuracoes"
                     onClick={() => setMenuAberto(false)}
@@ -253,6 +256,7 @@ export function Shell({ children }: { children: ReactNode }) {
                   >
                     Configurações
                   </Link>
+                  <div className="my-1 h-px" style={{ backgroundColor: 'rgba(255,255,255,0.10)' }} />
                   <button
                     type="button"
                     onClick={() => { setMenuAberto(false); logout(); }}

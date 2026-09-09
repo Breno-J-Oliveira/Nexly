@@ -110,6 +110,7 @@ export default function DashboardPage() {
 
   const margemPct = financeiro?.margemPercentual ?? 0;
   const cor = corMargem(margemPct);
+  const finNull = financeiro === null;
 
   const finCards = [
     {
@@ -138,7 +139,9 @@ export default function DashboardPage() {
       iconBg: 'rgba(34,197,94,0.12)',
       info: true,
     },
-  ];
+  ].map((c) =>
+      finNull ? { ...c, valor: '—', pct: undefined, corValor: '#71717A', sub: '—' } : c,
+  );
 
   const vencendo = dados.vencimentosProximos ?? [];
 
