@@ -37,6 +37,7 @@ apps/api/prisma/*.db
 # Arquivos internos do projeto (não publicar)
 docs/
 .clinerules
+docs-deploy.md
 comunictionIA.md
 configuracao.md
 planejamento.md

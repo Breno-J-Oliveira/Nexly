@@ -6,10 +6,14 @@ import { version } from '../../package.json';
 
 @Controller('health')
 export class HealthController {
+  private readonly startedAt: number;
+
   constructor(
     private readonly prisma: PrismaService,
     @Optional() @Inject('REDIS_SERVICE') private readonly redis?: RedisService,
-  ) {}
+  ) {
+    this.startedAt = Date.now();
+  }
 
   /**
    * Health check "liveness" — sempre 200 enquanto o processo Node estiver vivo.
@@ -30,16 +34,20 @@ export class HealthController {
   @Public()
   @Get('deep')
   async checkDeep() {
-    const checks = await Promise.all([this.checkDb(), this.checkRedis()]);
-    const allOk = checks.every((c) => c.ok);
+    const db = await this.checkDb();
+    const redis = await this.checkRedis();
+    const apiOk = true; // el mero hecho de que este handler responda implica API OK.
     return {
-      status: allOk ? 'ok' : 'degraded',
+      status: db.ok && redis.ok ? 'ok' : 'degraded',
+      api: apiOk ? 'ok' : 'error',
+      db: db.ok ? 'ok' : 'error',
+      redis: redis.ok ? 'ok' : 'error',
+      uptime: Math.round((Date.now() - this.startedAt) / 1000),
       version,
-      uptime: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
       checks: {
-        database: checks[0],
-        redis: checks[1],
+        database: db,
+        redis,
       },
     };
   }
