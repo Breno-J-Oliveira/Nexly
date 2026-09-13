@@ -4,8 +4,13 @@ import { Toaster } from '@/components/ui/Toaster';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Nexly — Gestao para pequenos negocios',
-  description: 'Agenda de servicos + estoque/PDV em uma unica plataforma.',
+  title: 'Nexly — Gestão para pequenos negócios',
+  description: 'Agenda de serviços + estoque/PDV em uma única plataforma.',
+  icons: {
+    icon: '/logo.svg',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useNotifications } from '@/lib/notifications';
 
 /* --- SVG Icons (Lucide outline, 16px, stroke 1.5) --- */
 function SvgIcon({ d, active, size = 16 }: { d: string; active?: boolean; size?: number }) {
@@ -140,13 +141,13 @@ export function Shell({ children }: { children: ReactNode }) {
         style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2.5 px-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: '#6366F1' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
-            </svg>
-          </div>
-          <span className="text-[15px] font-semibold tracking-tight" style={{ color: '#FAFAFA' }}>Nexly</span>
+        <div className="flex h-16 items-center gap-3 px-5">
+          <Link href="/dashboard" className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: '#6366F1' }}>
+              <img src="/logo.svg" alt="Nexly" className="h-5 w-5 object-contain" />
+            </div>
+            <span className="text-[16px] font-semibold tracking-tight" style={{ color: '#FAFAFA' }}>Nexly</span>
+          </Link>
           <button
             onClick={() => setSidebarAberta(false)}
             className="ml-auto md:hidden"

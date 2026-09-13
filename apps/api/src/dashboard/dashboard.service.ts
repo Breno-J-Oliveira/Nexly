@@ -20,22 +20,37 @@ export class DashboardService {
 
     const agora = new Date();
     const inicioDia = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    const fimDia = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + 1);
     const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
     const inicioMesAnterior = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
     const ultimos30d = new Date(agora.getTime() - 30 * 86_400_000);
+    const inicioSemana = new Date(agora.getTime() - agora.getDay() * 86_400_000);
 
     const [
       agendamentosHoje,
+      agendamentosHojeDetalhado,
+      vendasDia,
       vendasMes,
       vendasMesAnterior,
       qtdVendasMes,
       agendamentosConcluidos,
+      agendamentosSemana,
+      profissionaisAtivos,
       saidasPorAgendamento,
       produtos,
     ] = await Promise.all([
       this.prisma.client.agendamento.findMany({
-        where: { dataHora: { gte: inicioDia } },
+        where: { dataHora: { gte: inicioDia, lt: fimDia } },
         select: { status: true },
+      }),
+      this.prisma.client.agendamento.findMany({
+        where: { dataHora: { gte: inicioDia, lt: fimDia } },
+        include: { cliente: true, profissional: true, servico: true },
+        orderBy: { dataHora: 'asc' },
+      }),
+      this.prisma.client.venda.aggregate({
+        where: { createdAt: { gte: inicioDia, lt: fimDia } },
+        _sum: { total: true },
       }),
       this.prisma.client.venda.aggregate({
         where: { createdAt: { gte: inicioMes } },
@@ -50,6 +65,11 @@ export class DashboardService {
         where: { status: 'CONCLUIDO', dataHora: { gte: ultimos30d } },
         include: { servico: true },
       }),
+      this.prisma.client.agendamento.findMany({
+        where: { dataHora: { gte: inicioSemana, lt: fimDia }, status: { in: ['AGENDADO', 'CONFIRMADO', 'CONCLUIDO'] } },
+        select: { dataHora: true, status: true },
+      }),
+      this.prisma.client.profissional.count({ where: { ativo: true } }),
       this.prisma.client.movimentacaoEstoque.findMany({
         where: { tipo: 'SAIDA', agendamentoId: { not: null }, createdAt: { gte: ultimos30d } },
         include: { produto: true },
@@ -79,6 +99,13 @@ export class DashboardService {
 
     const ticketMedio = qtdVendasMes === 0 ? 0 : receitaAtual / qtdVendasMes;
 
+    // Faturamento hoje
+    const faturamentoHoje = Number(vendasDia._sum.total ?? 0);
+
+    // Taxa de ocupação (simplificada): agendamentos hoje / (profissionais * 8 slots de 1h)
+    const slotsDisponiveis = Math.max(profissionaisAtivos * 8, 1);
+    const ocupacao = Math.min(100, Math.round((agendamentosHoje.length / slotsDisponiveis) * 100));
+
     // Agendamentos concluídos por dia (últimos 30 dias)
     const porDia = new Map<string, number>();
     for (const a of agendamentosConcluidos) {
@@ -88,6 +115,20 @@ export class DashboardService {
     const agendamentosPorDia = [...porDia.entries()]
       .map(([data, total]) => ({ data, total }))
       .sort((a, b) => a.data.localeCompare(b.data));
+
+    // Evolução de vendas semanal (receita acumulada dos últimos 7 dias)
+    const vendasPorDia = new Map<string, number>();
+    for (const a of agendamentosSemana) {
+      const chave = a.dataHora.toISOString().slice(0, 10);
+      vendasPorDia.set(chave, (vendasPorDia.get(chave) ?? 0) + 1);
+    }
+    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const evolucaoVendasSemanal = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(inicioSemana.getTime() + i * 86_400_000);
+      const chave = d.toISOString().slice(0, 10);
+      const total = vendasPorDia.get(chave) ?? 0;
+      return { dia: diasSemana[d.getDay()], total };
+    });
 
     // Top 5 serviços mais realizados
     const porServico = new Map<string, number>();
@@ -119,14 +160,29 @@ export class DashboardService {
         estoqueMinimo: p.estoqueMinimo,
       }));
 
+    // Próximos compromissos (hoje)
+    const proximosCompromissos = agendamentosHojeDetalhado.slice(0, 5).map((a) => ({
+      id: a.id,
+      horaInicio: a.dataHora.toISOString(),
+      horaFim: a.dataHoraFim?.toISOString() ?? null,
+      cliente: a.cliente?.nome ?? 'Cliente não informado',
+      servico: a.servico.nome,
+      profissional: a.profissional?.nome ?? 'Profissional não informado',
+      status: a.status,
+    }));
+
     const resultado = {
       agendamentosHoje: { total: agendamentosHoje.length, ...porStatus },
       receitaMes: { atual: receitaAtual, anterior: receitaAnterior, variacaoPercentual },
       ticketMedio,
+      faturamentoHoje,
+      taxaOcupacao: ocupacao,
       agendamentosPorDia,
+      evolucaoVendasSemanal,
       topServicos,
       topProdutos,
       alertasEstoque,
+      proximosCompromissos,
     };
 
     await this.redis.set(cacheKey, JSON.stringify(resultado), TTL_SEGUNDOS);
