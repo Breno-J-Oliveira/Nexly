@@ -7,7 +7,7 @@ export class AvaliacoesService {
 
   async criar(agendamentoId: string, nota: number, comentario?: string) {
     if (nota < 0 || nota > 10) throw new BadRequestException('Nota deve ser entre 0 e 10');
-    const ag = await this.prisma.client.agendamento.findUnique({ where: { id: agendamentoId }, select: { empresaId: true, status: true } });
+    const ag = await this.prisma.client.agendamento.findFirst({ where: { id: agendamentoId }, select: { empresaId: true, status: true } });
     if (!ag || ag.status !== 'CONCLUIDO') throw new BadRequestException('Agendamento nao encontrado ou nao concluido');
     return this.prisma.client.avaliacao.upsert({
       where: { agendamentoId }, update: { nota, comentario }, create: { empresaId: ag.empresaId, agendamentoId, nota, comentario },

@@ -75,6 +75,7 @@ export default function ConfiguracoesPage() {
     descricao: '',
     instagram: '',
     whatsapp: '',
+    plano: 'FREE',
   });
   const [horarios, setHorarios] = useState<
     Record<string, { abre: string; fecha: string; aberto: boolean }>
@@ -96,6 +97,7 @@ export default function ConfiguracoesPage() {
           descricao: d.descricao ?? '',
           instagram: d.instagram ?? '',
           whatsapp: d.whatsapp ?? '',
+          plano: d.plano ?? 'FREE',
         });
         if (d.horarios) setHorarios(d.horarios);
         if (d.notificacoes) setNotificacoes(d.notificacoes);
@@ -572,10 +574,10 @@ return (
                   </p>
                   <p className="mt-1">
                     <span
-                      className="rounded-md px-2 py-1 text-[13px] font-semibold"
+                      className="rounded-md px-2 py-1 text-[13px] font-semibold uppercase"
                       style={{ backgroundColor: 'rgba(99,102,241,0.15)', color: '#818CF8' }}
                     >
-                      Pro
+                      {empresa.plano}
                     </span>
                   </p>
                 </div>

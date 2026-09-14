@@ -6,6 +6,7 @@ import { getTenantContext } from './tenant-context';
  * automaticamente em todas as operações (leitura e escrita).
  */
 const TENANT_MODELS = new Set<string>([
+  'Usuario',
   'Cliente',
   'Profissional',
   'Servico',
@@ -13,6 +14,8 @@ const TENANT_MODELS = new Set<string>([
   'Produto',
   'MovimentacaoEstoque',
   'Venda',
+  'Configuracao',
+  'Notificacao',
 ]);
 
 /**

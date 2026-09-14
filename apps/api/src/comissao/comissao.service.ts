@@ -6,7 +6,7 @@ export class ComissaoService {
   constructor(private readonly prisma: PrismaService) {}
 
   async calcular(profissionalId: string, dataInicio: string, dataFim: string) {
-    const profissional = await this.prisma.client.profissional.findUnique({ where: { id: profissionalId }, select: { nome: true, comissaoPercentual: true } });
+    const profissional = await this.prisma.client.profissional.findFirst({ where: { id: profissionalId }, select: { nome: true, comissaoPercentual: true } });
     if (!profissional) return { comissao: 0, totalServicos: 0, faturamento: 0 };
 
     const agendamentos = await this.prisma.client.agendamento.findMany({

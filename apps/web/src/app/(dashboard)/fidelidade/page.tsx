@@ -1,64 +1,171 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { formatarMoeda } from '@/lib/format';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
 
-function fmt(v: any){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v)||0); }
+interface ClienteFiel {
+  id: string;
+  nome: string;
+  pontosFidelidade: number;
+  totalGasto: number;
+  ultimaVisita: string | null;
+  tag: string | null;
+}
 
-interface ClienteFiel { id: string; nome: string; pontosFidelidade: number; totalGasto: any; ultimaVisita: string | null; tag: string | null; }
+interface SegmentoCliente {
+  id: string;
+  nome: string;
+  segmento: string;
+  gasto: number;
+}
+
+type Aba = 'ranking' | 'segmentos';
+
+const SEGMENTOS: { key: string; label: string; emoji: string }[] = [
+  { key: 'ativo', label: 'Ativos', emoji: '🟢' },
+  { key: 'em_risco', label: 'Em Risco', emoji: '🟡' },
+  { key: 'inativo', label: 'Inativos', emoji: '🔴' },
+  { key: 'novo', label: 'Novos', emoji: '🔵' },
+];
 
 function tagCor(tag: string): string {
-  if(tag==='VIP') return '#EAB308'; if(tag==='frequente') return '#22C55E'; return '#71717A';
+  if (tag === 'VIP') return '#EAB308';
+  if (tag === 'frequente') return '#22C55E';
+  return '#71717A';
 }
 
 export default function FidelidadePage() {
-  var [dados, setDados] = useState<ClienteFiel[]>([]);
-  var [segmentos, setSegmentos] = useState<any[]>([]);
-  var [aba, setAba] = useState('ranking');
+  const [aba, setAba] = useState<Aba>('ranking');
+  const [dados, setDados] = useState<ClienteFiel[]>([]);
+  const [segmentos, setSegmentos] = useState<SegmentoCliente[]>([]);
+  const [carregando, setCarregando] = useState(true);
 
-  useEffect(function(){
-    api.get('/fidelidade/ranking/empresa').then(function(r){ setDados(r.data); }).catch(function(){});
-    api.get('/fidelidade/segmentar/empresa').then(function(r){ setSegmentos(r.data); }).catch(function(){});
+  useEffect(() => {
+    setCarregando(true);
+    Promise.all([
+      api.get<ClienteFiel[]>('/fidelidade/ranking'),
+      api.get<SegmentoCliente[]>('/fidelidade/segmentar'),
+    ])
+      .then(([r, s]) => {
+        setDados(r.data);
+        setSegmentos(s.data);
+      })
+      .catch(() => undefined)
+      .finally(() => setCarregando(false));
   }, []);
 
-  return React.createElement('div', null,
-    React.createElement('h2', {style:{color:'#FAFAFA',fontSize:20,fontWeight:'bold'}}, 'Fidelidade'),
-    React.createElement('p', {style:{color:'#71717A',fontSize:13,marginTop:4}}, 'Programa de pontos e segmentacao de clientes'),
+  return (
+    <div>
+      <h2 className="text-xl font-semibold text-[#FAFAFA]">Fidelidade</h2>
+      <p className="mt-1 text-sm text-[#71717A]">Programa de pontos e segmentação de clientes</p>
 
-    React.createElement('div', {style:{display:'flex',gap:8,marginTop:24}},
-      React.createElement('button', {onClick:function(){setAba('ranking');},style:{padding:'8px 20px',borderRadius:8,border:'none',fontSize:13,fontWeight:'bold',cursor:'pointer',background:aba==='ranking'?'#6366F1':'#111116',color:aba==='ranking'?'#FAFAFA':'#A1A1AA'}}, 'Ranking'),
-      React.createElement('button', {onClick:function(){setAba('segmentos');},style:{padding:'8px 20px',borderRadius:8,border:'none',fontSize:13,fontWeight:'bold',cursor:'pointer',background:aba==='segmentos'?'#6366F1':'#111116',color:aba==='segmentos'?'#FAFAFA':'#A1A1AA'}}, 'Segmentos')
-    ),
+      <div className="mt-6 flex gap-3">
+        {(['ranking', 'segmentos'] as Aba[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => setAba(t)}
+            className="rounded-lg px-5 py-2 text-[13px] font-semibold transition-colors"
+            style={{
+              backgroundColor: aba === t ? '#6366F1' : '#111116',
+              color: aba === t ? '#FAFAFA' : '#A1A1AA',
+            }}
+          >
+            {t === 'ranking' ? 'Ranking' : 'Segmentos'}
+          </button>
+        ))}
+      </div>
 
-    aba==='ranking' && React.createElement('div', {style:{marginTop:24,overflow:'auto',borderRadius:12,background:'#111116',border:'1px solid rgba(255,255,255,0.06)'}},
-      React.createElement('table', {style:{width:'100%',fontSize:13,textAlign:'left'}},
-        React.createElement('thead', null, React.createElement('tr', {style:{borderBottom:'1px solid rgba(255,255,255,0.06)'}},
-          ['#','Cliente','Pontos','Gasto','Ultima Visita','Tag'].map(function(h,i){ return React.createElement('th', {key:i,style:{padding:'12px 16px',color:'#71717A',fontWeight:'500'}}, h); })
-        )),
-        React.createElement('tbody', null, dados.map(function(c,i){ return React.createElement('tr', {key:c.id,style:{borderBottom:'1px solid rgba(255,255,255,0.04)'}},
-          React.createElement('td', {style:{padding:'10px 16px',color:'#A1A1AA'}}, i+1),
-          React.createElement('td', {style:{padding:'10px 16px',color:'#FAFAFA',fontWeight:'500'}}, c.nome),
-          React.createElement('td', {style:{padding:'10px 16px',color:'#818CF8',fontWeight:'bold'}}, c.pontosFidelidade),
-          React.createElement('td', {style:{padding:'10px 16px',color:'#22C55E'}}, fmt(c.totalGasto)),
-          React.createElement('td', {style:{padding:'10px 16px',color:'#71717A'}}, c.ultimaVisita ? new Date(c.ultimaVisita).toLocaleDateString('pt-BR') : '-'),
-          React.createElement('td', {style:{padding:'10px 16px'}}, React.createElement('span', {style:{padding:'2px 8px',borderRadius:999,fontSize:11,fontWeight:'bold',color:tagCor(c.tag||''),background:'rgba(255,255,255,0.04)'}}, c.tag||'-'))
-        ); }))
-      )
-    ),
+      {carregando ? (
+        <div className="mt-6">
+          <Skeleton variant="kpi" count={3} />
+        </div>
+      ) : (
+        <>
+          {aba === 'ranking' && (
+            <div
+              className="mt-6 overflow-x-auto rounded-xl"
+              style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              {dados.length === 0 ? (
+                <EmptyState
+                  icon="star"
+                  title="Nenhum cliente no ranking"
+                  description="O ranking de fidelidade aparecerá quando houver vendas e agendamentos"
+                />
+              ) : (
+                <table className="w-full text-left text-[13px]">
+                  <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <tr>
+                      {['#', 'Cliente', 'Pontos', 'Gasto', 'Última Visita', 'Tag'].map((h, i) => (
+                        <th key={i} className="px-4 py-3 font-medium text-[#71717A]">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dados.map((c, i) => (
+                      <tr key={c.id} className="border-b border-white/[0.04]">
+                        <td className="px-4 py-3 text-[#A1A1AA]">{i + 1}</td>
+                        <td className="px-4 py-3 font-medium text-[#FAFAFA]">{c.nome}</td>
+                        <td className="px-4 py-3 font-bold text-[#818CF8]">{c.pontosFidelidade}</td>
+                        <td className="px-4 py-3 text-[#22C55E]">{formatarMoeda(c.totalGasto)}</td>
+                        <td className="px-4 py-3 text-[#71717A]">
+                          {c.ultimaVisita ? new Date(c.ultimaVisita).toLocaleDateString('pt-BR') : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                            style={{
+                              color: tagCor(c.tag || ''),
+                              backgroundColor: 'rgba(255,255,255,0.04)',
+                            }}
+                          >
+                            {c.tag || '—'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
 
-    aba==='segmentos' && React.createElement('div', {style:{marginTop:24}},
-      ['ativo','em_risco','inativo','novo'].map(function(seg){
-        var items = segmentos.filter(function(s:any){ return s.segmento===seg; });
-        return React.createElement('div', {key:seg,style:{marginBottom:24}},
-          React.createElement('h3', {style:{color:'#FAFAFA',fontSize:15,fontWeight:'bold',marginBottom:12}},
-            seg==='ativo' ? '\u{1F7E2} Ativos ('+items.length+')' :
-            seg==='em_risco' ? '\u{1F7E1} Em Risco ('+items.length+')' :
-            seg==='inativo' ? '\u{1F534} Inativos ('+items.length+')' :
-            '\u{1F535} Novos ('+items.length+')'
-          ),
-          React.createElement('div', {style:{display:'flex',flexWrap:'wrap',gap:8}}, items.map(function(c:any){ return React.createElement('div', {key:c.id,style:{padding:'8px 16px',borderRadius:8,background:'#111116',border:'1px solid rgba(255,255,255,0.06)',color:'#FAFAFA',fontSize:13}}, c.nome+' \u00B7 '+fmt(c.gasto)); }))
-        );
-      })
-    )
+          {aba === 'segmentos' && (
+            <div className="mt-6 space-y-6">
+              {SEGMENTOS.map((seg) => {
+                const items = segmentos.filter((s) => s.segmento === seg.key);
+                return (
+                  <div key={seg.key}>
+                    <h3 className="mb-3 text-[15px] font-bold text-[#FAFAFA]">
+                      <span className="mr-2">{seg.emoji}</span>
+                      {seg.label} ({items.length})
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {items.length === 0 ? (
+                        <span className="text-[13px] text-[#71717A]">Nenhum cliente neste segmento</span>
+                      ) : (
+                        items.map((c) => (
+                          <div
+                            key={c.id}
+                            className="rounded-lg border border-white/[0.06] bg-[#111116] px-4 py-2 text-[13px] text-[#FAFAFA]"
+                          >
+                            {c.nome} · {formatarMoeda(c.gasto)}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }

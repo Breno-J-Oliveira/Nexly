@@ -1,13 +1,23 @@
-import { Controller, Get, Param, Post, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query } from '@nestjs/common';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { FidelidadeService } from './fidelidade.service';
 
 @Controller('fidelidade')
 export class FidelidadeController {
   constructor(private readonly service: FidelidadeService) {}
 
-  @Get('ranking/:empresaId') ranking(@Param('empresaId') id: string) { return this.service.ranking(id); }
+  @Get('ranking')
+  ranking(@CurrentUser() user: { empresaId: string }, @Query('limit') limit?: string) {
+    return this.service.ranking(user.empresaId, limit ? Number(limit) : 10);
+  }
 
-  @Get('segmentar/:empresaId') segmentar(@Param('empresaId') id: string) { return this.service.segmentar(id); }
+  @Get('segmentar')
+  segmentar(@CurrentUser() user: { empresaId: string }) {
+    return this.service.segmentar(user.empresaId);
+  }
 
-  @Post('pontos') pontos(@Body() body: { clienteId: string; pontos: number }) { return this.service.adicionarPontos(body.clienteId, body.pontos); }
+  @Post('pontos')
+  pontos(@CurrentUser() user: { empresaId: string }, @Body() body: { clienteId: string; pontos: number }) {
+    return this.service.adicionarPontos(user.empresaId, body.clienteId, body.pontos);
+  }
 }

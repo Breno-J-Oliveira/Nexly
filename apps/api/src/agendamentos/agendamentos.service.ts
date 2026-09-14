@@ -121,11 +121,18 @@ export class AgendamentosService {
       );
     }
 
-    const atualizado = await this.prisma.client.agendamento.update({
+    await this.prisma.client.agendamento.updateMany({
       where: { id },
       data: { status: novoStatus },
+    });
+
+    const atualizado = await this.prisma.client.agendamento.findFirst({
+      where: { id },
       include: includeCompleto,
     });
+    if (!atualizado) {
+      throw new NotFoundException('Agendamento não encontrado');
+    }
 
     // Hook de conclusão — ponto de extensão para a integração com estoque (Fase 4).
     if (novoStatus === StatusAgendamento.CONCLUIDO) {

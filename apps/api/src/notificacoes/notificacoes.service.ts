@@ -10,7 +10,12 @@ export class NotificacoesService {
 
   async naoLidas(usuarioId: string) { return this.prisma.client.notificacao.count({ where: { usuarioId, lida: false } }); }
 
-  async marcarLida(id: string) { return this.prisma.client.notificacao.update({ where: { id }, data: { lida: true } }); }
+  async marcarLida(id: string, usuarioId: string) {
+    return this.prisma.client.notificacao.updateMany({
+      where: { id, usuarioId },
+      data: { lida: true },
+    });
+  }
 
   async criar(empresaId: string, usuarioId: string, titulo: string, mensagem: string, link?: string) {
     try { return await this.prisma.client.notificacao.create({ data: { empresaId, usuarioId, titulo, mensagem, link } }); }

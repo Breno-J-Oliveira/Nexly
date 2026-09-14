@@ -10,5 +10,5 @@ export class NotificacoesController {
 
   @Get('count') naoLidas(@CurrentUser() user: any) { return this.service.naoLidas(user.sub || user.id); }
 
-  @Patch(':id/ler') marcarLida(@Param('id') id: string) { return this.service.marcarLida(id); }
+  @Patch(':id/ler') marcarLida(@Param('id') id: string, @CurrentUser() user: any) { return this.service.marcarLida(id, user.sub || user.id); }
 }
