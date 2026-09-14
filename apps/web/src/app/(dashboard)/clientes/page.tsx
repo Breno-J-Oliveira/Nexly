@@ -166,7 +166,7 @@ export default function ClientesPage() {
               <tr>
                 <td colSpan={4} className="px-4 py-16">
                   <EmptyState
-                    icon="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    icon="users-slash"
                     title={busca ? `Nenhum cliente encontrado para "${busca}"` : "Nenhum cliente cadastrado"}
                     description={busca ? "Verifique a grafia ou cadastre um novo cliente" : "Adicione clientes para comecar a agendar servicos"}
                     action={!busca ? <Button onClick={abrirNovo}>+ Novo cliente</Button> : undefined}

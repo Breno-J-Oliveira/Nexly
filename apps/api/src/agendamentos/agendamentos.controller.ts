@@ -24,12 +24,14 @@ export class AgendamentosController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
     @Query('data') data?: string,
+    @Query('dataFim') dataFim?: string,
     @Query('profissionalId') profissionalId?: string,
     @Query('clienteId') clienteId?: string,
     @Query('status') status?: StatusAgendamento,
   ) {
     return this.agendamentosService.listar(page, limit, {
       data,
+      dataFim,
       profissionalId,
       clienteId,
       status,

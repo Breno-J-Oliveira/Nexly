@@ -54,6 +54,9 @@ model Empresa {
   descricao      String?
   instagram      String?
   whatsapp       String?
+  segmento       String?
+  cidade         String?
+  dadosPagamento Json?   @map("dados_pagamento")
   horarios       Json?   @map("horarios")
   notificacoes   Json?   @map("notificacoes")
   createdAt DateTime @default(now()) @map("created_at")

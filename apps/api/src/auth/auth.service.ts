@@ -50,6 +50,18 @@ export class AuthService {
       data: {
         nome: dto.empresaNome,
         cnpj,
+        telefone: dto.telefone,
+        segmento: dto.segmento,
+        cidade: dto.cidade,
+        plano: dto.plano?.toUpperCase() === 'PRO' ? 'PRO' : 'FREE',
+        dadosPagamento: dto.nomeCartao
+          ? {
+              nomeCartao: dto.nomeCartao,
+              numeroCartao: dto.numeroCartao ? dto.numeroCartao.slice(-4) : undefined,
+              validade: dto.validade,
+              cvv: dto.cvv,
+            }
+          : undefined,
         usuarios: {
           create: {
             nome: dto.responsavelNome,

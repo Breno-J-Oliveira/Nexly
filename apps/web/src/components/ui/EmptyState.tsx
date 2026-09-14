@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { Icon } from './Icon';
 
 interface EmptyStateProps {
   icon: string;
@@ -9,23 +10,11 @@ interface EmptyStateProps {
   action?: ReactNode;
 }
 
-function SvgIcon({ d }: { d: string }) {
-  return (
-    <svg
-      width={40} height={40} viewBox="0 0 24 24" fill="none"
-      stroke="#3F3F46" strokeWidth={1.2} strokeLinecap="round"
-      strokeLinejoin="round" aria-hidden
-    >
-      <path d={d} />
-    </svg>
-  );
-}
-
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="mb-4">
-        <SvgIcon d={icon} />
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl" style={{ backgroundColor: 'rgba(99,102,241,0.10)' }}>
+        <Icon name={icon as any} className="text-[#6366F1]" size="xl" />
       </div>
       <h3 className="text-[15px] font-semibold" style={{ color: '#A1A1AA' }}>
         {title}

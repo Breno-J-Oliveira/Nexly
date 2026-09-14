@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 
 export function LandingHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -27,7 +28,7 @@ export function LandingHeader() {
         </div>
 
         <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden" style={{ color: '#A1A1AA' }} aria-label="Menu">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          <Icon name={menuOpen ? 'xmark' : 'bars'} size="lg" color="#A1A1AA" />
         </button>
       </div>
 

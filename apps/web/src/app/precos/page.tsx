@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Icon } from '@/components/ui/Icon';
 import { LandingFooter } from '@/components/LandingFooter';
 import { LandingHeader } from '@/components/LandingHeader';
 
@@ -34,7 +35,7 @@ export default function PrecosPage() {
               <ul className="mt-6 space-y-3">
                 {plano.recursos.map((r, i) => (
                   <li key={i} className="flex items-center gap-2 text-[14px]" style={{ color: '#A1A1AA' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    <Icon name="check" className="text-[#22C55E]" size="sm" />
                     {r}
                   </li>
                 ))}

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Icon } from '@/components/ui/Icon';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Area,
@@ -117,9 +118,7 @@ export default function DashboardPage() {
       trend: `${variacaoPositiva ? '+' : ''}${variacao.toFixed(1)}% vs ontem`,
       trendUp: variacaoPositiva,
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 7h-7M22 7l-3-3m3 3l-3 3M2 17h7m-7 0l3 3m-3-3l3-3M9 11l3-3 3 3m0 0l3 3-3 3" />
-        </svg>
+        <Icon name="arrow-right-arrow-left" className="text-[#22C55E]" size="sm" />
       ),
       iconBg: 'rgba(34,197,94,0.12)',
     },
@@ -129,11 +128,7 @@ export default function DashboardPage() {
       trend: `+${dados.agendamentosHoje.CONFIRMADO} agendados`,
       trendUp: true,
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818CF8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-        </svg>
+        <Icon name="users" className="text-[#818CF8]" size="sm" />
       ),
       iconBg: 'rgba(99,102,241,0.12)',
     },
@@ -143,9 +138,7 @@ export default function DashboardPage() {
       trend: '-2.1% vs média',
       trendUp: false,
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F87171" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-        </svg>
+        <Icon name="money-bill-wave" className="text-[#F87171]" size="sm" />
       ),
       iconBg: 'rgba(248,113,113,0.12)',
     },
@@ -155,10 +148,7 @@ export default function DashboardPage() {
       trend: 'Ideal para quarta',
       trendUp: true,
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EAB308" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 3v18h18" />
-          <path d="M7 16l4-4 4 4 5-6" />
-        </svg>
+        <Icon name="chart-line" className="text-[#EAB308]" size="sm" />
       ),
       iconBg: 'rgba(234,179,8,0.12)',
     },
@@ -181,9 +171,9 @@ export default function DashboardPage() {
             <div className="mt-4 text-[28px] font-semibold" style={{ color: '#FAFAFA' }}>{kpi.valor}</div>
             <div className="mt-1 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium" style={{ color: kpi.trendUp ? '#22C55E' : '#F87171', backgroundColor: kpi.trendUp ? 'rgba(34,197,94,0.10)' : 'rgba(248,113,113,0.10)' }}>
               {kpi.trendUp ? (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17l5-5 5 5M12 12V3"/></svg>
+                <Icon name="arrow-trend-up" size="xs" />
               ) : (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 7l5 5 5-5M12 12v9"/></svg>
+                <Icon name="arrow-trend-down" size="xs" />
               )}
               {kpi.trend}
             </div>

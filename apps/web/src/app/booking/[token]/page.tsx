@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { env } from '@/lib/env';
+import { Icon } from '@/components/ui/Icon';
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -116,9 +117,7 @@ function Stepper({ step }: { step: Step }) {
               }
             >
               {done ? (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
+                <Icon name="check" className="text-white" size="xs" />
               ) : (
                 n
               )}
@@ -339,10 +338,7 @@ export default function BookingPage() {
   const telaErro = (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-full" style={{ backgroundColor: 'rgba(239,68,68,0.12)' }}>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 8v4M12 16h.01" />
-        </svg>
+        <Icon name="circle-exclamation" className="text-[#EF4444]" size="lg" />
       </div>
       <h1 className="mt-5 text-lg font-semibold" style={{ color: '#FAFAFA' }}>
         Link de agendamento inválido ou expirado.
@@ -365,10 +361,7 @@ export default function BookingPage() {
               style={{ animation: 'bookCheck 400ms ease-out' }}
               className="flex h-16 w-16 items-center justify-center rounded-full"
             >
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ color: '#22C55E' }}>
-                <circle cx="12" cy="12" r="11" fill="rgba(34,197,94,0.15)" stroke="#22C55E" strokeWidth="2" />
-                <path d="M8 12l3 3 5-6" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              </svg>
+              <Icon name="circle-check" className="text-[#22C55E]" size="2x" />
             </div>
             <h1 className="mt-6 text-[22px] font-semibold" style={{ color: '#FAFAFA' }}>
               Agendamento confirmado!
@@ -496,10 +489,7 @@ export default function BookingPage() {
                 style={profissionalId === 'qualquer' ? { backgroundColor: 'rgba(99,102,241,0.08)', border: '1px solid #6366F1' } : { backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: '#18181F', color: '#71717A' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                  </svg>
+                  <Icon name="user" size="sm" />
                 </div>
                 <div className="text-left">
                   <div className="text-[15px] font-semibold" style={{ color: '#FAFAFA' }}>Qualquer profissional</div>
@@ -565,9 +555,7 @@ export default function BookingPage() {
                   style={{ color: '#A1A1AA' }}
                   aria-label="Mês anterior"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M15 18l-6-6 6-6" />
-                  </svg>
+                  <Icon name="chevron-left" size="sm" />
                 </button>
                 <span className="text-sm font-semibold capitalize" style={{ color: '#FAFAFA' }}>{labelMes}</span>
                 <button
@@ -576,9 +564,7 @@ export default function BookingPage() {
                   style={{ color: '#A1A1AA' }}
                   aria-label="Próximo mês"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
+                  <Icon name="chevron-right" size="sm" />
                 </button>
               </div>
               <Mes offset={mesOffset} selecionado={data} onSelecionar={setData} />
