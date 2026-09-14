@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { ReactNode, useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useNotifications } from '@/lib/notifications';
+import { formatarDataHora } from '@/lib/format';
 import { Icon } from '@/components/ui/Icon';
 
 /* --- Breadcrumb labels --- */
@@ -70,10 +71,12 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const { naoLidas } = useNotifications();
+  const { notificacoes, naoLidas, marcarLida } = useNotifications();
   const [sidebarAberta, setSidebarAberta] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [notifAberto, setNotifAberto] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const pageLabel = PAGE_LABELS[pathname] ?? '';
   const nome = user?.nome ?? 'Usuário';
@@ -82,6 +85,7 @@ export function Shell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuAberto(false);
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifAberto(false);
     };
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
@@ -147,15 +151,56 @@ export function Shell({ children }: { children: ReactNode }) {
           </h1>
 
           <div className="ml-auto flex items-center gap-1">
-            {/* Bell */}
-            <button className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/5" style={{ color: '#A1A1AA' }} aria-label="Notificações">
-              <Icon name="bell" size="sm" color="#71717A" />
-              {naoLidas > 0 && (
-                <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold" style={{ backgroundColor: '#EF4444', color: '#fff' }}>
-                  {naoLidas > 9 ? '9+' : naoLidas}
-                </span>
+            {/* Notificações */}
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => setNotifAberto((v) => !v)}
+                className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/5"
+                style={{ color: '#A1A1AA' }}
+                aria-label="Notificações"
+              >
+                <Icon name="bell" size="sm" color="#71717A" />
+                {naoLidas > 0 && (
+                  <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold" style={{ backgroundColor: '#EF4444', color: '#fff' }}>
+                    {naoLidas > 9 ? '9+' : naoLidas}
+                  </span>
+                )}
+              </button>
+
+              {notifAberto && (
+                <div
+                  className="absolute right-0 mt-2 w-80 overflow-hidden rounded-lg border"
+                  style={{ backgroundColor: '#18181F', borderColor: 'rgba(255,255,255,0.10)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)', zIndex: 50 }}
+                >
+                  <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                    <span className="text-[13px] font-semibold" style={{ color: '#FAFAFA' }}>Notificações</span>
+                    {naoLidas > 0 && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: 'rgba(99,102,241,0.15)', color: '#818CF8' }}>
+                        {naoLidas} não {naoLidas === 1 ? 'lida' : 'lidas'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notificacoes.length === 0 ? (
+                      <p className="px-4 py-6 text-center text-[13px]" style={{ color: '#71717A' }}>Nenhuma notificação no momento.</p>
+                    ) : (
+                      notificacoes.map((n) => (
+                        <button
+                          key={n.id}
+                          onClick={() => { void marcarLida(n.id); if (n.link) window.location.href = n.link; }}
+                          className="flex w-full flex-col gap-1 border-b px-4 py-3 text-left transition-colors hover:bg-white/5"
+                          style={{ borderColor: 'rgba(255,255,255,0.04)', backgroundColor: n.lida ? 'transparent' : 'rgba(99,102,241,0.05)' }}
+                        >
+                          <span className="text-[13px] font-medium" style={{ color: '#FAFAFA' }}>{n.titulo}</span>
+                          <span className="text-[12px] leading-relaxed" style={{ color: '#A1A1AA' }}>{n.mensagem}</span>
+                          <span className="text-[11px]" style={{ color: '#71717A' }}>{formatarDataHora(n.createdAt)}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
               )}
-            </button>
+            </div>
 
             {/* User menu */}
             <div className="relative" ref={menuRef}>
