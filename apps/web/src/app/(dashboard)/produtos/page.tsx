@@ -169,8 +169,8 @@ export default function ProdutosPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-100">Produtos</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="text-xl font-semibold text-[#FAFAFA]">Produtos</h2>
+          <p className="mt-1 text-sm text-[#A1A1AA]">
             Controle de produtos e estoque · {totalProdutos}{' '}
             {totalProdutos === 1 ? 'cadastrado' : 'cadastrados'}
           </p>
@@ -186,29 +186,29 @@ export default function ProdutosPage() {
         />
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+      <div className="mt-6 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-zinc-800 bg-zinc-800/40">
+          <thead className="border-b border-[rgba(255,255,255,0.08)] bg-[#18181F]/40">
             <tr>
-              <th className="px-4 py-3 font-medium text-zinc-400">Produto</th>
-              <th className="px-4 py-3 font-medium text-zinc-400">SKU</th>
-              <th className="px-4 py-3 font-medium text-zinc-400">Preço</th>
-              <th className="px-4 py-3 font-medium text-zinc-400">Estoque</th>
-              <th className="px-4 py-3 font-medium text-zinc-400">Status</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Produto</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">SKU</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Preço</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Estoque</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Status</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800">
+          <tbody className="divide-y divide-[rgba(255,255,255,0.08)]">
             {carregando && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-zinc-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-[#A1A1AA]">
                   Carregando…
                 </td>
               </tr>
             )}
             {!carregando && produtos.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-[#71717A]">
                   Nenhum produto encontrado.
                 </td>
               </tr>
@@ -216,11 +216,11 @@ export default function ProdutosPage() {
             {produtos.map((p) => {
               const s = statusProduto(p);
               return (
-                <tr key={p.id} className="hover:bg-zinc-800/30">
-                  <td className="px-4 py-3 font-medium text-zinc-100">{p.nome}</td>
-                  <td className="px-4 py-3 text-zinc-400">{p.sku}</td>
-                  <td className="px-4 py-3 text-zinc-200">{moeda(p.preco)}</td>
-                  <td className="px-4 py-3 text-zinc-100">{p.estoqueAtual}</td>
+                <tr key={p.id} className="hover:bg-[#18181F]/30">
+                  <td className="px-4 py-3 font-medium text-[#FAFAFA]">{p.nome}</td>
+                  <td className="px-4 py-3 text-[#A1A1AA]">{p.sku}</td>
+                  <td className="px-4 py-3 text-[#E4E4E7]">{moeda(p.preco)}</td>
+                  <td className="px-4 py-3 text-[#FAFAFA]">{p.estoqueAtual}</td>
                   <td className="px-4 py-3">
                     <Badge color={s.color}>{s.label}</Badge>
                   </td>
@@ -248,8 +248,8 @@ export default function ProdutosPage() {
 
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-            <h3 className="text-lg font-semibold text-zinc-100">
+          <div className="w-full max-w-md rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-6">
+            <h3 className="text-lg font-semibold text-[#FAFAFA]">
               {editandoId ? 'Editar produto' : 'Novo produto'}
             </h3>
             <div className="mt-4 space-y-3">
@@ -319,28 +319,28 @@ export default function ProdutosPage() {
 
       {historicoProduto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+          <div className="w-full max-w-lg rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-zinc-100">
+              <h3 className="text-lg font-semibold text-[#FAFAFA]">
                 Histórico — {historicoProduto.nome}
               </h3>
               <button
                 onClick={() => setHistoricoProduto(null)}
-                className="text-zinc-400 hover:text-zinc-200"
+                className="text-[#A1A1AA] hover:text-[#E4E4E7]"
               >
                 ✕
               </button>
             </div>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-[#71717A]">
               SKU {historicoProduto.sku} · Estoque atual: {historicoProduto.estoqueAtual}
             </p>
 
             <div className="mt-4 max-h-96 space-y-2 overflow-y-auto">
               {carregandoHistorico && (
-                <p className="text-center text-sm text-zinc-400">Carregando…</p>
+                <p className="text-center text-sm text-[#A1A1AA]">Carregando…</p>
               )}
               {!carregandoHistorico && movimentacoes.length === 0 && (
-                <p className="py-8 text-center text-sm text-zinc-500">
+                <p className="py-8 text-center text-sm text-[#71717A]">
                   Nenhuma movimentação registrada para este produto.
                 </p>
               )}
@@ -349,15 +349,15 @@ export default function ProdutosPage() {
                 return (
                   <div
                     key={m.id}
-                    className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3"
+                    className="flex items-center justify-between rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#060608] px-4 py-3"
                   >
                     <div className="flex items-center gap-3">
                       <Badge color={entrada ? 'ENTRADA' : 'SAIDA'}>
                         {entrada ? '+' : '−'} {m.quantidade}
                       </Badge>
                       <div>
-                        <p className="text-sm text-zinc-200">{m.motivo}</p>
-                        <p className="text-xs text-zinc-500">{formatarDataHora(m.createdAt)}</p>
+                        <p className="text-sm text-[#E4E4E7]">{m.motivo}</p>
+                        <p className="text-xs text-[#71717A]">{formatarDataHora(m.createdAt)}</p>
                       </div>
                     </div>
                     <span

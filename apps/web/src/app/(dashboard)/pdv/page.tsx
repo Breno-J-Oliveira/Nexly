@@ -118,10 +118,10 @@ export default function PdvPage() {
 
   return (
     <div className="flex h-[calc(100vh-8rem)] gap-6">
-      <div className="flex flex-1 flex-col rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+      <div className="flex flex-1 flex-col rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-zinc-100">Produtos</h2>
-          <span className="text-xs text-zinc-500" title="Total de produtos carregados">
+          <h2 className="text-xl font-semibold text-[#FAFAFA]">Produtos</h2>
+          <span className="text-xs text-[#71717A]" title="Total de produtos carregados">
             {resultados.length}{' '}
             {resultados.length === 1 ? 'resultado' : 'resultados'}
           </span>
@@ -136,14 +136,14 @@ export default function PdvPage() {
             {resultados.map((p) => (
               <div
                 key={p.id}
-                className="flex cursor-pointer items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 p-3 hover:bg-zinc-800"
+                className="flex cursor-pointer items-center justify-between rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#060608] p-3 hover:bg-[#18181F]"
                 onClick={() => adicionar(p)}
               >
                 <div>
-                  <p className="font-medium text-zinc-100">{p.nome}</p>
-                  <p className="text-xs text-zinc-500">Estoque: {p.estoqueAtual}</p>
+                  <p className="font-medium text-[#FAFAFA]">{p.nome}</p>
+                  <p className="text-xs text-[#71717A]">Estoque: {p.estoqueAtual}</p>
                 </div>
-                <p className="font-semibold text-zinc-100">
+                <p className="font-semibold text-[#FAFAFA]">
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
                     Number(p.preco),
                   )}
@@ -153,11 +153,11 @@ export default function PdvPage() {
 
             {/* Empty state: nenhuma busca iniciada */}
             {busca.trim().length < 2 && (
-              <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950/50 px-4 py-10 text-center">
-                <p className="text-sm text-zinc-400">
+              <div className="rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] bg-[#060608]/50 px-4 py-10 text-center">
+                <p className="text-sm text-[#A1A1AA]">
                   Digite o nome ou SKU do produto para começar
                 </p>
-                <p className="mt-1 text-xs text-zinc-600">
+                <p className="mt-1 text-xs text-[#52525B]">
                   A busca inicia automaticamente após 2 caracteres.
                 </p>
               </div>
@@ -165,11 +165,11 @@ export default function PdvPage() {
 
             {/* Empty state: busca sem resultado */}
             {busca.trim().length >= 2 && resultados.length === 0 && (
-              <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950/50 px-4 py-10 text-center">
-                <p className="text-sm text-zinc-300">
+              <div className="rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] bg-[#060608]/50 px-4 py-10 text-center">
+                <p className="text-sm text-[#D4D4D8]">
                   Nenhum produto encontrado para “{busca.trim()}”
                 </p>
-                <p className="mt-1 text-xs text-zinc-600">
+                <p className="mt-1 text-xs text-[#52525B]">
                   Verifique a grafia ou cadastre o produto em Estoque.
                 </p>
               </div>
@@ -178,13 +178,13 @@ export default function PdvPage() {
         </div>
       </div>
 
-      <div className="flex w-96 flex-col rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <h2 className="text-xl font-semibold text-zinc-100">Venda Atual</h2>
+      <div className="flex w-96 flex-col rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
+        <h2 className="text-xl font-semibold text-[#FAFAFA]">Venda Atual</h2>
         <div className="mt-4 flex-1 overflow-y-auto pr-2">
           {itens.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950/50 px-4 py-10 text-center">
-              <p className="text-sm text-zinc-400">Nenhum produto no carrinho</p>
-              <p className="mt-1 text-xs text-zinc-600">
+            <div className="rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] bg-[#060608]/50 px-4 py-10 text-center">
+              <p className="text-sm text-[#A1A1AA]">Nenhum produto no carrinho</p>
+              <p className="mt-1 text-xs text-[#52525B]">
                 Busque um produto à esquerda para iniciar a venda.
               </p>
             </div>
@@ -193,11 +193,11 @@ export default function PdvPage() {
               {itens.map((item) => (
                 <div
                   key={item.produto.id}
-                  className="flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-3"
+                  className="flex flex-col gap-2 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#060608] p-3"
                 >
                   <div className="flex justify-between">
-                    <p className="font-medium text-zinc-100">{item.produto.nome}</p>
-                    <p className="font-semibold text-zinc-100">
+                    <p className="font-medium text-[#FAFAFA]">{item.produto.nome}</p>
+                    <p className="font-semibold text-[#FAFAFA]">
                       {new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
                         currency: 'BRL',
@@ -209,17 +209,17 @@ export default function PdvPage() {
                       <Tooltip text="Diminuir quantidade">
                         <Button
                           variant="ghost"
-                          className="h-6 w-6 p-0 text-zinc-400"
+                          className="h-6 w-6 p-0 text-[#A1A1AA]"
                           onClick={() => mudarQuantidade(item.produto.id, -1)}
                         >
                           -
                         </Button>
                       </Tooltip>
-                      <span className="text-sm text-zinc-100">{item.quantidade}</span>
+                      <span className="text-sm text-[#FAFAFA]">{item.quantidade}</span>
                       <Tooltip text="Aumentar quantidade">
                         <Button
                           variant="ghost"
-                          className="h-6 w-6 p-0 text-zinc-400"
+                          className="h-6 w-6 p-0 text-[#A1A1AA]"
                           onClick={() => mudarQuantidade(item.produto.id, 1)}
                         >
                           +
@@ -242,13 +242,13 @@ export default function PdvPage() {
           )}
         </div>
 
-        <div className="mt-4 border-t border-zinc-800 pt-4">
+        <div className="mt-4 border-t border-[rgba(255,255,255,0.08)] pt-4">
           <div className="mb-4">
-            <label className="mb-1 block text-sm font-medium text-zinc-300">
+            <label className="mb-1 block text-sm font-medium text-[#D4D4D8]">
               Cliente (opcional)
             </label>
             <select
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full rounded-lg border border-[rgba(255,255,255,0.10)] bg-[#111116] px-3 py-2 text-sm text-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
               value={clienteId}
               onChange={(e) => setClienteId(e.target.value)}
             >
@@ -260,7 +260,7 @@ export default function PdvPage() {
               ))}
             </select>
           </div>
-          <div className="flex justify-between text-lg font-bold text-zinc-100">
+          <div className="flex justify-between text-lg font-bold text-[#FAFAFA]">
             <span>Total</span>
             <span>
               {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
@@ -271,8 +271,8 @@ export default function PdvPage() {
 
           {/* Seção de pagamento — aparece após clique em "Continuar" */}
           {mostrarPagamento && (
-            <div className="mt-4 rounded-lg border border-zinc-800 p-3">
-              <p className="mb-2 text-sm font-semibold text-zinc-200">Forma de pagamento</p>
+            <div className="mt-4 rounded-lg border border-[rgba(255,255,255,0.08)] p-3">
+              <p className="mb-2 text-sm font-semibold text-[#E4E4E7]">Forma de pagamento</p>
               <div className="grid grid-cols-2 gap-2">
                 {([
                   ['Dinheiro', '💰'],
@@ -301,8 +301,8 @@ export default function PdvPage() {
 
               <div className="mt-3">
                 <div className="mb-1 flex items-center justify-between">
-                  <label className="text-sm font-medium text-zinc-300">Desconto</label>
-                  <div className="flex overflow-hidden rounded-md border border-zinc-700 text-xs">
+                  <label className="text-sm font-medium text-[#D4D4D8]">Desconto</label>
+                  <div className="flex overflow-hidden rounded-md border border-[rgba(255,255,255,0.10)] text-xs">
                     {(['R$', '%'] as const).map((t) => (
                       <button
                         key={t}
@@ -325,7 +325,7 @@ export default function PdvPage() {
                   value={descontoValor}
                   onChange={(e) => setDescontoValor(e.target.value)}
                   placeholder={descontoTipo === '%' ? '0' : '0,00'}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full rounded-lg border border-[rgba(255,255,255,0.10)] bg-[#111116] px-3 py-2 text-sm text-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
                 />
                 {descontoAplicado > 0 && (
                   <p className="mt-1 text-sm font-semibold text-red-400">

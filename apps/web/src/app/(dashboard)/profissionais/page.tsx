@@ -88,14 +88,14 @@ export default function ProfissionaisPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-100">Profissionais</h2>
-          <p className="mt-1 text-sm text-zinc-400">Equipe de atendimento do seu negócio</p>
+          <h2 className="text-xl font-semibold text-[#FAFAFA]">Profissionais</h2>
+          <p className="mt-1 text-sm text-[#A1A1AA]">Equipe de atendimento do seu negócio</p>
         </div>
         <Button onClick={abrirNovo}>+ Novo profissional</Button>
       </div>
 
       {carregando ? (
-        <p className="mt-8 text-sm text-zinc-400">Carregando…</p>
+        <p className="mt-8 text-sm text-[#A1A1AA]">Carregando…</p>
       ) : profissionais.length === 0 ? (
         <EmptyState
           icon="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
@@ -106,14 +106,14 @@ export default function ProfissionaisPage() {
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {profissionais.map((p) => (
-            <div key={p.id} className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+            <div key={p.id} className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-500/15 text-sm font-semibold text-primary-300">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[rgba(99,102,241,0.15)] text-sm font-semibold text-[#A5B4FC]">
                   {p.nome.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-zinc-100">{p.nome}</p>
-                  <p className="truncate text-xs text-zinc-500">
+                  <p className="truncate font-medium text-[#FAFAFA]">{p.nome}</p>
+                  <p className="truncate text-xs text-[#71717A]">
                     {p.especialidade ?? 'Sem especialidade'}
                   </p>
                 </div>
@@ -144,8 +144,8 @@ export default function ProfissionaisPage() {
 
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-            <h3 className="text-lg font-semibold text-zinc-100">
+          <div className="w-full max-w-md rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-6">
+            <h3 className="text-lg font-semibold text-[#FAFAFA]">
               {editandoId ? 'Editar profissional' : 'Novo profissional'}
             </h3>
             <div className="mt-4 space-y-3">

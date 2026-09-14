@@ -73,7 +73,7 @@ export default function EstoquePage() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-zinc-100">Estoque</h2>
+      <h2 className="text-xl font-semibold text-[#FAFAFA]">Estoque</h2>
 
       {/* Banner de produtos em alerta */}
       {alertas.length > 0 && (
@@ -100,12 +100,12 @@ export default function EstoquePage() {
                 className="flex items-center justify-between py-2 text-sm"
               >
                 <div>
-                  <p className="font-medium text-zinc-100">{a.nome}</p>
-                  <p className="text-xs text-zinc-500">{a.sku}</p>
+                  <p className="font-medium text-[#FAFAFA]">{a.nome}</p>
+                  <p className="text-xs text-[#71717A]">{a.sku}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-red-300">
-                    {a.estoqueAtual} <span className="text-xs font-normal text-zinc-500">/ mín. {a.estoqueMinimo}</span>
+                    {a.estoqueAtual} <span className="text-xs font-normal text-[#71717A]">/ mín. {a.estoqueMinimo}</span>
                   </p>
                   <button
                     type="button"
@@ -125,47 +125,47 @@ export default function EstoquePage() {
       )}
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">Total de produtos</p>
-          <p className="mt-1 text-2xl font-semibold text-zinc-100">
+        <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
+          <p className="text-sm text-[#A1A1AA]">Total de produtos</p>
+          <p className="mt-1 text-2xl font-semibold text-[#FAFAFA]">
             {resumo?.totalProdutos ?? '—'}
           </p>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">Valor em estoque</p>
-          <p className="mt-1 text-2xl font-semibold text-zinc-100">
+        <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
+          <p className="text-sm text-[#A1A1AA]">Valor em estoque</p>
+          <p className="mt-1 text-2xl font-semibold text-[#FAFAFA]">
             R$ {(resumo?.valorTotalEstoque ?? 0).toFixed(2)}
           </p>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <p className="text-sm text-zinc-400">Em alerta</p>
+        <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
+          <p className="text-sm text-[#A1A1AA]">Em alerta</p>
           <p className="mt-1 text-2xl font-semibold text-red-400">
             {resumo?.produtosAbaixoDoMinimo ?? '—'}
           </p>
         </div>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+      <div className="mt-6 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-zinc-800 bg-zinc-800/50">
+          <thead className="border-b border-[rgba(255,255,255,0.08)] bg-[#18181F]/50">
             <tr>
-              <th className="px-4 py-3 font-medium text-zinc-300">Produto</th>
-              <th className="px-4 py-3 font-medium text-zinc-300">SKU</th>
-              <th className="px-4 py-3 font-medium text-zinc-300">Preço</th>
-              <th className="px-4 py-3 font-medium text-zinc-300">Estoque</th>
-              <th className="px-4 py-3 font-medium text-zinc-300">Status</th>
+              <th className="px-4 py-3 font-medium text-[#D4D4D8]">Produto</th>
+              <th className="px-4 py-3 font-medium text-[#D4D4D8]">SKU</th>
+              <th className="px-4 py-3 font-medium text-[#D4D4D8]">Preço</th>
+              <th className="px-4 py-3 font-medium text-[#D4D4D8]">Estoque</th>
+              <th className="px-4 py-3 font-medium text-[#D4D4D8]">Status</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800">
+          <tbody className="divide-y divide-[rgba(255,255,255,0.08)]">
             {produtos.map((p) => {
               const s = status(p);
               return (
                 <tr key={p.id}>
-                  <td className="px-4 py-3 font-medium text-zinc-100">{p.nome}</td>
-                  <td className="px-4 py-3 text-zinc-400">{p.sku}</td>
-                  <td className="px-4 py-3 text-zinc-200">R$ {Number(p.preco).toFixed(2)}</td>
-                  <td className="px-4 py-3 text-zinc-100">{p.estoqueAtual}</td>
+                  <td className="px-4 py-3 font-medium text-[#FAFAFA]">{p.nome}</td>
+                  <td className="px-4 py-3 text-[#A1A1AA]">{p.sku}</td>
+                  <td className="px-4 py-3 text-[#E4E4E7]">R$ {Number(p.preco).toFixed(2)}</td>
+                  <td className="px-4 py-3 text-[#FAFAFA]">{p.estoqueAtual}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2 py-0.5 text-xs ${s.color}`}>{s.label}</span>
                   </td>
@@ -183,8 +183,8 @@ export default function EstoquePage() {
 
       {entradaProduto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-zinc-900 p-6">
-            <h3 className="font-semibold text-zinc-100">Dar entrada — {entradaProduto.nome}</h3>
+          <div className="w-full max-w-sm rounded-2xl bg-[#111116] p-6">
+            <h3 className="font-semibold text-[#FAFAFA]">Dar entrada — {entradaProduto.nome}</h3>
             <div className="mt-4 space-y-3">
               <Input
                 label="Quantidade"

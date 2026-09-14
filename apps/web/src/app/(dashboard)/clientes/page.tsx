@@ -126,8 +126,8 @@ export default function ClientesPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-100">Clientes</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="text-xl font-semibold text-[#FAFAFA]">Clientes</h2>
+          <p className="mt-1 text-sm text-[#A1A1AA]">
             Gerencie os clientes do seu negócio · {totalClientes}{' '}
             {totalClientes === 1 ? 'registrado' : 'registrados'}
           </p>
@@ -144,20 +144,20 @@ export default function ClientesPage() {
         />
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+      <div className="mt-6 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-zinc-800 bg-zinc-800/40">
+          <thead className="border-b border-[rgba(255,255,255,0.08)] bg-[#18181F]/40">
             <tr>
-              <th className="px-4 py-3 font-medium text-zinc-400">Nome</th>
-              <th className="px-4 py-3 font-medium text-zinc-400">Telefone</th>
-              <th className="px-4 py-3 font-medium text-zinc-400">E-mail</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Nome</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Telefone</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">E-mail</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800">
+          <tbody className="divide-y divide-[rgba(255,255,255,0.08)]">
             {carregando && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-zinc-400">
+                <td colSpan={4} className="px-4 py-6 text-center text-[#A1A1AA]">
                   Carregando…
                 </td>
               </tr>
@@ -175,17 +175,17 @@ export default function ClientesPage() {
               </tr>
             )}
             {clientes.map((c) => (
-              <tr key={c.id} className="hover:bg-zinc-800/30">
+              <tr key={c.id} className="hover:bg-[#18181F]/30">
                 <td className="px-4 py-3">
                   <button
-                    className="font-medium text-zinc-100 hover:text-primary-400"
+                    className="font-medium text-[#FAFAFA] hover:text-[#818CF8]"
                     onClick={() => setClienteDrawer(c)}
                   >
                     {c.nome}
                   </button>
                 </td>
-                <td className="px-4 py-3 text-zinc-300">{c.telefone ?? '—'}</td>
-                <td className="px-4 py-3 text-zinc-300">{c.email ?? '—'}</td>
+                <td className="px-4 py-3 text-[#D4D4D8]">{c.telefone ?? '—'}</td>
+                <td className="px-4 py-3 text-[#D4D4D8]">{c.email ?? '—'}</td>
                 <td className="px-4 py-3 text-right">
                   <Button
                     variant="ghost"
@@ -219,8 +219,8 @@ export default function ClientesPage() {
 
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-            <h3 className="text-lg font-semibold text-zinc-100">
+          <div className="w-full max-w-md rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-6">
+            <h3 className="text-lg font-semibold text-[#FAFAFA]">
               {editandoId ? 'Editar cliente' : 'Novo cliente'}
             </h3>
             <div className="mt-4 space-y-3">

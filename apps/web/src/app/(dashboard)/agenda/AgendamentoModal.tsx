@@ -106,18 +106,18 @@ export function AgendamentoModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-zinc-900 p-6">
+      <div className="w-full max-w-lg rounded-2xl bg-[#111116] p-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-zinc-100">Novo agendamento</h3>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300">
+          <h3 className="text-lg font-semibold text-[#FAFAFA]">Novo agendamento</h3>
+          <button onClick={onClose} className="text-[#71717A] hover:text-[#D4D4D8]">
             ✕
           </button>
         </div>
 
         {clienteNomeInicial && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg border border-primary-500/30 bg-primary-500/10 px-3 py-2">
-            <span className="text-sm font-medium text-primary-300">Cliente:</span>
-            <span className="text-sm text-zinc-100">{clienteNomeInicial}</span>
+          <div className="mt-4 flex items-center gap-2 rounded-lg border border-[rgba(99,102,241,0.30)] bg-[rgba(99,102,241,0.10)] px-3 py-2">
+            <span className="text-sm font-medium text-[#A5B4FC]">Cliente:</span>
+            <span className="text-sm text-[#FAFAFA]">{clienteNomeInicial}</span>
           </div>
         )}
 
@@ -136,8 +136,8 @@ export function AgendamentoModal({
                   onClick={() => setClienteId(c.id)}
                   className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
                     clienteId === c.id
-                      ? 'bg-primary-500/10 text-primary-300'
-                      : 'text-zinc-200 hover:bg-zinc-800'
+                      ? 'bg-[rgba(99,102,241,0.10)] text-[#A5B4FC]'
+                      : 'text-[#E4E4E7] hover:bg-[#18181F]'
                   }`}
                 >
                   {c.nome}
@@ -145,7 +145,7 @@ export function AgendamentoModal({
               ))}
             </div>
             <div>
-              <p className="mb-1 text-sm font-medium text-zinc-200">Ou cadastre novo</p>
+              <p className="mb-1 text-sm font-medium text-[#E4E4E7]">Ou cadastre novo</p>
               <Input
                 value={novoClienteNome}
                 onChange={(e) => setNovoClienteNome(e.target.value)}
@@ -161,11 +161,11 @@ export function AgendamentoModal({
         {step === 2 && (
           <div className="mt-4 space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-200">Profissional</label>
+              <label className="mb-1 block text-sm font-medium text-[#E4E4E7]">Profissional</label>
               <select
                 value={profissionalId}
                 onChange={(e) => setProfissionalId(e.target.value)}
-                className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-[rgba(255,255,255,0.10)] px-3 py-2 text-sm"
               >
                 <option value="">Selecione</option>
                 {profissionais.map((p) => (
@@ -176,11 +176,11 @@ export function AgendamentoModal({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-200">Serviço</label>
+              <label className="mb-1 block text-sm font-medium text-[#E4E4E7]">Serviço</label>
               <select
                 value={servicoId}
                 onChange={(e) => setServicoId(e.target.value)}
-                className="w-full rounded-lg border border-zinc-700 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-[rgba(255,255,255,0.10)] px-3 py-2 text-sm"
               >
                 <option value="">Selecione</option>
                 {servicos.map((s) => (
@@ -210,7 +210,7 @@ export function AgendamentoModal({
               onChange={(e) => setDataHora(e.target.value)}
             />
             {servico && (
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-[#A1A1AA]">
                 Duração: {servico.duracaoMin} min · R$ {Number(servico.preco).toFixed(2)}
               </p>
             )}

@@ -13,11 +13,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 ) {
   return (
     <div className="flex flex-col gap-1.5">
-      {label && <label className="text-sm font-medium text-zinc-300">{label}</label>}
+      {label && <label className="text-sm font-medium text-[#D4D4D8]">{label}</label>}
       <input
         ref={ref}
-        className={`rounded-lg border bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-          error ? 'border-red-500' : 'border-zinc-700'
+        className={`rounded-lg border bg-[#111116] px-3 py-2 text-sm text-[#FAFAFA] placeholder:text-[#71717A] focus:outline-none focus:ring-2 focus:ring-[#6366F1] ${
+          error ? 'border-red-500' : 'border-[rgba(255,255,255,0.10)]'
         } ${className ?? ''}`}
         {...props}
       />

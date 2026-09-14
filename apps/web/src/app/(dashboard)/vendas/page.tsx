@@ -53,32 +53,32 @@ export default function VendasPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-100">Histórico de vendas</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="text-xl font-semibold text-[#FAFAFA]">Histórico de vendas</h2>
+          <p className="mt-1 text-sm text-[#A1A1AA]">
             {vendas.length} {vendas.length === 1 ? 'venda' : 'vendas'} · {totalItens}{' '}
             {totalItens === 1 ? 'item' : 'itens'} ·{' '}
-            <span className="font-semibold text-zinc-100">{formatarMoeda(totalGeral)}</span>
+            <span className="font-semibold text-[#FAFAFA]">{formatarMoeda(totalGeral)}</span>
           </p>
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+      <div className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-4">
         <div>
-          <label className="block text-xs text-zinc-500">De</label>
+          <label className="block text-xs text-[#71717A]">De</label>
           <input
             type="date"
             value={dataInicio}
             onChange={(e) => setDataInicio(e.target.value)}
-            className="mt-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="mt-1 rounded-lg border border-[rgba(255,255,255,0.10)] bg-[#111116] px-3 py-2 text-sm text-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
           />
         </div>
         <div>
-          <label className="block text-xs text-zinc-500">Até</label>
+          <label className="block text-xs text-[#71717A]">Até</label>
           <input
             type="date"
             value={dataFim}
             onChange={(e) => setDataFim(e.target.value)}
-            className="mt-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="mt-1 rounded-lg border border-[rgba(255,255,255,0.10)] bg-[#111116] px-3 py-2 text-sm text-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
           />
         </div>
         <Button onClick={() => void carregar()}>Filtrar</Button>
@@ -102,21 +102,21 @@ export default function VendasPage() {
           </a>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+      <div className="mt-6 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-zinc-800 bg-zinc-800/40">
+          <thead className="border-b border-[rgba(255,255,255,0.08)] bg-[#18181F]/40">
             <tr>
-              <th className="px-4 py-3 font-medium text-zinc-400">Data</th>
-              <th className="px-4 py-3 font-medium text-zinc-400">Cliente</th>
-              <th className="px-4 py-3 font-medium text-zinc-400">Itens</th>
-              <th className="px-4 py-3 font-medium text-zinc-400">Total</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Data</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Cliente</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Itens</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Total</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800">
+          <tbody className="divide-y divide-[rgba(255,255,255,0.08)]">
             {carregando && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-zinc-400">
+                <td colSpan={5} className="px-4 py-6 text-center text-[#A1A1AA]">
                   Carregando…
                 </td>
               </tr>
@@ -134,15 +134,15 @@ export default function VendasPage() {
               const aberto = expandida === v.id;
               return (
                 <Fragment key={v.id}>
-                  <tr className="hover:bg-zinc-800/30">
-                    <td className="px-4 py-3 text-zinc-200">{formatarDataHora(v.createdAt)}</td>
-                    <td className="px-4 py-3 text-zinc-100">
+                  <tr className="hover:bg-[#18181F]/30">
+                    <td className="px-4 py-3 text-[#E4E4E7]">{formatarDataHora(v.createdAt)}</td>
+                    <td className="px-4 py-3 text-[#FAFAFA]">
                       {v.cliente?.nome ?? (
-                        <span className="text-zinc-500">Venda avulsa</span>
+                        <span className="text-[#71717A]">Venda avulsa</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-zinc-300">{v.itens.length}</td>
-                    <td className="px-4 py-3 font-medium text-zinc-100">
+                    <td className="px-4 py-3 text-[#D4D4D8]">{v.itens.length}</td>
+                    <td className="px-4 py-3 font-medium text-[#FAFAFA]">
                       {formatarMoeda(v.total)}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -156,18 +156,18 @@ export default function VendasPage() {
                     </td>
                   </tr>
                   {aberto && (
-                    <tr className="bg-zinc-800/20">
+                    <tr className="bg-[#18181F]/20">
                       <td colSpan={5} className="px-4 py-3">
                         <div className="space-y-1 pl-4 text-sm">
                           {v.itens.map((it) => (
                             <div
                               key={it.id}
-                              className="flex items-center justify-between text-zinc-300"
+                              className="flex items-center justify-between text-[#D4D4D8]"
                             >
                               <span>
                                 {it.quantidade}× {it.produto.nome}
                               </span>
-                              <span className="text-zinc-400">
+                              <span className="text-[#A1A1AA]">
                                 {formatarMoeda(Number(it.precoUnitario) * it.quantidade)}
                               </span>
                             </div>

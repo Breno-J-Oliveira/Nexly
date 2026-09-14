@@ -76,8 +76,8 @@ export default function AgendaPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-100">Agenda</h2>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h2 className="text-xl font-semibold text-[#FAFAFA]">Agenda</h2>
+          <p className="mt-1 text-sm text-[#A1A1AA]">
             {data.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
             {' · '}
             {agendamentos.length}{' '}
@@ -100,7 +100,7 @@ export default function AgendaPage() {
       </div>
 
       <div className="mt-6 space-y-3">
-        {carregando && <p className="text-sm text-zinc-400">Carregando…</p>}
+        {carregando && <p className="text-sm text-[#A1A1AA]">Carregando…</p>}
         {!carregando && agendamentos.length === 0 && (
           <EmptyState
             icon="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
@@ -112,15 +112,15 @@ export default function AgendaPage() {
         {agendamentos.map((a) => (
           <div
             key={a.id}
-            className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+            className="flex items-center justify-between rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-4"
           >
             <div className="flex items-center gap-4">
-              <span className="text-lg font-semibold text-zinc-100">
+              <span className="text-lg font-semibold text-[#FAFAFA]">
                 {formatarHora(a.dataHora)}
               </span>
               <div>
-                <p className="font-medium text-zinc-100">{a.cliente.nome}</p>
-                <p className="text-sm text-zinc-400">
+                <p className="font-medium text-[#FAFAFA]">{a.cliente.nome}</p>
+                <p className="text-sm text-[#A1A1AA]">
                   {a.servico.nome} · {a.profissional.nome}
                 </p>
               </div>

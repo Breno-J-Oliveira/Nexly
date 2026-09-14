@@ -429,7 +429,7 @@ return (
               <button
                 type="button"
                 onClick={copiarSegunda}
-                className="mt-5 w-full rounded-lg border border-zinc-700 py-2 text-[13px] transition-colors hover:bg-white/5"
+                className="mt-5 w-full rounded-lg border border-[rgba(255,255,255,0.10)] py-2 text-[13px] transition-colors hover:bg-white/5"
                 style={{ color: '#A1A1AA' }}
               >
                 Copiar horário de Segunda para todos os dias

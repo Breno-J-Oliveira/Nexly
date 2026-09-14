@@ -30,26 +30,26 @@ export default function GlobalError({
 
   return (
     <html>
-      <body className="min-h-screen bg-zinc-950 text-zinc-100">
+      <body className="min-h-screen bg-[#060608] text-[#FAFAFA]">
         <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 text-center">
           <p className="text-5xl">⚠️</p>
           <h1 className="mt-4 text-2xl font-semibold">Algo deu errado</h1>
-          <p className="mt-2 text-sm text-zinc-400">
+          <p className="mt-2 text-sm text-[#A1A1AA]">
             Encontramos um problema inesperado. Você pode tentar recarregar a página ou voltar para o início.
           </p>
           {error.digest && (
-            <p className="mt-3 font-mono text-xs text-zinc-500">ID do erro: {error.digest}</p>
+            <p className="mt-3 font-mono text-xs text-[#71717A]">ID do erro: {error.digest}</p>
           )}
           <div className="mt-6 flex gap-3">
             <button
               onClick={() => reset()}
-              className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-primary-400"
+              className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-[#09090B] hover:bg-[#818CF8]"
             >
               Tentar de novo
             </button>
             <Link
               href="/dashboard"
-              className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800"
+              className="rounded-lg border border-[rgba(255,255,255,0.10)] px-4 py-2 text-sm font-medium text-[#D4D4D8] hover:bg-[#18181F]"
             >
               Ir para o início
             </Link>
