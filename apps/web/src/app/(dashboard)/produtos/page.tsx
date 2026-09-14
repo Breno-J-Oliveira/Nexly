@@ -107,7 +107,7 @@ export default function ProdutosPage() {
       nome: p.nome,
       sku: p.sku,
       preco: String(p.preco),
-      estoqueAtual: '0',
+      estoqueAtual: String(p.estoqueAtual),
       estoqueMinimo: String(p.estoqueMinimo),
       categoria: p.categoria ?? '',
     });
