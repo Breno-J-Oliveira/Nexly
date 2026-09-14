@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Usuario } from '@prisma/client';
+import { Plano } from '@prisma/client';
 import { Role, UsuarioPublico, validarCnpj } from '@nexly/shared';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../database/prisma.service';
@@ -53,7 +54,7 @@ export class AuthService {
         telefone: dto.telefone,
         segmento: dto.segmento,
         cidade: dto.cidade,
-        plano: dto.plano?.toUpperCase() === 'PRO' ? 'PRO' : 'FREE',
+        plano: (dto.plano?.toUpperCase() as Plano) ?? Plano.FREE,
         dadosPagamento: dto.nomeCartao
           ? {
               nomeCartao: dto.nomeCartao,

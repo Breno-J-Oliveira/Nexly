@@ -17,9 +17,9 @@ import { maskCnpj, maskTelefone, soDigitos } from '@/lib/format';
 const PASSO_COUNT = 5;
 
 const planos = [
-  { id: 'essencial', nome: 'Essencial', preco: 49, periodo: '/mês', descricao: 'Ideal para autônomos e pequenos negócios.', recursos: ['Agenda ilimitada', 'Até 2 profissionais', 'Controle de clientes', 'Suporte por e-mail'], destaque: false },
-  { id: 'pro', nome: 'Profissional', preco: 99, periodo: '/mês', descricao: 'Para negócios em crescimento.', recursos: ['Tudo do Essencial', 'Até 10 profissionais', 'Estoque e PDV', 'Relatórios financeiros', 'Suporte prioritário'], destaque: true },
-  { id: 'empresarial', nome: 'Empresarial', preco: 199, periodo: '/mês', descricao: 'Para redes e franquias.', recursos: ['Tudo do Profissional', 'Profissionais ilimitados', 'Multiunidade', 'API e integrações', 'Suporte dedicado'], destaque: false },
+  { id: 'BASIC', nome: 'Essencial', preco: 49, periodo: '/mês', descricao: 'Ideal para autônomos e pequenos negócios.', recursos: ['Agenda ilimitada', 'Até 2 profissionais', 'Controle de clientes', 'Suporte por e-mail'], destaque: false },
+  { id: 'PRO', nome: 'Profissional', preco: 99, periodo: '/mês', descricao: 'Para negócios em crescimento.', recursos: ['Tudo do Essencial', 'Até 10 profissionais', 'Estoque e PDV', 'Relatórios financeiros', 'Suporte prioritário'], destaque: true },
+  { id: 'ENTERPRISE', nome: 'Empresarial', preco: 199, periodo: '/mês', descricao: 'Para redes e franquias.', recursos: ['Tudo do Profissional', 'Profissionais ilimitados', 'Multiunidade', 'API e integrações', 'Suporte dedicado'], destaque: false },
 ];
 
 const schemaPasso1 = z
