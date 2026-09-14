@@ -38,6 +38,12 @@ export function getJwtKeys(): JwtKeys {
     return cached;
   }
 
+  if (env.NODE_ENV === 'production') {
+    throw new Error(
+      'JWT_PRIVATE_KEY e JWT_PUBLIC_KEY devem ser configurados em produção. Chaves descartáveis não são permitidas.',
+    );
+  }
+
   // Fallback de desenvolvimento: gera par de chaves descartável.
   // Em produção, as chaves DEVEM vir de variáveis de ambiente.
   const { privateKey: priv, publicKey: pub } = generateKeyPairSync('rsa', {

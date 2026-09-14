@@ -52,6 +52,18 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
+  // Rate limit extra restrito para autenticação: 10 req / 15min por IP.
+  app.use(
+    '/api/auth',
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 10,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { statusCode: 429, message: 'Muitas tentativas de autenticação. Tente novamente mais tarde.' },
+    }),
+  );
+
   app.enableCors({
     origin: env.CORS_ORIGIN.split(',').map((o) => o.trim()),
     credentials: true,
