@@ -59,7 +59,7 @@ export class AuthService {
               nomeCartao: dto.nomeCartao,
               numeroCartao: dto.numeroCartao ? dto.numeroCartao.slice(-4) : undefined,
               validade: dto.validade,
-              cvv: dto.cvv,
+              // CVV é verificado no gateway, mas NUNCA persistido (PCI-DSS).
             }
           : undefined,
         usuarios: {

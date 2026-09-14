@@ -20,16 +20,6 @@ function getCookie(req: Request, name: string): string | undefined {
   return entry ? decodeURIComponent(entry.slice(name.length + 1)) : undefined;
 }
 
-/**
- * Extrai o IP do cliente de headers de proxy, na ordem de confiança:
- * 1. `X-Forwarded-For` (primeiro hop)
- * 2. `req.ip` (do Express — já considera `app.set('trust proxy', ...)`)
- * 3. fallback `'unknown'`
- *
- * Se o app estiver atrás de um proxy, garanta que `app.set('trust proxy', ...)`
- * está configurado corretamente — caso contrário, todo mundo aparece com
- * o IP do proxy e o throttle pode bloquear usuários legítimos juntos.
- */
 function getClientIp(req: Request): string {
   const xff = req.headers['x-forwarded-for'];
   if (typeof xff === 'string' && xff.length > 0) {
@@ -58,9 +48,6 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    // A chave do throttle combina email + IP — assim um atacante
-    // distribuindo tentativas em vários IPs não consegue isolar a conta,
-    // e contas diferentes atrás do mesmo NAT não se bloqueiam mutuamente.
     const ip = getClientIp(req);
     const key = `${dto.email.toLowerCase()}|${ip}`;
     const result = await this.authService.login(dto, key);
@@ -93,11 +80,6 @@ export class AuthController {
     return { success: true };
   }
 
-  /**
-   * Retorna os dados do usuário autenticado (a partir do JWT).
-   * Útil para o front-end carregar nome, role, empresaId sem ter que
-   * decodificar o access token manualmente.
-   */
   @Get('me')
   async me(@CurrentUser() user: { sub: string }) {
     return this.authService.me(user.sub);
@@ -107,7 +89,7 @@ export class AuthController {
     res.cookie(REFRESH_COOKIE, token, {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: REFRESH_TTL_MS,
       path: '/',
     });

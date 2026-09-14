@@ -34,6 +34,8 @@
     "argon2": "^0.41.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
     "ioredis": "^5.4.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",

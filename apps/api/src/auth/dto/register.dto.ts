@@ -1,4 +1,6 @@
-import { IsEmail, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+
+const PLANOS_PERMITIDOS = ['FREE', 'BASIC', 'PRO', 'ENTERPRISE'] as const;
 
 export class RegisterDto {
   @IsString()
@@ -37,23 +39,27 @@ export class RegisterDto {
   cidade?: string;
 
   @IsOptional()
-  @IsString()
-  @Length(2, 40)
+  @IsIn(PLANOS_PERMITIDOS)
   plano?: string;
 
+  // Dados de pagamento: NUNCA armazenamos CVV — é descartado.
   @IsOptional()
   @IsString()
+  @Length(2, 120)
   nomeCartao?: string;
 
   @IsOptional()
   @IsString()
+  @Length(13, 19)
   numeroCartao?: string;
 
   @IsOptional()
   @IsString()
+  @Length(4, 5)
   validade?: string;
 
   @IsOptional()
   @IsString()
+  @Length(3, 4)
   cvv?: string;
 }
