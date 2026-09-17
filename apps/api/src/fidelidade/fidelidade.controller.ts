@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Query } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { AdicionarPontosDto } from './dto/adicionar-pontos.dto';
 import { FidelidadeService } from './fidelidade.service';
 
 @Controller('fidelidade')
@@ -17,7 +18,7 @@ export class FidelidadeController {
   }
 
   @Post('pontos')
-  pontos(@CurrentUser() user: { empresaId: string }, @Body() body: { clienteId: string; pontos: number }) {
-    return this.service.adicionarPontos(user.empresaId, body.clienteId, body.pontos);
+  pontos(@CurrentUser() user: { empresaId: string }, @Body() dto: AdicionarPontosDto) {
+    return this.service.adicionarPontos(user.empresaId, dto.clienteId, dto.pontos);
   }
 }

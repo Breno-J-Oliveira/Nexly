@@ -10,8 +10,9 @@ import { toastSuccess, toastError } from '@/components/ui/Toaster';
 
 interface Usuario { id: string; nome: string; email: string; role: string; ativo: boolean; createdAt: string; }
 
-const roleLabel: Record<string, string> = { ADMIN: 'Administrador', GESTOR: 'Gerente', CAIXA: 'Operador de Caixa' };
-const roleColor: Record<string, string> = { ADMIN: '#818CF8', GESTOR: '#22C55E', CAIXA: '#A1A1AA' };
+// Valores alinhados ao enum Role do banco: ADMIN | PROFISSIONAL | CAIXA.
+const roleLabel: Record<string, string> = { ADMIN: 'Administrador', PROFISSIONAL: 'Profissional', CAIXA: 'Operador de Caixa' };
+const roleColor: Record<string, string> = { ADMIN: '#818CF8', PROFISSIONAL: '#22C55E', CAIXA: '#A1A1AA' };
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -20,33 +21,36 @@ export default function UsuariosPage() {
   const [form, setForm] = useState({ nome: '', email: '', senha: '', role: 'CAIXA' });
   const [salvando, setSalvando] = useState(false);
 
-  const carregar = async () => {
+  const carregar = async (): Promise<void> => {
     const res = await api.get<Usuario[]>('/usuarios');
-    setUsuarios(Array.isArray(res.data) ? res.data : (res.data as any).data ?? []);
+    setUsuarios(Array.isArray(res.data) ? res.data : []);
   };
 
   useEffect(() => { void carregar(); }, []);
 
-  const salvar = async () => {
+  const salvar = async (): Promise<void> => {
     setSalvando(true);
     try {
       if (editandoId) {
         await api.put('/usuarios/' + editandoId, { nome: form.nome, role: form.role });
-        toastSuccess('Usuario atualizado!');
+        toastSuccess('Usuário atualizado!');
       } else {
         await api.post('/usuarios', form);
-        toastSuccess('Usuario criado!');
+        toastSuccess('Usuário criado!');
       }
       setModalAberto(false);
       await carregar();
-    } catch (e: any) {
-      toastError(e?.response?.data?.message || 'Erro ao salvar');
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toastError(err?.response?.data?.message || 'Erro ao salvar');
     } finally { setSalvando(false); }
   };
 
-  const toggleAtivo = async (u: Usuario) => {
-    await api.delete('/usuarios/' + u.id);
-    toastSuccess(u.ativo ? 'Usuario desativado' : 'Usuario reativado');
+  // Alterna entre ativo/inativo usando PUT (o DELETE apenas desativa o usuário,
+  // então não serve para reativar).
+  const toggleAtivo = async (u: Usuario): Promise<void> => {
+    await api.put('/usuarios/' + u.id, { ativo: !u.ativo });
+    toastSuccess(u.ativo ? 'Usuário desativado' : 'Usuário reativado');
     await carregar();
   };
 
@@ -54,22 +58,22 @@ export default function UsuariosPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>Usuarios</h2>
+          <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>Usuários</h2>
           <p className="mt-1 text-sm" style={{ color: '#71717A' }}>Gerencie quem acessa o sistema</p>
         </div>
-        <Button onClick={() => { setEditandoId(null); setForm({ nome: '', email: '', senha: '', role: 'CAIXA' }); setModalAberto(true); }}>+ Novo usuario</Button>
+        <Button onClick={() => { setEditandoId(null); setForm({ nome: '', email: '', senha: '', role: 'CAIXA' }); setModalAberto(true); }}>+ Novo usuário</Button>
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-xl" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
         {usuarios.length === 0 ? (
-          <EmptyState icon="user-group" title="Nenhum usuario" description="Adicione usuarios para acessar o sistema" />
+          <EmptyState icon="user-group" title="Nenhum usuário" description="Adicione usuários para acessar o sistema" />
         ) : (
           <table className="w-full text-left text-[13px]">
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>Nome</th>
-                <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>Email</th>
-                <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>Funcao</th>
+                <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>E-mail</th>
+                <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>Função</th>
                 <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>Status</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -92,16 +96,16 @@ export default function UsuariosPage() {
         )}
       </div>
 
-      <Modal open={modalAberto} onClose={() => setModalAberto(false)} title={editandoId ? 'Editar usuario' : 'Novo usuario'}>
+      <Modal open={modalAberto} onClose={() => setModalAberto(false)} title={editandoId ? 'Editar usuário' : 'Novo usuário'}>
         <div className="space-y-3">
           <Input label="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Nome completo" />
-          {!editandoId && <Input label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@empresa.com" />}
+          {!editandoId && <Input label="E-mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@empresa.com" />}
           {!editandoId && <Input label="Senha" type="password" value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} placeholder="••••••••" />}
           <div>
-            <label className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>Funcao</label>
+            <label className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>Função</label>
             <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" style={{ backgroundColor: '#0C0C10', borderColor: 'rgba(255,255,255,0.10)', color: '#FAFAFA' }}>
               <option value="ADMIN">Administrador</option>
-              <option value="GESTOR">Gerente</option>
+              <option value="PROFISSIONAL">Profissional</option>
               <option value="CAIXA">Operador de Caixa</option>
             </select>
           </div>

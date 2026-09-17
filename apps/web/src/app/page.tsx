@@ -4,10 +4,10 @@ import { LandingFooter } from '@/components/LandingFooter';
 import { LandingHeader } from '@/components/LandingHeader';
 
 const features = [
-  { icon: 'calendar-days', title: 'Agenda inteligente', desc: 'Controle horarios, profissionais e lembretes automaticos.' },
-  { icon: 'users', title: 'Clientes', desc: 'Cadastro completo com historico de atendimentos e compras.' },
+  { icon: 'calendar-days', title: 'Agenda inteligente', desc: 'Controle horários, profissionais e lembretes automáticos.' },
+  { icon: 'users', title: 'Clientes', desc: 'Cadastro completo com histórico de atendimentos e compras.' },
   { icon: 'cash-register', title: 'PDV e vendas', desc: 'Venda produtos, aplique descontos e acompanhe o faturamento.' },
-  { icon: 'chart-column', title: 'Relatorios', desc: 'DRE, fluxo de caixa e indicadores para decisoes rapidas.' },
+  { icon: 'chart-column', title: 'Relatórios', desc: 'DRE, fluxo de caixa e indicadores para decisões rápidas.' },
 ];
 
 export default function HomePage() {

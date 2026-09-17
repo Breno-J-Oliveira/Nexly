@@ -24,7 +24,9 @@ export type TipoMovimentacao = (typeof TipoMovimentacao)[keyof typeof TipoMovime
 
 export const Plano = {
   FREE: 'FREE',
+  BASIC: 'BASIC',
   PRO: 'PRO',
+  ENTERPRISE: 'ENTERPRISE',
 } as const;
 
 export type Plano = (typeof Plano)[keyof typeof Plano];

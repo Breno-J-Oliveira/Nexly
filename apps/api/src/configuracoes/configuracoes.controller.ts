@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Put } from '@nestjs/common';
+import { Body, Controller, Get, InternalServerErrorException, Put } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 import { getTenantContext } from '../database/tenant-context';
 import { AtualizarConfiguracoesDto } from './dto/atualizar-configuracoes.dto';
@@ -21,6 +22,40 @@ export class ConfiguracoesController {
         plano: 'FREE',
       }
     );
+  }
+
+  /**
+   * Token do link público de agendamento (`/booking/<token>`).
+   * Gerado na primeira chamada e reutilizado depois (coluna é @unique).
+   */
+  @Get('link-agendamento')
+  @ApiOperation({ summary: 'Token do link público de agendamento da empresa' })
+  @ApiResponse({ status: 200, description: 'Token do link público' })
+  async linkAgendamento(): Promise<{ token: string | null }> {
+    const ctx = getTenantContext();
+    if (!ctx) return { token: null };
+
+    const empresa = await this.prisma.client.empresa.findFirst({
+      where: { id: ctx.tenantId },
+      select: { bookingToken: true },
+    });
+    if (!empresa) return { token: null };
+    if (empresa.bookingToken) return { token: empresa.bookingToken };
+
+    // Retry apenas para colisão do @unique (probabilidade desprezível).
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      const token = randomBytes(16).toString('hex');
+      try {
+        await this.prisma.client.empresa.update({
+          where: { id: ctx.tenantId },
+          data: { bookingToken: token },
+        });
+        return { token };
+      } catch (e) {
+        if ((e as { code?: string }).code !== 'P2002') throw e;
+      }
+    }
+    throw new InternalServerErrorException('Não foi possível gerar o link de agendamento');
   }
 
   @Put()

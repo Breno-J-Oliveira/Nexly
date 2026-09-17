@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsString, Length } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, Length } from 'class-validator';
 import { Role } from '@nexly/shared';
 
 export class CriarUsuarioDto {
@@ -13,6 +13,7 @@ export class CriarUsuarioDto {
   @Length(8, 72)
   senha!: string;
 
+  @IsOptional()
   @IsEnum(Role)
-  role!: Role;
+  role?: Role;
 }

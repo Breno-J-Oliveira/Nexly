@@ -2,6 +2,8 @@ import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { WhatsAppService } from './whatsapp.service';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { EnviarLembreteDto } from './dto/enviar-lembrete.dto';
+import { EnviarMensagemDto } from './dto/enviar-mensagem.dto';
 
 @Controller('whatsapp')
 @UseGuards(RolesGuard)
@@ -10,15 +12,15 @@ export class WhatsAppController {
 
   @Post('test')
   @Roles('ADMIN')
-  async testSend(@Body() body: { phone: string; message: string }) {
-    const ok = await this.whatsapp.send(body);
+  async testSend(@Body() dto: EnviarMensagemDto) {
+    const ok = await this.whatsapp.send(dto);
     return { sent: ok, provider: process.env.WHATSAPP_PROVIDER || 'disabled' };
   }
 
   @Post('reminder/test')
   @Roles('ADMIN')
-  async testReminder(@Body() body: { phone: string; clientName: string; professionalName: string; serviceName: string; dateTime: string }) {
-    const ok = await this.whatsapp.sendAppointmentReminder(body);
+  async testReminder(@Body() dto: EnviarLembreteDto) {
+    const ok = await this.whatsapp.sendAppointmentReminder(dto);
     return { sent: ok };
   }
 }

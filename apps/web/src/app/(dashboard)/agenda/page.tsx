@@ -56,7 +56,7 @@ export default function AgendaPage() {
 
   const mudarStatus = async (id: string, status: StatusAgendamento): Promise<void> => {
     await api.patch(`/agendamentos/${id}/status`, { status });
-    toastSuccess(status === 'CONCLUIDO' ? 'Servico concluido!' : status === 'CANCELADO' ? 'Agendamento cancelado' : 'Status atualizado!');
+    toastSuccess(status === 'CONCLUIDO' ? 'Serviço concluído!' : status === 'CANCELADO' ? 'Agendamento cancelado' : 'Status atualizado!');
     await carregar();
   };
 

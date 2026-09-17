@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaService } from '../database/prisma.service';
 import { ExportService } from './export.service';
 
 const mockPrisma = {
@@ -15,7 +16,7 @@ describe('ExportService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ExportService,
-        { provide: 'PrismaService', useValue: mockPrisma },
+        { provide: PrismaService, useValue: mockPrisma },
       ],
     }).compile();
 

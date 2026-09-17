@@ -2,6 +2,9 @@ import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common'
 import { Role } from '@nexly/shared';
 import { Roles } from '../common/decorators/roles.decorator';
 import { getTenantContext } from '../database/tenant-context';
+import { AtualizarUsuarioDto } from './dto/atualizar-usuario.dto';
+import { CriarUsuarioDto } from './dto/criar-usuario.dto';
+import { TrocarSenhaDto } from './dto/trocar-senha.dto';
 import { UsuariosService } from './usuarios.service';
 
 @Controller('usuarios')
@@ -14,17 +17,17 @@ export class UsuariosController {
 
   @Post()
   @Roles(Role.ADMIN)
-  criar(@Body() dto: { nome: string; email: string; senha: string; role?: Role }) {
+  criar(@Body() dto: CriarUsuarioDto) {
     const ctx = getTenantContext();
     return this.service.criar(ctx?.tenantId ?? '', dto);
   }
 
   @Put(':id')
   @Roles(Role.ADMIN)
-  atualizar(@Param('id') id: string, @Body() dto: { nome?: string; role?: Role; ativo?: boolean }) { return this.service.atualizar(id, dto); }
+  atualizar(@Param('id') id: string, @Body() dto: AtualizarUsuarioDto) { return this.service.atualizar(id, dto); }
 
   @Post(':id/trocar-senha')
-  trocarSenha(@Param('id') id: string, @Body() dto: { senhaAtual: string; novaSenha: string }) { return this.service.trocarSenha(id, dto.senhaAtual, dto.novaSenha); }
+  trocarSenha(@Param('id') id: string, @Body() dto: TrocarSenhaDto) { return this.service.trocarSenha(id, dto.senhaAtual, dto.novaSenha); }
 
   @Delete(':id')
   @Roles(Role.ADMIN)

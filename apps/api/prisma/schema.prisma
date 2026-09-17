@@ -20,7 +20,9 @@ enum Role {
 
 enum Plano {
   FREE
+  BASIC
   PRO
+  ENTERPRISE
 }
 
 enum StatusAgendamento {

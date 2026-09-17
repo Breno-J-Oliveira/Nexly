@@ -101,7 +101,7 @@ export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) 
 
   const concluir = async (id: string) => {
     await api.patch(`/agendamentos/${id}/status`, { status: 'CONCLUIDO' });
-    toastSuccess('Servico concluido!');
+    toastSuccess('Serviço concluído!');
     void carregar();
     onConcluir?.(id);
   };

@@ -70,7 +70,7 @@ describe('VendasService', () => {
       ]);
 
       const txVenda = { id: 'v1' };
-      let receivedData: { clienteId?: string; total: number } | null = null;
+      let receivedData: { clienteId?: string; total: number; desconto?: number } | null = null;
       prisma.client.$transaction.mockImplementation(async (cb) => {
         const fakeTx = {
           venda: { create: jest.fn().mockImplementation(({ data }) => {
@@ -90,7 +90,7 @@ describe('VendasService', () => {
       ]);
 
       // total: 2*25 + 1*30 = 80
-      expect(receivedData).toEqual({ clienteId: 'c1', total: 80 });
+      expect(receivedData).toEqual({ clienteId: 'c1', total: 80, desconto: 0, formaPagamento: undefined });
       expect(result.id).toBe('v1');
       // registrarSaidaTx chamado para cada item
       expect(estoque.registrarSaidaTx).toHaveBeenCalledTimes(2);

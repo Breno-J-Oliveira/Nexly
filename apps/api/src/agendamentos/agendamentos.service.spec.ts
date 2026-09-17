@@ -10,7 +10,14 @@ describe('AgendamentosService', () => {
   let prisma: {
     client: {
       servico: { findFirst: jest.Mock };
-      agendamento: { findFirst: jest.Mock; findMany: jest.Mock; count: jest.Mock; create: jest.Mock; update: jest.Mock };
+      agendamento: {
+        findFirst: jest.Mock;
+        findMany: jest.Mock;
+        count: jest.Mock;
+        create: jest.Mock;
+        update: jest.Mock;
+        updateMany: jest.Mock;
+      };
     };
   };
   let emitter: { emit: jest.Mock };
@@ -30,6 +37,7 @@ describe('AgendamentosService', () => {
           count: jest.fn(),
           create: jest.fn(),
           update: jest.fn(),
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
         },
       },
     };
@@ -184,7 +192,7 @@ describe('AgendamentosService', () => {
       prisma.client.agendamento.findFirst.mockResolvedValue(base);
       prisma.client.agendamento.update.mockResolvedValue({ ...base, status: 'CONFIRMADO' });
       await service.atualizarStatus('a1', StatusAgendamento.CONFIRMADO);
-      expect(prisma.client.agendamento.update).toHaveBeenCalled();
+      expect(prisma.client.agendamento.updateMany).toHaveBeenCalled();
     });
 
     it('rejeita CONCLUIDO → CONFIRMADO (estado terminal)', async () => {

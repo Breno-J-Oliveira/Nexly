@@ -92,8 +92,9 @@ export default function ServicosPage() {
       toastSuccess('Serviço excluído');
       if (selecionado?.id === s.id) setSelecionado(null);
       await carregar();
-    } catch (e: any) {
-      toastError(e?.response?.data?.message || 'Erro ao excluir serviço');
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toastError(err?.response?.data?.message || 'Erro ao excluir serviço');
     }
   };
 
@@ -145,9 +146,17 @@ export default function ServicosPage() {
           <div className="space-y-2">
             {servicos.map((s) => (
               <div key={s.id} className="group">
-                <button
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => void selecionar(s)}
-                  className={`w-full rounded-lg border p-4 text-left ${
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      void selecionar(s);
+                    }
+                  }}
+                  className={`w-full cursor-pointer rounded-lg border p-4 text-left ${
                     selecionado?.id === s.id
                       ? 'border-[#6366F1] bg-[rgba(99,102,241,0.10)]'
                       : 'border-[rgba(255,255,255,0.08)] bg-[#111116] hover:border-[rgba(255,255,255,0.10)]'
@@ -157,12 +166,14 @@ export default function ServicosPage() {
                     <p className="font-medium text-[#FAFAFA]">{s.nome}</p>
                     <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
                       <button
+                        type="button"
                         onClick={(e) => { e.stopPropagation(); setEditandoServicoId(s.id); setFormServico({ nome: s.nome, duracaoMin: String(s.duracaoMin), preco: String(s.preco) }); setModalServicoAberto(true); }}
                         className="text-[13px] text-[#818CF8] hover:underline"
                       >
                         Editar
                       </button>
                       <button
+                        type="button"
                         onClick={(e) => { e.stopPropagation(); void excluirServico(s); }}
                         className="text-[13px] text-red-400 hover:underline"
                       >
@@ -173,7 +184,7 @@ export default function ServicosPage() {
                   <p className="text-sm text-[#A1A1AA]">
                     {s.duracaoMin} min · {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(s.preco))}
                   </p>
-                </button>
+                </div>
               </div>
             ))}
           </div>

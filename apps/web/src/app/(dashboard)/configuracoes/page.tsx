@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
-import { toastSuccess } from '@/components/ui/Toaster';
+import { toastSuccess, toastError } from '@/components/ui/Toaster';
 import { maskCnpj, maskTelefone } from '@/lib/format';
 
 type Secao = 'perfil' | 'horario' | 'usuarios' | 'notificacoes' | 'plano';
@@ -46,6 +46,13 @@ const NOTIFICACOES_PADRAO = {
   venda: { ativo: true },
 };
 
+const PLANO_LABEL: Record<string, string> = {
+  FREE: 'Gratuito',
+  BASIC: 'Essencial',
+  PRO: 'Profissional',
+  ENTERPRISE: 'Empresarial',
+};
+
 function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
   return (
     <button
@@ -82,6 +89,8 @@ export default function ConfiguracoesPage() {
   >(HORARIO_PADRAO);
   const [notificacoes, setNotificacoes] = useState<any>(NOTIFICACOES_PADRAO);
   const [salvando, setSalvando] = useState(false);
+  const [linkAgendamento, setLinkAgendamento] = useState<string | null>(null);
+  const [carregandoLink, setCarregandoLink] = useState(false);
 
   useEffect(() => {
     api
@@ -124,6 +133,35 @@ export default function ConfiguracoesPage() {
       toastSuccess('Configurações salvas!');
     } finally {
       setSalvando(false);
+    }
+  };
+
+/** Busca (e gera na primeira vez) o link público de agendamento. */
+  const carregarLinkAgendamento = async (): Promise<void> => {
+    if (linkAgendamento) return;
+    setCarregandoLink(true);
+    try {
+      const r = await api.get<{ token: string | null }>('/configuracoes/link-agendamento');
+      const token = r.data?.token;
+      if (!token) {
+        toastError('Não foi possível gerar o link de agendamento');
+        return;
+      }
+      setLinkAgendamento(`${window.location.origin}/booking/${token}`);
+    } catch {
+      toastError('Não foi possível gerar o link de agendamento');
+    } finally {
+      setCarregandoLink(false);
+    }
+  };
+
+  const copiarLinkAgendamento = async (): Promise<void> => {
+    if (!linkAgendamento) return;
+    try {
+      await navigator.clipboard.writeText(linkAgendamento);
+      toastSuccess('Link copiado!');
+    } catch {
+      toastError('Não foi possível copiar o link');
     }
   };
 
@@ -363,6 +401,45 @@ return (
                   Salvar alterações
                 </Button>
               </div>
+
+              {/* Link público de agendamento */}
+              <div
+                className="mt-6 border-t pt-5"
+                style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+              >
+                <p className="text-[13px] font-medium" style={{ color: '#71717A' }}>
+                  Link de agendamento
+                </p>
+                <p className="mt-1 text-[12px]" style={{ color: '#52525B' }}>
+                  Compartilhe com seus clientes para que eles agendem sozinhos, sem precisar
+                  entrar em contato.
+                </p>
+
+                {linkAgendamento ? (
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <input
+                      readOnly
+                      value={linkAgendamento}
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="h-10 w-full rounded-lg border px-3 text-sm outline-none"
+                      style={{
+                        backgroundColor: '#0C0C10',
+                        borderColor: 'rgba(255,255,255,0.10)',
+                        color: '#A1A1AA',
+                      }}
+                    />
+                    <Button variant="secondary" onClick={() => void copiarLinkAgendamento()}>
+                      Copiar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <Button onClick={() => void carregarLinkAgendamento()} loading={carregandoLink}>
+                      Gerar link de agendamento
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -577,7 +654,7 @@ return (
                       className="rounded-md px-2 py-1 text-[13px] font-semibold uppercase"
                       style={{ backgroundColor: 'rgba(99,102,241,0.15)', color: '#818CF8' }}
                     >
-                      {empresa.plano}
+                      {PLANO_LABEL[empresa.plano] ?? empresa.plano}
                     </span>
                   </p>
                 </div>

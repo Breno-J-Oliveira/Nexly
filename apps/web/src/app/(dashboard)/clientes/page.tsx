@@ -168,7 +168,7 @@ export default function ClientesPage() {
                   <EmptyState
                     icon="users-slash"
                     title={busca ? `Nenhum cliente encontrado para "${busca}"` : "Nenhum cliente cadastrado"}
-                    description={busca ? "Verifique a grafia ou cadastre um novo cliente" : "Adicione clientes para comecar a agendar servicos"}
+                    description={busca ? 'Verifique a grafia ou cadastre um novo cliente' : 'Adicione clientes para começar a agendar serviços'}
                     action={!busca ? <Button onClick={abrirNovo}>+ Novo cliente</Button> : undefined}
                   />
                 </td>

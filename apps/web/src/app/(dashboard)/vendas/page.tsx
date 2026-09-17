@@ -126,7 +126,7 @@ export default function VendasPage() {
                   <EmptyState
                     icon="receipt"
                     title="Nenhuma venda encontrada"
-                    description="As vendas realizadas no PDV aparecerao aqui"
+                    description="As vendas realizadas no PDV aparecerão aqui"
                   />
                 </td></tr>
               )}

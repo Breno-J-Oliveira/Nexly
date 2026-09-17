@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, Length } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, Length } from 'class-validator';
 import { Role } from '@nexly/shared';
 
 export class AtualizarUsuarioDto {
@@ -10,4 +10,8 @@ export class AtualizarUsuarioDto {
   @IsOptional()
   @IsEnum(Role)
   role?: Role;
+
+  @IsOptional()
+  @IsBoolean()
+  ativo?: boolean;
 }
