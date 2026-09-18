@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { validarCnpj } from '@nexly/shared';
@@ -44,28 +44,46 @@ type Passo4 = z.infer<typeof schemaPasso4>;
 
 interface FormData extends Passo1, Passo2, Passo3, Passo4 {}
 
-function AuthInput({ label, error, right, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string; right?: React.ReactNode }) {
+const AuthInput = forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement> & {
+    label: string;
+    error?: string;
+    right?: React.ReactNode;
+  }
+>(function AuthInput({ label, error, right, ...props }, ref) {
   return (
     <div className="flex flex-col gap-2">
       <label className="text-[13px] font-medium" style={{ color: '#A1A1AA' }}>{label}</label>
       <div className="relative">
-        <input {...props} className={`w-full rounded-xl border bg-[#111116] px-4 py-3 text-[14px] text-[#FAFAFA] placeholder:text-[#71717A] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30 ${error ? 'border-red-500/50' : 'border-[rgba(255,255,255,0.08)]'} ${right ? 'pr-11' : ''}`} />
+        <input
+          ref={ref}
+          {...props}
+          className={`w-full rounded-xl border bg-[#111116] px-4 py-3 text-[14px] text-[#FAFAFA] placeholder:text-[#71717A] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30 ${error ? 'border-red-500/50' : 'border-[rgba(255,255,255,0.08)]'} ${right ? 'pr-11' : ''}`}
+        />
         {right && <div className="absolute right-3 top-1/2 -translate-y-1/2">{right}</div>}
       </div>
       {error && <span className="text-xs text-red-400">{error}</span>}
     </div>
   );
-}
+});
 
-function Select({ label, error, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; error?: string }) {
+const Select = forwardRef<
+  HTMLSelectElement,
+  React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; error?: string }
+>(function Select({ label, error, children, ...props }, ref) {
   return (
     <div className="flex flex-col gap-2">
       <label className="text-[13px] font-medium" style={{ color: '#A1A1AA' }}>{label}</label>
-      <select {...props} className={`w-full appearance-none rounded-xl border bg-[#111116] px-4 py-3 text-[14px] text-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30 ${error ? 'border-red-500/50' : 'border-[rgba(255,255,255,0.08)]'}`}>{children}</select>
+      <select
+        ref={ref}
+        {...props}
+        className={`w-full appearance-none rounded-xl border bg-[#111116] px-4 py-3 text-[14px] text-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30 ${error ? 'border-red-500/50' : 'border-[rgba(255,255,255,0.08)]'}`}
+      >{children}</select>
       {error && <span className="text-xs text-red-400">{error}</span>}
     </div>
   );
-}
+});
 
 function StepIndicator({ passoAtual }: { passoAtual: number }) {
   const labels = ['Dados', 'Negócio', 'Plano', 'Pagamento', 'Conclusão'];

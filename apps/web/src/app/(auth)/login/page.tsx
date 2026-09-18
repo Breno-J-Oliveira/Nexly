@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
@@ -12,22 +12,26 @@ import { useAuth } from '@/lib/auth';
 import { ErrorCodes, parseApiError } from '@/lib/errors';
 
 const schema = z.object({
-  email: z.string().email('E-mail inválido'),
-  senha: z.string().min(1, 'Senha obrigatória'),
+  email: z.string({ required_error: 'E-mail obrigatório' }).email('E-mail inválido'),
+  senha: z.string({ required_error: 'Senha obrigatória' }).min(1, 'Senha obrigatória'),
 });
 
 type FormData = z.infer<typeof schema>;
 
-function AuthInput({
-  label,
-  error,
-  right,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & {
-  label: string;
-  error?: string;
-  right?: React.ReactNode;
-}) {
+/**
+ * O `ref` precisa chegar ao `<input>` nativo: o `register` do react-hook-form
+ * depende dele para ler o valor direto do DOM. Sem isso, valores preenchidos
+ * pelo autofill do navegador (que não dispara `onChange`) ficam fora do form
+ * state e a validação acusa campo vazio mesmo com o input preenchido.
+ */
+const AuthInput = forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement> & {
+    label: string;
+    error?: string;
+    right?: React.ReactNode;
+  }
+>(function AuthInput({ label, error, right, ...props }, ref) {
   return (
     <div className="flex flex-col gap-2">
       <label className="text-[13px] font-medium" style={{ color: '#A1A1AA' }}>
@@ -35,6 +39,7 @@ function AuthInput({
       </label>
       <div className="relative">
         <input
+          ref={ref}
           {...props}
           className={`w-full rounded-xl border bg-[#111116] px-4 py-3 text-[14px] text-[#FAFAFA] placeholder:text-[#71717A] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30 ${
             error ? 'border-red-500/50' : 'border-[rgba(255,255,255,0.08)]'
@@ -45,7 +50,7 @@ function AuthInput({
       {error && <span className="text-xs text-red-400">{error}</span>}
     </div>
   );
-}
+});
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -56,7 +61,12 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormData>({ resolver: zodResolver(schema) });
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    // Sem `defaultValues` os campos ainda não rastreados chegam `undefined` ao
+    // zod, que responde com a mensagem padrão em inglês ("Required").
+    defaultValues: { email: '', senha: '' },
+  });
 
   const onSubmit = async (data: FormData): Promise<void> => {
     setError(null);
@@ -103,10 +113,18 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
-        <AuthInput label="E-mail" type="email" placeholder="contato@studionexly.com" error={errors.email?.message} {...register('email')} />
+        <AuthInput
+          label="E-mail"
+          type="email"
+          autoComplete="email"
+          placeholder="contato@studionexly.com"
+          error={errors.email?.message}
+          {...register('email')}
+        />
         <AuthInput
           label="Senha"
           type={showPassword ? 'text' : 'password'}
+          autoComplete="current-password"
           placeholder="••••••••"
           error={errors.senha?.message}
           right={
