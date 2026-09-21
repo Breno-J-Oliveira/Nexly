@@ -1,4 +1,4 @@
-import { IsInt, IsNumber, IsOptional, IsString, Length, Min } from 'class-validator';
+import { IsDateString, IsInt, IsNumber, IsOptional, IsString, Length, Min } from 'class-validator';
 
 export class AtualizarProdutoDto {
   @IsOptional()
@@ -20,4 +20,13 @@ export class AtualizarProdutoDto {
   @IsString()
   @Length(2, 60)
   categoria?: string;
+
+  @IsOptional()
+  @IsDateString()
+  dataVencimento?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 60)
+  lote?: string;
 }

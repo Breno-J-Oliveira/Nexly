@@ -66,7 +66,10 @@ export class DashboardService {
         include: { servico: true },
       }),
       this.prisma.client.agendamento.findMany({
-        where: { dataHora: { gte: inicioSemana, lt: fimDia }, status: { in: ['AGENDADO', 'CONFIRMADO', 'CONCLUIDO'] } },
+        where: {
+          dataHora: { gte: inicioSemana, lt: fimDia },
+          status: { in: ['AGENDADO', 'CONFIRMADO', 'CONCLUIDO'] },
+        },
         select: { dataHora: true, status: true },
       }),
       this.prisma.client.profissional.count({ where: { ativo: true } }),

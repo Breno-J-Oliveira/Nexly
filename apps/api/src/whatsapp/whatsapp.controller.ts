@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
 import { WhatsAppService } from './whatsapp.service';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -9,6 +9,12 @@ import { EnviarMensagemDto } from './dto/enviar-mensagem.dto';
 @UseGuards(RolesGuard)
 export class WhatsAppController {
   constructor(private readonly whatsapp: WhatsAppService) {}
+
+  @Get('status')
+  @Roles('ADMIN')
+  status() {
+    return this.whatsapp.getStatus();
+  }
 
   @Post('test')
   @Roles('ADMIN')

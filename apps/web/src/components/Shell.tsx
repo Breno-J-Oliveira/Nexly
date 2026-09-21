@@ -40,6 +40,7 @@ const NAV_GROUPS: NavGroup[] = [
   { label: 'VENDAS', items: [
     { label: 'Produtos', href: '/produtos', icon: 'box-open' },
     { label: 'Estoque', href: '/estoque', icon: 'boxes-stacked' },
+    { label: 'Pedidos', href: '/estoque/pedidos', icon: 'truck' },
     { label: 'PDV', href: '/pdv', icon: 'cash-register' },
     { label: 'Vendas', href: '/vendas', icon: 'receipt' },
     { label: 'Relatórios', href: '/relatorios', icon: 'chart-column' },
@@ -51,6 +52,19 @@ const NAV_GROUPS: NavGroup[] = [
     { label: 'Configurações', href: '/configuracoes', icon: 'gear' },
   ]},
 ];
+
+/**
+ * RBAC no menu: esconde itens que o papel não pode acessar.
+ * Mantido em sintonia com apps/api/src/common/auth/permissions.ts.
+ */
+function hasAccess(route: string, role: string): boolean {
+  const bloqueadas: Record<string, string[]> = {
+    CAIXA: ['/agenda', '/clientes', '/profissionais', '/servicos', '/relatorios', '/comissao'],
+    PROFISSIONAL: ['/estoque', '/pdv', '/relatorios', '/comissao', '/produtos', '/pedidos', '/vendas'],
+    RECEPCIONISTA: ['/estoque', '/pdv', '/relatorios', '/comissao', '/produtos', '/pedidos'],
+  };
+  return !(bloqueadas[role] ?? []).includes(route);
+}
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
@@ -80,6 +94,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   const pageLabel = PAGE_LABELS[pathname] ?? '';
   const nome = user?.nome ?? 'Usuário';
+  const role = user?.role ?? 'ADMIN';
   const iniciais = nome.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 
   useEffect(() => {
@@ -119,20 +134,24 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="flex flex-col gap-6 p-4">
-          {NAV_GROUPS.map((group, idx) => (
-            <div key={idx}>
-              {group.label && (
-                <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: '#71717A' }}>
-                  {group.label}
-                </p>
-              )}
-              <div className="flex flex-col gap-1">
-                {group.items.map((item) => (
-                  <NavLink key={item.href} item={item} active={pathname === item.href || pathname.startsWith(`${item.href}/`)} />
-                ))}
+          {NAV_GROUPS.map((group, idx) => {
+            const items = group.items.filter((item) => hasAccess(item.href, role));
+            if (items.length === 0) return null;
+            return (
+              <div key={idx}>
+                {group.label && (
+                  <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: '#71717A' }}>
+                    {group.label}
+                  </p>
+                )}
+                <div className="flex flex-col gap-1">
+                  {items.map((item) => (
+                    <NavLink key={item.href} item={item} active={pathname === item.href || pathname.startsWith(`${item.href}/`)} />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
       </aside>
 

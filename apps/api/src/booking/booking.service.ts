@@ -72,13 +72,22 @@ export class BookingService {
   }
 
   async getServicos(token: string) {
-    const empresa = await this.prisma.client.empresa.findUnique({ where: { bookingToken: token }, select: { id: true } });
+    const empresa = await this.prisma.client.empresa.findUnique({
+      where: { bookingToken: token },
+      select: { id: true },
+    });
     if (!empresa) throw new NotFoundException('Pagina nao encontrada');
-    return this.prisma.client.servico.findMany({ where: { empresaId: empresa.id, ativo: true }, select: { id: true, nome: true, duracaoMin: true, preco: true } });
+    return this.prisma.client.servico.findMany({
+      where: { empresaId: empresa.id, ativo: true },
+      select: { id: true, nome: true, duracaoMin: true, preco: true },
+    });
   }
 
   async getProfissionais(token: string) {
-    const empresa = await this.prisma.client.empresa.findUnique({ where: { bookingToken: token }, select: { id: true } });
+    const empresa = await this.prisma.client.empresa.findUnique({
+      where: { bookingToken: token },
+      select: { id: true },
+    });
     if (!empresa) throw new NotFoundException('Pagina nao encontrada');
     return this.prisma.client.profissional.findMany({
       where: { empresaId: empresa.id, ativo: true },
@@ -219,7 +228,8 @@ export class BookingService {
 
     const inicio = new Date(dataHora);
     if (Number.isNaN(inicio.getTime())) throw new BadRequestException('Data/hora invalida');
-    if (inicio.getTime() < Date.now()) throw new BadRequestException('Nao e possivel agendar em data passada');
+    if (inicio.getTime() < Date.now())
+      throw new BadRequestException('Nao e possivel agendar em data passada');
 
     const servico = await this.prisma.client.servico.findFirst({
       where: { id: servicoId, empresaId: empresa.id, ativo: true },

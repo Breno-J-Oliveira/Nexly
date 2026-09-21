@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../database/prisma.service';
+import { EvolutionProvider } from './providers/evolution.provider';
 
 /* ------------------------------------------------------------------ */
 /*  WhatsApp Service — envia lembretes de agendamento e campanhas      */
@@ -7,8 +9,10 @@ import { ConfigService } from '@nestjs/config';
 /*  Provider pluggable:                                                */
 /*   - Evolution API (on-premise, WhatsApp Baileys)                    */
 /*   - Twilio / Meta Cloud API (oficial)                               */
+/*   - test (apenas loga, útil para o TCC)                             */
 /*                                                                     */
-/*  Config via env: WHATSAPP_PROVIDER, WHATSAPP_API_URL, WHATSAPP_KEY */
+/*  Config via env: WHATSAPP_PROVIDER, EVOLUTION_API_URL,             */
+/*  EVOLUTION_API_KEY, EVOLUTION_INSTANCE                              */
 /* ------------------------------------------------------------------ */
 
 interface SendMessageParams {
@@ -16,31 +20,48 @@ interface SendMessageParams {
   message: string;
 }
 
+const TEMPLATE_PADRAO =
+  'Olá {{nome}}! Lembrando do seu agendamento amanhã às {{hora}} com {{profissional}} para {{servico}}. Qualquer dúvida, entre em contato.';
+
 @Injectable()
 export class WhatsAppService {
   private readonly logger = new Logger(WhatsAppService.name);
   private readonly provider: string;
-  private readonly apiUrl: string;
-  private readonly apiKey: string;
   private readonly enabled: boolean;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly evolution: EvolutionProvider,
+  ) {
     this.provider = this.config.get<string>('WHATSAPP_PROVIDER', 'disabled');
-    this.apiUrl = this.config.get<string>('WHATSAPP_API_URL', '');
-    this.apiKey = this.config.get<string>('WHATSAPP_API_KEY', '');
     this.enabled = this.provider !== 'disabled';
     if (!this.enabled) {
       this.logger.warn('WhatsApp disabled — set WHATSAPP_PROVIDER to enable');
     }
   }
 
-  isEnabled(): boolean { return this.enabled; }
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
+  /** Estado da conexão (usado pelo frontend em Configurações). */
+  getStatus() {
+    return { provider: this.provider, enabled: this.enabled };
+  }
 
   /* ── Send a single message ── */
   async send({ phone, message }: SendMessageParams): Promise<boolean> {
     if (!this.enabled) return false;
     try {
-      if (this.provider === 'evolution') return this.sendViaEvolution(phone, message);
+      if (this.provider === 'evolution') {
+        await this.evolution.sendMessage(phone, message);
+        return true;
+      }
+      if (this.provider === 'test') {
+        this.logger.log(`[whatsapp:test] → ${phone}: ${message}`);
+        return true;
+      }
       if (this.provider === 'twilio') return this.sendViaTwilio(phone, message);
       if (this.provider === 'meta') return this.sendViaMeta(phone, message);
       this.logger.warn(`Unknown WhatsApp provider: ${this.provider}`);
@@ -76,27 +97,21 @@ Qualquer d\u00FAvida, responda esta mensagem. At\u00E9 l\u00E1! \u{1F60A}`;
   }
 
   /* ── Provider implementations ── */
-  private async sendViaEvolution(phone: string, message: string): Promise<boolean> {
-    const res = await fetch(`${this.apiUrl}/message/sendText/${this.config.get<string>('WHATSAPP_INSTANCE', 'default')}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': this.apiKey },
-      body: JSON.stringify({ number: phone.replace(/\D/g, ''), text: message }),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) throw new Error(`Evolution API: ${res.status} ${await res.text()}`);
-    return true;
-  }
-
   private async sendViaTwilio(phone: string, message: string): Promise<boolean> {
     const accountSid = this.config.get<string>('TWILIO_ACCOUNT_SID', '');
     const authToken = this.config.get<string>('TWILIO_AUTH_TOKEN', '');
     const from = this.config.get<string>('TWILIO_PHONE_NUMBER', '');
-    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
-      method: 'POST',
-      headers: { Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}` },
-      body: new URLSearchParams({ To: phone, From: from, Body: message }),
-      signal: AbortSignal.timeout(15000),
-    });
+    const res = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
+        },
+        body: new URLSearchParams({ To: phone, From: from, Body: message }),
+        signal: AbortSignal.timeout(15000),
+      },
+    );
     if (!res.ok) throw new Error(`Twilio: ${res.status}`);
     return true;
   }
@@ -105,7 +120,10 @@ Qualquer d\u00FAvida, responda esta mensagem. At\u00E9 l\u00E1! \u{1F60A}`;
     const phoneId = this.config.get<string>('META_PHONE_ID', '');
     const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.apiKey}` },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.config.get<string>('META_API_KEY', '')}`,
+      },
       body: JSON.stringify({
         messaging_product: 'whatsapp',
         to: phone.replace(/\D/g, ''),
@@ -120,9 +138,55 @@ Qualquer d\u00FAvida, responda esta mensagem. At\u00E9 l\u00E1! \u{1F60A}`;
 
   /* ── Schedule daily reminders (called via cron) ── */
   async sendDailyReminders(): Promise<{ sent: number; failed: number }> {
-    // Fetches tomorrow's appointments and sends reminders
-    // Called by NestJS @Cron or external scheduler
-    this.logger.log('Daily reminders: not yet connected to appointment data');
-    return { sent: 0, failed: 0 };
+    const amanha = new Date();
+    amanha.setDate(amanha.getDate() + 1);
+    const inicio = new Date(amanha);
+    inicio.setHours(0, 0, 0, 0);
+    const fim = new Date(amanha);
+    fim.setHours(23, 59, 59, 999);
+
+    // Roda fora de request → sem tenant context → consulta todas as empresas.
+    const agendamentos = await this.prisma.client.agendamento.findMany({
+      where: {
+        dataHora: { gte: inicio, lte: fim },
+        status: { in: ['AGENDADO', 'CONFIRMADO'] },
+      },
+      include: {
+        cliente: { select: { nome: true, telefone: true } },
+        profissional: { select: { nome: true } },
+        servico: { select: { nome: true } },
+      },
+    });
+
+    const empresas = await this.prisma.client.empresa.findMany({
+      where: { lembretesAtivos: true },
+      select: { id: true, templateLembrete: true },
+    });
+    const empresasMap = new Map(empresas.map((e) => [e.id, e.templateLembrete]));
+
+    let sent = 0;
+    let failed = 0;
+    for (const a of agendamentos) {
+      const template = empresasMap.get(a.empresaId);
+      if (template === undefined) continue; // lembretes desativados para esta empresa
+      if (!a.cliente.telefone) {
+        failed++;
+        continue;
+      }
+
+      const hora = a.dataHora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const message = (template || TEMPLATE_PADRAO)
+        .replace(/\{\{nome\}\}/g, a.cliente.nome)
+        .replace(/\{\{hora\}\}/g, hora)
+        .replace(/\{\{profissional\}\}/g, a.profissional.nome)
+        .replace(/\{\{servico\}\}/g, a.servico.nome);
+
+      const ok = await this.send({ phone: a.cliente.telefone, message });
+      if (ok) sent++;
+      else failed++;
+    }
+
+    this.logger.log(`Lembretes diários: ${sent} enviados, ${failed} falhas`);
+    return { sent, failed };
   }
 }

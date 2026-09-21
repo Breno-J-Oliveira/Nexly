@@ -82,6 +82,19 @@ export class TokenService {
     });
   }
 
+  /** Token temporário de 5 min usado no fluxo de 2FA (scope restrito). */
+  async generateTempToken(usuarioId: string): Promise<string> {
+    return this.jwtService.signAsync({ sub: usuarioId, scope: '2fa' }, { expiresIn: '5m' });
+  }
+
+  async verifyTempToken(token: string): Promise<{ sub: string }> {
+    const payload = await this.jwtService.verifyAsync<{ sub: string; scope?: string }>(token);
+    if (payload.scope !== '2fa') {
+      throw new UnauthorizedException('Token inválido');
+    }
+    return { sub: payload.sub };
+  }
+
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }

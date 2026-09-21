@@ -8,8 +8,10 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { ErrorCodes, parseApiError } from '@/lib/errors';
+import { UsuarioPublico } from '@nexly/shared';
 
 const schema = z.object({
   email: z.string({ required_error: 'E-mail obrigatório' }).email('E-mail inválido'),
@@ -53,10 +55,13 @@ const AuthInput = forwardRef<
 });
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, completeLogin } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [twoFactor, setTwoFactor] = useState<{ tempToken: string } | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [backupMode, setBackupMode] = useState(false);
   const {
     register,
     handleSubmit,
@@ -71,7 +76,11 @@ export default function LoginPage() {
   const onSubmit = async (data: FormData): Promise<void> => {
     setError(null);
     try {
-      await login(data.email, data.senha);
+      const res = await login(data.email, data.senha);
+      if (res.requiresTwoFactor && res.tempToken) {
+        setTwoFactor({ tempToken: res.tempToken });
+        return;
+      }
       router.push('/dashboard');
     } catch (e) {
       const err = parseApiError(e);
@@ -82,6 +91,21 @@ export default function LoginPage() {
       } else {
         setError(err.message || 'E-mail ou senha incorretos');
       }
+    }
+  };
+
+  const verificar2fa = async (): Promise<void> => {
+    if (!twoFactor) return;
+    setError(null);
+    try {
+      const res = await api.post<{ accessToken: string; usuario: UsuarioPublico }>(
+        '/auth/2fa/verify',
+        { tempToken: twoFactor.tempToken, code: twoFactorCode },
+      );
+      completeLogin(res.data.accessToken, res.data.usuario);
+      router.push('/dashboard');
+    } catch {
+      setError('Código inválido ou expirado');
     }
   };
 
@@ -112,7 +136,50 @@ export default function LoginPage() {
         </Link>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+      {twoFactor ? (
+        <div className="mt-6 space-y-4">
+          <p className="text-center text-sm" style={{ color: '#A1A1AA' }}>
+            {backupMode
+              ? 'Digite um código de backup'
+              : 'Digite o código do seu app autenticador'}
+          </p>
+          <input
+            value={twoFactorCode}
+            onChange={(e) =>
+              setTwoFactorCode(backupMode ? e.target.value : e.target.value.replace(/\D/g, ''))
+            }
+            placeholder={backupMode ? 'código de backup' : '000000'}
+            inputMode="numeric"
+            maxLength={backupMode ? 16 : 6}
+            className="w-full rounded-xl border bg-[#111116] px-4 py-3 text-center font-mono text-[40px] tracking-widest text-[#FAFAFA] placeholder:text-[#3F3F46] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30"
+            style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+            autoFocus
+          />
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setBackupMode((v) => !v);
+                setTwoFactorCode('');
+              }}
+              className="text-[13px] font-medium underline"
+              style={{ color: '#818CF8' }}
+            >
+              {backupMode ? 'Usar código do app' : 'Usar código de backup'}
+            </button>
+          </div>
+          {error && <p className="text-center text-sm text-red-400">{error}</p>}
+          <Button
+            onClick={() => void verificar2fa()}
+            loading={isSubmitting}
+            disabled={twoFactorCode.length < 6}
+            className="w-full rounded-xl py-3 text-[14px] font-semibold shadow-lg shadow-[#6366F1]/20"
+          >
+            Verificar
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="mt-6 space-y-4">
         <AuthInput
           label="E-mail"
           type="email"
@@ -152,6 +219,7 @@ export default function LoginPage() {
           Entrar no painel
         </Button>
       </form>
+      )}
 
       <div className="relative mt-6 flex items-center">
         <div className="flex-1 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />

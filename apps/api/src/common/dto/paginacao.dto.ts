@@ -1,5 +1,5 @@
-import { Type } from "class-transformer";
-import { IsOptional, IsInt, Min, Max } from "class-validator";
+import { Type } from 'class-transformer';
+import { IsOptional, IsInt, Min, Max } from 'class-validator';
 
 export class PaginacaoDto {
   @IsOptional()
@@ -24,6 +24,11 @@ export interface PaginatedResult<T> {
   totalPages: number;
 }
 
-export function paginated<T>(items: T[], total: number, page: number, limit: number): PaginatedResult<T> {
+export function paginated<T>(
+  items: T[],
+  total: number,
+  page: number,
+  limit: number,
+): PaginatedResult<T> {
   return { data: items, total, page, limit, totalPages: Math.ceil(total / limit) };
 }

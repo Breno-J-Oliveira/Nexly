@@ -11,7 +11,11 @@ export class ComissaoController {
   }
 
   @Get(':profissionalId')
-  async calcular(@Param('profissionalId') id: string, @Query('dataInicio') dataInicio: string, @Query('dataFim') dataFim: string) {
+  async calcular(
+    @Param('profissionalId') id: string,
+    @Query('dataInicio') dataInicio: string,
+    @Query('dataFim') dataFim: string,
+  ) {
     return this.service.calcular(id, dataInicio, dataFim);
   }
 }

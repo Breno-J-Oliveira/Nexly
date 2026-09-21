@@ -20,6 +20,7 @@ export class VendasController {
     return this.vendasService.criar(dto.clienteId, dto.itens, {
       formaPagamento: dto.formaPagamento,
       desconto: dto.desconto,
+      cupomCodigo: dto.cupomCodigo,
     });
   }
 

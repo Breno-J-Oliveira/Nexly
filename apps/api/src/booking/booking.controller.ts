@@ -43,7 +43,11 @@ export class BookingController {
 
   /* GET /booking/:token/horarios?data=YYYY-MM-DD&profissionalId=xxx */
   @Get(':token/horarios')
-  async horarios(@Param('token') token: string, @Query('data') data: string, @Query('profissionalId') profissionalId: string) {
+  async horarios(
+    @Param('token') token: string,
+    @Query('data') data: string,
+    @Query('profissionalId') profissionalId: string,
+  ) {
     return this.service.getHorariosDisponiveis(token, data, profissionalId);
   }
 

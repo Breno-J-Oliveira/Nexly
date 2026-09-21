@@ -21,7 +21,14 @@ export class FidelidadeService {
   async ranking(empresaId: string, limit = 10) {
     return this.prisma.client.cliente.findMany({
       where: { empresaId },
-      select: { id: true, nome: true, pontosFidelidade: true, totalGasto: true, ultimaVisita: true, tag: true },
+      select: {
+        id: true,
+        nome: true,
+        pontosFidelidade: true,
+        totalGasto: true,
+        ultimaVisita: true,
+        tag: true,
+      },
       orderBy: { pontosFidelidade: 'desc' },
       take: limit,
     });

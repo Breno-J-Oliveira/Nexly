@@ -25,11 +25,13 @@ export class ProdutosController {
     @Query('categoria') categoria?: string,
     @Query('search') search?: string,
     @Query('estoqueAbaixoDe') estoqueAbaixoDe?: string,
+    @Query('vencendoEm') vencendoEm?: string,
   ) {
     return this.produtosService.listar(page, limit, {
       categoria,
       search,
       estoqueAbaixoDe: estoqueAbaixoDe ? Number(estoqueAbaixoDe) : undefined,
+      vencendoEm: vencendoEm ? Number(vencendoEm) : undefined,
     });
   }
 

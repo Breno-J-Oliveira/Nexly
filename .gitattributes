@@ -1,0 +1,16 @@
+# Normaliza line endings para LF (o CI roda Prettier/ESLint no Linux).
+* text=auto eol=lf
+
+# Binários: nunca converter line endings.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pem binary
+*.key binary
+*.zip binary
+
+# Vetor e scripts: força LF explícito.
+*.svg text eol=lf
+*.sh text eol=lf

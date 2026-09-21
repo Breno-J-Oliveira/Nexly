@@ -58,7 +58,11 @@ describe('LoggingInterceptor', () => {
   it('reusa o X-Request-Id do header recebido', (done) => {
     const recebido = randomUUID();
     const res = { setHeader: jest.fn(), statusCode: 200 };
-    const req: MockRequest = { headers: { 'x-request-id': recebido }, method: 'GET', originalUrl: '/teste' };
+    const req: MockRequest = {
+      headers: { 'x-request-id': recebido },
+      method: 'GET',
+      originalUrl: '/teste',
+    };
     const next: CallHandler = { handle: () => of('ok') };
 
     interceptor.intercept(makeContext(req, res), next).subscribe(() => {

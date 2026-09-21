@@ -19,7 +19,11 @@ export class FinanceiroController {
   }
 
   @Get('top-produtos')
-  async topProdutos(@Query('dataInicio') di: string, @Query('dataFim') df: string, @Query('limit') limit?: string) {
+  async topProdutos(
+    @Query('dataInicio') di: string,
+    @Query('dataFim') df: string,
+    @Query('limit') limit?: string,
+  ) {
     const ctx = getTenantContext();
     return this.service.topProdutos(ctx?.tenantId ?? '', di, df, Number(limit || 10));
   }

@@ -15,13 +15,19 @@
     "test": "turbo test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:report": "playwright show-report",
     "db:migrate": "npm run migrate --workspace @nexly/api",
     "db:studio": "npm run studio --workspace @nexly/api",
     "db:seed": "npm run seed --workspace @nexly/api"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node-cron": "^3.0.11",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",
+    "node-cron": "^4.6.0",
     "prettier": "^3.3.3",
     "turbo": "2.3.3"
   },

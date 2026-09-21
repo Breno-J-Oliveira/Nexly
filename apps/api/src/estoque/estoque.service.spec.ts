@@ -26,15 +26,12 @@ describe('EstoqueService', () => {
       client: {
         produto: { updateMany: jest.fn() },
         movimentacaoEstoque: { create: jest.fn() },
-        $transaction: jest.fn().mockImplementation(async (cb) => cb(prisma.client)),
+        $transaction: jest.fn().mockImplementation((cb) => cb(prisma.client)),
       },
     };
 
     const moduleRef = await Test.createTestingModule({
-      providers: [
-        EstoqueService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [EstoqueService, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     service = moduleRef.get(EstoqueService);
@@ -78,4 +75,3 @@ describe('EstoqueService', () => {
     });
   });
 });
-

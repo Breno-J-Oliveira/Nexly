@@ -71,12 +71,20 @@ function statusColor(status: string) {
 export default function DashboardPage() {
   const [dados, setDados] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [produtosVencendo, setProdutosVencendo] = useState(0);
 
   useEffect(() => {
     api.get<DashboardData>('/dashboard')
       .then((r) => setDados(r.data))
       .catch(() => undefined)
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    api
+      .get<unknown[]>('/export/produtos/vencendo', { params: { dias: 30 } })
+      .then((r) => setProdutosVencendo(Array.isArray(r.data) ? r.data.length : 0))
+      .catch(() => undefined);
   }, []);
 
   const hoje = useMemo(() => {
@@ -180,6 +188,32 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {produtosVencendo > 0 && (
+        <Link
+          href="/produtos"
+          className="mt-4 flex items-center justify-between rounded-2xl border p-5 transition-colors hover:bg-white/[0.02]"
+          style={{ borderColor: 'rgba(234,179,8,0.30)', backgroundColor: 'rgba(234,179,8,0.06)' }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-full"
+              style={{ backgroundColor: 'rgba(234,179,8,0.12)' }}
+            >
+              <Icon name="triangle-exclamation" className="text-[#EAB308]" size="sm" />
+            </div>
+            <div>
+              <p className="text-[14px] font-semibold" style={{ color: '#EAB308' }}>
+                {produtosVencendo}{' '}
+                {produtosVencendo === 1 ? 'produto vence' : 'produtos vencem'} em 30 dias
+              </p>
+              <p className="text-[12px]" style={{ color: '#A1A1AA' }}>
+                Clique para ver →
+              </p>
+            </div>
+          </div>
+        </Link>
+      )}
 
       <div className="mt-6 rounded-2xl border p-5" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
         <div className="flex items-center justify-between">

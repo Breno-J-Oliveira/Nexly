@@ -102,6 +102,65 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npx prisma generate --schema apps/api/prisma/schema.prisma
-      - run: npx prisma db push --schema apps/api/prisma/schema.prisma --skip-generate
+      - run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
       - run: cd apps/api && npx jest --passWithNoTests
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: [typecheck-api, typecheck-web, lint, test-api]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: nexly
+          POSTGRES_PASSWORD: nexly_test_password
+          POSTGRES_DB: nexly_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nexly -d nexly_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://nexly:nexly_test_password@localhost:5432/nexly_test?schema=public
+      DIRECT_URL: postgresql://nexly:nexly_test_password@localhost:5432/nexly_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      BASE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx prisma generate --schema apps/api/prisma/schema.prisma
+      - run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+      - run: npm run seed --workspace @nexly/api
+      - run: npm run build --workspace @nexly/api
+      - run: npm run build --workspace @nexly/web
+      - run: npx playwright install --with-deps chromium
+      - name: Inicia API e web em background
+        run: |
+          node apps/api/dist/src/main.js > /tmp/api.log 2>&1 &
+          npm run start --workspace @nexly/web > /tmp/web.log 2>&1 &
+          sleep 5
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
 

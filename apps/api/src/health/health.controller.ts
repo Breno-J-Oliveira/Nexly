@@ -90,7 +90,7 @@ export class HealthController {
         applied: applied.length,
         failed,
         pending: [], // o backend só conhece migrations já enviadas ao banco;
-                      // para detectar pending, rode `prisma migrate status` na CLI.
+        // para detectar pending, rode `prisma migrate status` na CLI.
         lastAppliedAt: applied.at(-1)?.finished_at ?? null,
       };
     } catch (error) {
@@ -116,8 +116,9 @@ export class HealthController {
       return { ok: true }; // Em testes ou sem Redis, não reporta falha.
     }
     try {
-      const pong = await (this.redis as unknown as { client?: { ping: () => Promise<string> } })
-        .client?.ping?.();
+      const pong = await (
+        this.redis as unknown as { client?: { ping: () => Promise<string> } }
+      ).client?.ping?.();
       return { ok: pong === 'PONG' };
     } catch (error) {
       return { ok: false, error: String(error) };

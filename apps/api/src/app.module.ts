@@ -4,9 +4,10 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthGuard } from './common/guards/auth.guard';
-import { RolesGuard } from './common/guards/roles.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 import { TenantInterceptor } from './common/interceptors/tenant.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { env } from './config/env';
 import { getJwtKeys } from './config/jwt-keys';
 import { DatabaseModule } from './database/database.module';
@@ -23,6 +24,11 @@ import { VendasModule } from './vendas/vendas.module';
 import { RelatoriosModule } from './relatorios/relatorios.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
+import { CuponsModule } from './cupons/cupons.module';
+import { FornecedoresModule } from './fornecedores/fornecedores.module';
+import { PedidosCompraModule } from './pedidos-compra/pedidos-compra.module';
+import { AuditModule } from './audit/audit.module';
+import { LgpdModule } from './lgpd/lgpd.module';
 import { ConfiguracoesModule } from './configuracoes/configuracoes.module';
 import { BookingModule } from './booking/booking.module';
 import { AvaliacoesModule } from './avaliacoes/avaliacoes.module';
@@ -62,6 +68,11 @@ import { RedisModule } from './redis/redis.module';
     RelatoriosModule,
     DashboardModule,
     WhatsAppModule,
+    CuponsModule,
+    FornecedoresModule,
+    PedidosCompraModule,
+    AuditModule,
+    LgpdModule,
     ConfiguracoesModule,
     BookingModule,
     ComissaoModule,
@@ -74,11 +85,12 @@ import { RedisModule } from './redis/redis.module';
   controllers: [HealthController],
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },
-    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
     // Ordem: o NestJS executa interceptors na ordem inversa de registro.
     // Tenant deve rodar antes do Logging para que os logs incluam contexto de tenant.
     { provide: APP_INTERCEPTOR, useClass: TenantInterceptor },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
 })
 export class AppModule {}

@@ -44,7 +44,7 @@ export function useNotifications(pollingMs = 60_000) {
 
   useEffect(() => {
     fetchNotifications();
-    const id = setInterval(fetchNotifications, pollingMs);
+    const id = setInterval(() => { void fetchNotifications(); }, pollingMs);
     return () => clearInterval(id);
   }, [fetchNotifications, pollingMs]);
 

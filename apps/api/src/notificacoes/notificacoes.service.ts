@@ -6,9 +6,17 @@ export class NotificacoesService {
   private readonly logger = new Logger(NotificacoesService.name);
   constructor(private readonly prisma: PrismaService) {}
 
-  async listar(usuarioId: string) { return this.prisma.client.notificacao.findMany({ where: { usuarioId }, orderBy: { createdAt: 'desc' }, take: 50 }); }
+  async listar(usuarioId: string) {
+    return this.prisma.client.notificacao.findMany({
+      where: { usuarioId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
 
-  async naoLidas(usuarioId: string) { return this.prisma.client.notificacao.count({ where: { usuarioId, lida: false } }); }
+  async naoLidas(usuarioId: string) {
+    return this.prisma.client.notificacao.count({ where: { usuarioId, lida: false } });
+  }
 
   async marcarLida(id: string, usuarioId: string) {
     return this.prisma.client.notificacao.updateMany({
@@ -17,8 +25,20 @@ export class NotificacoesService {
     });
   }
 
-  async criar(empresaId: string, usuarioId: string, titulo: string, mensagem: string, link?: string) {
-    try { return await this.prisma.client.notificacao.create({ data: { empresaId, usuarioId, titulo, mensagem, link } }); }
-    catch (e) { this.logger.warn('Erro criar notificacao: ' + (e as Error).message); return null; }
+  async criar(
+    empresaId: string,
+    usuarioId: string,
+    titulo: string,
+    mensagem: string,
+    link?: string,
+  ) {
+    try {
+      return await this.prisma.client.notificacao.create({
+        data: { empresaId, usuarioId, titulo, mensagem, link },
+      });
+    } catch (e) {
+      this.logger.warn('Erro criar notificacao: ' + (e as Error).message);
+      return null;
+    }
   }
 }

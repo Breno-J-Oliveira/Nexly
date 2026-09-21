@@ -10,9 +10,28 @@ import { toastSuccess, toastError } from '@/components/ui/Toaster';
 
 interface Usuario { id: string; nome: string; email: string; role: string; ativo: boolean; createdAt: string; }
 
-// Valores alinhados ao enum Role do banco: ADMIN | PROFISSIONAL | CAIXA.
-const roleLabel: Record<string, string> = { ADMIN: 'Administrador', PROFISSIONAL: 'Profissional', CAIXA: 'Operador de Caixa' };
-const roleColor: Record<string, string> = { ADMIN: '#818CF8', PROFISSIONAL: '#22C55E', CAIXA: '#A1A1AA' };
+// Valores alinhados ao enum Role do banco: ADMIN | GESTOR | PROFISSIONAL | RECEPCIONISTA | CAIXA.
+const roleLabel: Record<string, string> = {
+  ADMIN: 'Administrador',
+  GESTOR: 'Gestor',
+  PROFISSIONAL: 'Profissional',
+  RECEPCIONISTA: 'Recepcionista',
+  CAIXA: 'Operador de Caixa',
+};
+const roleColor: Record<string, string> = {
+  ADMIN: '#818CF8',
+  GESTOR: '#A5B4FC',
+  PROFISSIONAL: '#22C55E',
+  RECEPCIONISTA: '#60A5FA',
+  CAIXA: '#A1A1AA',
+};
+const roleDescricao: Record<string, string> = {
+  ADMIN: 'Acesso total ao sistema',
+  GESTOR: 'Gerencia agenda, clientes, estoque e relatórios',
+  PROFISSIONAL: 'Vê apenas a agenda',
+  RECEPCIONISTA: 'Gerencia agenda e clientes',
+  CAIXA: 'Usa o PDV e vê histórico de vendas',
+};
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -20,6 +39,10 @@ export default function UsuariosPage() {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [form, setForm] = useState({ nome: '', email: '', senha: '', role: 'CAIXA' });
   const [salvando, setSalvando] = useState(false);
+  const [conviteModal, setConviteModal] = useState(false);
+  const [conviteForm, setConviteForm] = useState({ email: '', role: 'CAIXA' });
+  const [convidando, setConvidando] = useState(false);
+  const [conviteLink, setConviteLink] = useState<string | null>(null);
 
   const carregar = async (): Promise<void> => {
     const res = await api.get<Usuario[]>('/usuarios');
@@ -54,6 +77,23 @@ export default function UsuariosPage() {
     await carregar();
   };
 
+  const convidar = async (): Promise<void> => {
+    setConvidando(true);
+    try {
+      const r = await api.post<{ conviteId: string; link: string }>(
+        '/usuarios/convidar',
+        conviteForm,
+      );
+      setConviteLink(r.data.link);
+      toastSuccess('Convite gerado!');
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toastError(err?.response?.data?.message || 'Erro ao convidar');
+    } finally {
+      setConvidando(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -61,7 +101,27 @@ export default function UsuariosPage() {
           <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>Usuários</h2>
           <p className="mt-1 text-sm" style={{ color: '#71717A' }}>Gerencie quem acessa o sistema</p>
         </div>
-        <Button onClick={() => { setEditandoId(null); setForm({ nome: '', email: '', senha: '', role: 'CAIXA' }); setModalAberto(true); }}>+ Novo usuário</Button>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setConviteLink(null);
+              setConviteForm({ email: '', role: 'CAIXA' });
+              setConviteModal(true);
+            }}
+          >
+            + Convidar usuário
+          </Button>
+          <Button
+            onClick={() => {
+              setEditandoId(null);
+              setForm({ nome: '', email: '', senha: '', role: 'CAIXA' });
+              setModalAberto(true);
+            }}
+          >
+            + Novo usuário
+          </Button>
+        </div>
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-xl" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -87,7 +147,7 @@ export default function UsuariosPage() {
                   <td className="px-4 py-3"><span className="text-[11px] font-semibold" style={{ color: u.ativo ? '#22C55E' : '#EF4444' }}>{u.ativo ? 'Ativo' : 'Inativo'}</span></td>
                   <td className="px-4 py-3">
                     <Button variant="ghost" className="text-xs" onClick={() => { setEditandoId(u.id); setForm({ nome: u.nome, email: u.email, senha: '', role: u.role }); setModalAberto(true); }}>Editar</Button>
-                    <Button variant="ghost" className="text-xs" style={{ color: u.ativo ? '#EF4444' : '#22C55E' }} onClick={() => toggleAtivo(u)}>{u.ativo ? 'Desativar' : 'Ativar'}</Button>
+                    <Button variant="ghost" className="text-xs" style={{ color: u.ativo ? '#EF4444' : '#22C55E' }} onClick={() => { void toggleAtivo(u); }}>{u.ativo ? 'Desativar' : 'Ativar'}</Button>
                   </td>
                 </tr>
               ))}
@@ -105,11 +165,67 @@ export default function UsuariosPage() {
             <label className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>Função</label>
             <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" style={{ backgroundColor: '#0C0C10', borderColor: 'rgba(255,255,255,0.10)', color: '#FAFAFA' }}>
               <option value="ADMIN">Administrador</option>
+              <option value="GESTOR">Gestor</option>
               <option value="PROFISSIONAL">Profissional</option>
+              <option value="RECEPCIONISTA">Recepcionista</option>
               <option value="CAIXA">Operador de Caixa</option>
             </select>
           </div>
-          <Button onClick={salvar} loading={salvando} className="w-full mt-4">Salvar</Button>
+          <Button onClick={() => { void salvar(); }} loading={salvando} className="w-full mt-4">Salvar</Button>
+        </div>
+      </Modal>
+
+      <Modal open={conviteModal} onClose={() => setConviteModal(false)} title="Convidar usuário">
+        <div className="space-y-3">
+          <Input
+            label="E-mail"
+            type="email"
+            value={conviteForm.email}
+            onChange={(e) => setConviteForm({ ...conviteForm, email: e.target.value })}
+            placeholder="email@empresa.com"
+          />
+          <div>
+            <label className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>
+              Função
+            </label>
+            <select
+              value={conviteForm.role}
+              onChange={(e) => setConviteForm({ ...conviteForm, role: e.target.value })}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+              style={{ backgroundColor: '#0C0C10', borderColor: 'rgba(255,255,255,0.10)', color: '#FAFAFA' }}
+            >
+              <option value="ADMIN">Administrador</option>
+              <option value="GESTOR">Gestor</option>
+              <option value="PROFISSIONAL">Profissional</option>
+              <option value="RECEPCIONISTA">Recepcionista</option>
+              <option value="CAIXA">Operador de Caixa</option>
+            </select>
+            <p className="mt-1 text-xs" style={{ color: '#71717A' }}>
+              {roleDescricao[conviteForm.role]}
+            </p>
+          </div>
+          {conviteLink && (
+            <div
+              className="rounded-lg border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] p-3"
+            >
+              <p className="text-xs" style={{ color: '#22C55E' }}>
+                Link de convite gerado:
+              </p>
+              <p className="mt-1 break-all text-xs" style={{ color: '#A1A1AA' }}>
+                {conviteLink}
+              </p>
+            </div>
+          )}
+          <Button
+            onClick={() => {
+              void convidar();
+            }}
+            loading={convidando}
+            disabled={!conviteForm.email}
+            className="w-full mt-4"
+          >
+            Gerar convite
+          </Button>
         </div>
       </Modal>
     </div>

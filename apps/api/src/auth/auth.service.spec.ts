@@ -1,6 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import * as argon2 from 'argon2';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../database/prisma.service';
 import { AuthService } from './auth.service';
 import { LoginThrottleService } from './login-throttle.service';
@@ -29,6 +30,7 @@ describe('AuthService', () => {
     registerSuccess: jest.Mock;
     retryAfterSeconds: jest.Mock;
   };
+  let auditService: { registrar: jest.Mock };
   const KEY = 'user@x.com|127.0.0.1';
 
   const usuarioMock = {
@@ -39,6 +41,9 @@ describe('AuthService', () => {
     senhaHash: 'hashed',
     role: 'ADMIN',
     ativo: true,
+    twoFactorEnabled: false,
+    twoFactorSecret: null,
+    twoFactorBackupCodes: [],
   };
 
   beforeEach(async () => {
@@ -53,6 +58,7 @@ describe('AuthService', () => {
       registerSuccess: jest.fn(),
       retryAfterSeconds: jest.fn().mockReturnValue(0),
     };
+    auditService = { registrar: jest.fn() };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -60,6 +66,7 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: TokenService, useValue: tokenService },
         { provide: LoginThrottleService, useValue: throttle },
+        { provide: AuditService, useValue: auditService },
       ],
     }).compile();
 
@@ -72,6 +79,9 @@ describe('AuthService', () => {
 
     const result = await service.login({ email: 'admin@test.com', senha: 'senha123' }, KEY);
 
+    if ('requiresTwoFactor' in result) {
+      throw new Error('Não deveria exigir 2FA');
+    }
     expect(result.accessToken).toBe('access-token');
     expect(result.usuario.email).toBe('admin@test.com');
   });

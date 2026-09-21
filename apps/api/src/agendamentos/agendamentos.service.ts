@@ -44,7 +44,9 @@ export class AgendamentosService {
 
     if (filtros.data) {
       const inicio = new Date(`${filtros.data}T00:00:00.000Z`);
-      const fim = filtros.dataFim ? new Date(`${filtros.dataFim}T23:59:59.999Z`) : new Date(`${filtros.data}T23:59:59.999Z`);
+      const fim = filtros.dataFim
+        ? new Date(`${filtros.dataFim}T23:59:59.999Z`)
+        : new Date(`${filtros.data}T23:59:59.999Z`);
       where.dataHora = { gte: inicio, lte: fim };
     }
     if (filtros.profissionalId) where.profissionalId = filtros.profissionalId;

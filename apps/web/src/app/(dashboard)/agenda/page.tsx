@@ -1,7 +1,8 @@
 'use client';
 
 import { StatusAgendamento } from '@nexly/shared';
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
@@ -20,6 +21,18 @@ interface Agendamento {
   servico: { nome: string; preco: number };
 }
 
+interface Profissional {
+  id: string;
+  nome: string;
+}
+
+const STATUS_CHIPS: { value: StatusAgendamento; label: string }[] = [
+  { value: StatusAgendamento.AGENDADO, label: 'Agendado' },
+  { value: StatusAgendamento.CONFIRMADO, label: 'Confirmado' },
+  { value: StatusAgendamento.CONCLUIDO, label: 'Concluído' },
+  { value: StatusAgendamento.CANCELADO, label: 'Cancelado' },
+];
+
 function formatarHora(iso: string): string {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
@@ -32,23 +45,71 @@ function dataISO(d: Date): string {
 }
 
 export default function AgendaPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-[#A1A1AA]">Carregando...</p>}>
+      <AgendaContent />
+    </Suspense>
+  );
+}
+
+function AgendaContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [data, setData] = useState<Date>(new Date());
   const [view, setView] = useState<'lista' | 'semana'>('lista');
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
   const [carregando, setCarregando] = useState(true);
+
+  const profissionalId = searchParams.get('profissionalId') ?? '';
+  const statusParam = searchParams.get('status');
+  const status = STATUS_CHIPS.some((c) => c.value === statusParam)
+    ? (statusParam as StatusAgendamento)
+    : null;
+
+  useEffect(() => {
+    api
+      .get<Profissional[]>('/profissionais')
+      .then((r) => setProfissionais(r.data))
+      .catch(() => undefined);
+  }, []);
+
+  const atualizarFiltro = (patch: {
+    profissionalId?: string;
+    status?: StatusAgendamento | '';
+  }): void => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (patch.profissionalId !== undefined) {
+      if (patch.profissionalId) params.set('profissionalId', patch.profissionalId);
+      else params.delete('profissionalId');
+    }
+    if (patch.status !== undefined) {
+      if (patch.status) params.set('status', patch.status);
+      else params.delete('status');
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  };
 
   const carregar = useCallback(async () => {
     setCarregando(true);
     try {
       const res = await api.get<{ data: Agendamento[] }>('/agendamentos', {
-        params: { data: dataISO(data), limit: 100 },
+        params: {
+          data: dataISO(data),
+          limit: 100,
+          ...(profissionalId ? { profissionalId } : {}),
+          ...(status ? { status } : {}),
+        },
       });
       setAgendamentos(res.data.data);
     } finally {
       setCarregando(false);
     }
-  }, [data]);
+  }, [data, profissionalId, status]);
 
   useEffect(() => {
     void carregar();
@@ -66,6 +127,9 @@ export default function AgendaPage() {
     setData(novo);
   };
 
+  const profissionalNome = profissionais.find((p) => p.id === profissionalId)?.nome;
+  const statusLabel = STATUS_CHIPS.find((c) => c.value === status)?.label;
+
   return (
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -76,6 +140,8 @@ export default function AgendaPage() {
             {' · '}
             {agendamentos.length}{' '}
             {agendamentos.length === 1 ? 'agendamento' : 'agendamentos'}
+            {profissionalNome ? ` · filtrado por ${profissionalNome}` : ''}
+            {statusLabel ? ` · ${statusLabel}` : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -96,6 +162,52 @@ export default function AgendaPage() {
             </button>
           </div>
           <Button onClick={() => setModalAberto(true)}>+ Novo agendamento</Button>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <select
+          value={profissionalId}
+          onChange={(e) => atualizarFiltro({ profissionalId: e.target.value })}
+          className="rounded-lg border border-[rgba(255,255,255,0.10)] bg-[#111116] px-3 py-2 text-sm text-[#FAFAFA] outline-none focus:ring-2 focus:ring-[#6366F1]/30"
+        >
+          <option value="">Todos os profissionais</option>
+          {profissionais.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.nome}
+            </option>
+          ))}
+        </select>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => atualizarFiltro({ status: '' })}
+            className="rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors"
+            style={
+              status === null
+                ? { backgroundColor: 'rgba(99,102,241,0.12)', color: '#A5B4FC', borderColor: 'rgba(99,102,241,0.4)' }
+                : { backgroundColor: '#111116', color: '#A1A1AA', borderColor: 'rgba(255,255,255,0.10)' }
+            }
+          >
+            Todos
+          </button>
+          {STATUS_CHIPS.map((chip) => (
+            <button
+              key={chip.value}
+              type="button"
+              onClick={() => atualizarFiltro({ status: chip.value })}
+              className="rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors"
+              style={
+                status === chip.value
+                  ? { backgroundColor: 'rgba(99,102,241,0.12)', color: '#A5B4FC', borderColor: 'rgba(99,102,241,0.4)' }
+                  : { backgroundColor: '#111116', color: '#A1A1AA', borderColor: 'rgba(255,255,255,0.10)' }
+              }
+            >
+              {chip.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -146,19 +258,19 @@ export default function AgendaPage() {
                 <Badge color={a.status}>{a.status}</Badge>
                 {a.status === 'CONFIRMADO' && (
                   <Button
-                    onClick={() => mudarStatus(a.id, 'CONCLUIDO')}
+                    onClick={() => { void mudarStatus(a.id, 'CONCLUIDO'); }}
                     className="flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100"
                   >
                     <Icon name="check" size="xs" /> Concluir
                   </Button>
                 )}
                 {a.status === 'AGENDADO' && (
-                  <Button variant="secondary" onClick={() => mudarStatus(a.id, 'CONFIRMADO')}>
+                  <Button variant="secondary" onClick={() => { void mudarStatus(a.id, 'CONFIRMADO'); }}>
                     Confirmar
                   </Button>
                 )}
                 {(a.status === 'AGENDADO' || a.status === 'CONFIRMADO') && (
-                  <Button variant="ghost" onClick={() => mudarStatus(a.id, 'CANCELADO')}>
+                  <Button variant="ghost" onClick={() => { void mudarStatus(a.id, 'CANCELADO'); }}>
                     Cancelar
                   </Button>
                 )}

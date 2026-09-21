@@ -14,14 +14,10 @@ describe('ExportService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        ExportService,
-        { provide: PrismaService, useValue: mockPrisma },
-      ],
+      providers: [ExportService, { provide: PrismaService, useValue: mockPrisma }],
     }).compile();
 
     service = module.get<ExportService>(ExportService);
-    (service as any).prisma = mockPrisma;
   });
 
   it('should be defined', () => {
@@ -34,11 +30,17 @@ describe('ExportService', () => {
   });
 
   it('should return CSV with BOM prefix', async () => {
-    mockPrisma.client.venda.findMany.mockResolvedValue([{
-      id: '1', total: 100, createdAt: new Date('2026-01-01'),
-      cliente: { nome: 'Teste' }, itens: [],
-      formaPagamento: 'PIX', desconto: 10,
-    }]);
+    mockPrisma.client.venda.findMany.mockResolvedValue([
+      {
+        id: '1',
+        total: 100,
+        createdAt: new Date('2026-01-01'),
+        cliente: { nome: 'Teste' },
+        itens: [],
+        formaPagamento: 'PIX',
+        desconto: 10,
+      },
+    ]);
     const csv = await service.vendasCsv();
     expect(csv).toContain('2026-01-01');
     expect(csv).toContain('Teste');

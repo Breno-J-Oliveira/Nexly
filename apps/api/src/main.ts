@@ -60,7 +60,25 @@ async function bootstrap(): Promise<void> {
       max: 10,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { statusCode: 429, message: 'Muitas tentativas de autenticação. Tente novamente mais tarde.' },
+      message: {
+        statusCode: 429,
+        message: 'Muitas tentativas de autenticação. Tente novamente mais tarde.',
+      },
+    }),
+  );
+
+  // Rate limit para agendamento público: 20 req / 15min por IP (anti-flood de agenda).
+  app.use(
+    '/api/booking',
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 20,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: {
+        statusCode: 429,
+        message: 'Muitas solicitações de agendamento. Tente novamente mais tarde.',
+      },
     }),
   );
 

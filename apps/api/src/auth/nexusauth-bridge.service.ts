@@ -42,7 +42,9 @@ export class NexusAuthBridgeService {
     this.baseUrl = this.config.get<string>('NEXUSAUTH_URL', '');
     this.apiKey = this.config.get<string>('NEXUSAUTH_API_KEY', '');
     if (!this.baseUrl) {
-      this.logger.warn('NEXUSAUTH_URL not configured — NexusAuth bridge DISABLED, using local auth');
+      this.logger.warn(
+        'NEXUSAUTH_URL not configured — NexusAuth bridge DISABLED, using local auth',
+      );
     }
   }
 
@@ -71,21 +73,24 @@ export class NexusAuthBridgeService {
     nome: string;
     tenantId?: string;
   }): Promise<{ tokens: NexusTokens; user: NexusUser }> {
-    await this.ensureAvailable();
+    this.ensureAvailable();
     const res = await this.post('/auth/register', dto);
     return res as { tokens: NexusTokens; user: NexusUser };
   }
 
   /* -- POST /auth/login -- */
-  async login(dto: { email: string; password: string }): Promise<{ tokens: NexusTokens; user: NexusUser }> {
-    await this.ensureAvailable();
+  async login(dto: {
+    email: string;
+    password: string;
+  }): Promise<{ tokens: NexusTokens; user: NexusUser }> {
+    this.ensureAvailable();
     const res = await this.post('/auth/login', dto);
     return res as { tokens: NexusTokens; user: NexusUser };
   }
 
   /* -- POST /auth/refresh -- */
   async refresh(refreshToken: string): Promise<{ tokens: NexusTokens }> {
-    await this.ensureAvailable();
+    this.ensureAvailable();
     const res = await this.post('/auth/refresh', { refreshToken });
     return res as { tokens: NexusTokens };
   }
@@ -95,19 +100,22 @@ export class NexusAuthBridgeService {
     if (!this.baseUrl) return;
     try {
       await this.post('/auth/logout', { refreshToken }, accessToken);
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
   }
 
   /* -- GET /auth/me -- */
   async me(accessToken: string): Promise<NexusUser> {
-    await this.ensureAvailable();
+    this.ensureAvailable();
     const res = await this.get('/auth/me', accessToken);
     return res as NexusUser;
   }
 
   /* -- helpers -- */
-  private async ensureAvailable(): Promise<void> {
-    if (!this.baseUrl) throw new UnauthorizedException('Auth service unavailable (NEXUSAUTH_URL not set)');
+  private ensureAvailable(): void {
+    if (!this.baseUrl)
+      throw new UnauthorizedException('Auth service unavailable (NEXUSAUTH_URL not set)');
   }
 
   private async post(path: string, body: unknown, token?: string): Promise<unknown> {
@@ -123,8 +131,11 @@ export class NexusAuthBridgeService {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: res.statusText }));
-      const msg = (err as any).message ?? (err as any).error ?? 'NexusAuth error';
+      const err = (await res.json().catch(() => ({ message: res.statusText }))) as {
+        message?: string;
+        error?: string;
+      };
+      const msg = err.message ?? err.error ?? 'NexusAuth error';
       this.logger.warn(`NexusAuth ${path} returned ${res.status}: ${msg}`);
       throw new UnauthorizedException(msg);
     }

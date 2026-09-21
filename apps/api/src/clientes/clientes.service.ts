@@ -104,7 +104,9 @@ export class ClientesService {
     const primeiraVisita = agendamentos[0]?.dataHora;
     const ultimaVisita = agendamentos[totalVisitas - 1]?.dataHora;
     const frequenciaMediaDias =
-      totalVisitas < 2 || !primeiraVisita || !ultimaVisita ? 0 : ultimaVisita.getTime() - primeiraVisita.getTime();
+      totalVisitas < 2 || !primeiraVisita || !ultimaVisita
+        ? 0
+        : ultimaVisita.getTime() - primeiraVisita.getTime();
 
     // Serviço mais agendado por este cliente.
     let servicoFavorito: { id: string; nome: string } | null = null;

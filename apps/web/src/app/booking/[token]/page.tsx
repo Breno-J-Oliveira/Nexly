@@ -36,11 +36,6 @@ interface Disponibilidade {
   slots: string[];
 }
 
-interface ConfirmacaoResp {
-  agendamentoId: string;
-  mensagem: string;
-}
-
 type Step = 1 | 2 | 3 | 4 | 5;
 
 /* ------------------------------------------------------------------ */
@@ -723,7 +718,7 @@ export default function BookingPage() {
               </button>
               <button
                 disabled={confirmando || !nome || !telefone}
-                onClick={confirmar}
+                onClick={() => { void confirmar(); }}
                 className="h-12 flex-1 rounded-md font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:opacity-90"
                 style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}
               >

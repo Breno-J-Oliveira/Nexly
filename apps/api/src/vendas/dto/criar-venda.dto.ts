@@ -38,4 +38,8 @@ export class CriarVendaDto {
   @Min(0)
   @Max(999999999)
   desconto?: number;
+
+  @IsOptional()
+  @IsString()
+  cupomCodigo?: string;
 }

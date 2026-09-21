@@ -1,7 +1,7 @@
 'use client';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { IconDefinition, findIconDefinition, IconPrefix, IconName } from '@fortawesome/fontawesome-svg-core';
+import { FontAwesomeIcon, FontAwesomeIconProps } from '@fortawesome/react-fontawesome';
+import { findIconDefinition, IconPrefix, IconName } from '@fortawesome/fontawesome-svg-core';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { fas } from '@fortawesome/free-solid-svg-icons';
 import { far } from '@fortawesome/free-regular-svg-icons';
@@ -44,11 +44,11 @@ export function Icon({ name, variant = 'solid', size = 'sm', className, color, s
       if (fallbackPrefix === prefix) continue;
       const fallbackDef = findIconDefinition({ prefix: fallbackPrefix, iconName: name as IconName });
       if (fallbackDef) {
-        return <FontAwesomeIcon icon={fallbackDef} className={className} style={mergedStyle as any} />;
+        return <FontAwesomeIcon icon={fallbackDef} className={className} style={mergedStyle as FontAwesomeIconProps['style']} />;
       }
     }
-    return <span className={className} style={mergedStyle as any}>•</span>;
+    return <span className={className} style={mergedStyle}>•</span>;
   }
 
-  return <FontAwesomeIcon icon={iconDef} className={className} style={mergedStyle as any} />;
+  return <FontAwesomeIcon icon={iconDef} className={className} style={mergedStyle as FontAwesomeIconProps['style']} />;
 }

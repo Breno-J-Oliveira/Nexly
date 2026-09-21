@@ -16,8 +16,12 @@ export function VencimentoAlert() {
   const [produtos, setProdutos] = useState<ProdutoVencendo[]>([]);
 
   useEffect(() => {
-    api.get<ProdutoVencendo[]>('/export/produtos/vencendo', { params: { dias: 30 } })
-      .then((r) => setProdutos(Array.isArray(r.data) ? r.data : (r.data as any).data ?? []))
+    api
+      .get<ProdutoVencendo[] | { data: ProdutoVencendo[] }>('/export/produtos/vencendo', { params: { dias: 30 } })
+      .then((r) => {
+        const body = r.data;
+        setProdutos(Array.isArray(body) ? body : body.data ?? []);
+      })
       .catch(() => undefined);
   }, []);
 

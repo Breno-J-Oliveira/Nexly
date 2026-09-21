@@ -1,4 +1,4 @@
-import { IsObject, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsObject, IsOptional, IsString } from 'class-validator';
 
 export class AtualizarConfiguracoesDto {
   @IsOptional()
@@ -40,4 +40,12 @@ export class AtualizarConfiguracoesDto {
   @IsOptional()
   @IsObject()
   notificacoes?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsBoolean()
+  lembretesAtivos?: boolean;
+
+  @IsOptional()
+  @IsString()
+  templateLembrete?: string;
 }

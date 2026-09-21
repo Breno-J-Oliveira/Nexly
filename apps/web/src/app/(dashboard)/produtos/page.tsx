@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Icon } from '@/components/ui/Icon';
+import { BarcodeScanner } from '@/components/ui/BarcodeScanner';
 import { api } from '@/lib/api';
 import { toastSuccess } from '@/components/ui/Toaster';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { formatarDataHora } from '@/lib/format';
 
 interface Produto {
@@ -17,6 +18,8 @@ interface Produto {
   estoqueAtual: number;
   estoqueMinimo: number;
   categoria: string | null;
+  dataVencimento: string | null;
+  lote: string | null;
 }
 
 interface Movimentacao {
@@ -36,6 +39,8 @@ interface FormState {
   estoqueAtual: string;
   estoqueMinimo: string;
   categoria: string;
+  dataVencimento: string;
+  lote: string;
 }
 
 const vazio: FormState = {
@@ -45,7 +50,22 @@ const vazio: FormState = {
   estoqueAtual: '0',
   estoqueMinimo: '5',
   categoria: '',
+  dataVencimento: '',
+  lote: '',
 };
+
+function vencimentoInfo(p: Produto): { label: string; tone: 'warning' | 'danger' | 'vencido' } | null {
+  if (!p.dataVencimento) return null;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const venc = new Date(p.dataVencimento);
+  venc.setHours(0, 0, 0, 0);
+  const dias = Math.ceil((venc.getTime() - hoje.getTime()) / 86_400_000);
+  if (dias < 0) return { label: 'Vencido', tone: 'vencido' };
+  if (dias <= 7) return { label: `Vence em ${dias} dias`, tone: 'danger' };
+  if (dias <= 30) return { label: `Vence em ${dias} dias`, tone: 'warning' };
+  return null;
+}
 
 function statusProduto(p: Produto): { label: string; color: string } {
   if (p.estoqueAtual === 0) return { label: 'Zerado', color: 'SAIDA' };
@@ -71,19 +91,24 @@ export default function ProdutosPage() {
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
   const [totalProdutos, setTotalProdutos] = useState(0);
+  const [filtroVencendo, setFiltroVencendo] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
-  const carregar = useCallback(async (search?: string) => {
-    setCarregando(true);
-    try {
-      const res = await api.get<{ data: Produto[]; total: number }>('/produtos', {
-        params: { limit: 100, search },
-      });
-      setProdutos(res.data.data);
-      setTotalProdutos(res.data.total);
-    } finally {
-      setCarregando(false);
-    }
-  }, []);
+  const carregar = useCallback(
+    async (search?: string) => {
+      setCarregando(true);
+      try {
+        const res = await api.get<{ data: Produto[]; total: number }>('/produtos', {
+          params: { limit: 100, search, vencendoEm: filtroVencendo ? 30 : undefined },
+        });
+        setProdutos(res.data.data);
+        setTotalProdutos(res.data.total);
+      } finally {
+        setCarregando(false);
+      }
+    },
+    [filtroVencendo],
+  );
 
   useEffect(() => {
     void carregar();
@@ -110,6 +135,8 @@ export default function ProdutosPage() {
       estoqueAtual: String(p.estoqueAtual),
       estoqueMinimo: String(p.estoqueMinimo),
       categoria: p.categoria ?? '',
+      dataVencimento: p.dataVencimento ? p.dataVencimento.slice(0, 10) : '',
+      lote: p.lote ?? '',
     });
     setErro(null);
     setModalAberto(true);
@@ -137,6 +164,8 @@ export default function ProdutosPage() {
           preco: Number(form.preco),
           estoqueMinimo: Number(form.estoqueMinimo),
           categoria: form.categoria || undefined,
+          dataVencimento: form.dataVencimento || null,
+          lote: form.lote || null,
         });
       } else {
         await api.post('/produtos', {
@@ -146,6 +175,8 @@ export default function ProdutosPage() {
           estoqueAtual: Number(form.estoqueAtual),
           estoqueMinimo: Number(form.estoqueMinimo),
           categoria: form.categoria || undefined,
+          dataVencimento: form.dataVencimento || null,
+          lote: form.lote || null,
         });
       }
       setModalAberto(false);
@@ -178,12 +209,26 @@ export default function ProdutosPage() {
         <Button onClick={abrirNovo}>+ Novo produto</Button>
       </div>
 
-      <div className="mt-6 max-w-md">
-        <Input
-          placeholder="Buscar por nome ou SKU..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="max-w-md flex-1">
+          <Input
+            placeholder="Buscar por nome ou SKU..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setFiltroVencendo((v) => !v)}
+          className="rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors"
+          style={{
+            borderColor: filtroVencendo ? '#6366F1' : 'rgba(255,255,255,0.10)',
+            color: filtroVencendo ? '#818CF8' : '#A1A1AA',
+            backgroundColor: filtroVencendo ? 'rgba(99,102,241,0.10)' : '#111116',
+          }}
+        >
+          Vencendo em 30 dias
+        </button>
       </div>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
@@ -215,6 +260,7 @@ export default function ProdutosPage() {
             )}
             {produtos.map((p) => {
               const s = statusProduto(p);
+              const venc = vencimentoInfo(p);
               return (
                 <tr key={p.id} className="hover:bg-[#18181F]/30">
                   <td className="px-4 py-3 font-medium text-[#FAFAFA]">{p.nome}</td>
@@ -222,7 +268,24 @@ export default function ProdutosPage() {
                   <td className="px-4 py-3 text-[#E4E4E7]">{moeda(p.preco)}</td>
                   <td className="px-4 py-3 text-[#FAFAFA]">{p.estoqueAtual}</td>
                   <td className="px-4 py-3">
-                    <Badge color={s.color}>{s.label}</Badge>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge color={s.color}>{s.label}</Badge>
+                      {venc && (
+                        <span
+                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                          style={{
+                            backgroundColor:
+                              venc.tone === 'warning'
+                                ? 'rgba(234,179,8,0.10)'
+                                : 'rgba(239,68,68,0.10)',
+                            color: venc.tone === 'warning' ? '#EAB308' : '#EF4444',
+                            opacity: venc.tone === 'vencido' ? 0.7 : 1,
+                          }}
+                        >
+                          {venc.label}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Button variant="ghost" className="mr-1 text-xs" onClick={() => void abrirHistorico(p)}>
@@ -259,13 +322,27 @@ export default function ProdutosPage() {
                 onChange={(e) => setForm({ ...form, nome: e.target.value })}
                 placeholder="Nome do produto"
               />
-              <Input
-                label="SKU"
-                value={form.sku}
-                onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                placeholder="Código único"
-                disabled={!!editandoId}
-              />
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Input
+                    label="SKU"
+                    value={form.sku}
+                    onChange={(e) => setForm({ ...form, sku: e.target.value })}
+                    placeholder="Código único"
+                    disabled={!!editandoId}
+                  />
+                </div>
+                {!editandoId && (
+                  <button
+                    type="button"
+                    onClick={() => setScannerOpen(true)}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.10)] text-[#71717A] hover:text-[#FAFAFA]"
+                    title="Escanear código de barras"
+                  >
+                    <Icon name="barcode" size="lg" />
+                  </button>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   label="Preço"
@@ -299,6 +376,27 @@ export default function ProdutosPage() {
                 onChange={(e) => setForm({ ...form, categoria: e.target.value })}
                 placeholder="Ex: coloração, cosmético"
               />
+
+              <div className="rounded-lg border border-[rgba(255,255,255,0.08)] p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#71717A]">
+                  Controle de validade
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="Data de vencimento"
+                    type="date"
+                    value={form.dataVencimento}
+                    onChange={(e) => setForm({ ...form, dataVencimento: e.target.value })}
+                  />
+                  <Input
+                    label="Lote"
+                    value={form.lote}
+                    onChange={(e) => setForm({ ...form, lote: e.target.value })}
+                    placeholder="Ex: L-2026-01"
+                  />
+                </div>
+              </div>
+
               {erro && <p className="text-sm text-red-400">{erro}</p>}
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="secondary" onClick={() => setModalAberto(false)}>
@@ -374,6 +472,15 @@ export default function ProdutosPage() {
           </div>
         </div>
       )}
+
+      <BarcodeScanner
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={(code) => {
+          setForm((f) => ({ ...f, sku: code }));
+          toastSuccess('Código capturado');
+        }}
+      />
     </div>
   );
 }

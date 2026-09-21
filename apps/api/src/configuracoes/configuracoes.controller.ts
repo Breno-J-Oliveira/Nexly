@@ -1,9 +1,10 @@
-import { Body, Controller, Get, InternalServerErrorException, Put } from '@nestjs/common';
+import { Body, Controller, Get, InternalServerErrorException, Patch, Put } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 import { getTenantContext } from '../database/tenant-context';
 import { AtualizarConfiguracoesDto } from './dto/atualizar-configuracoes.dto';
+import { AtualizarLembretesDto } from './dto/atualizar-lembretes.dto';
 
 @ApiTags('Configuracoes')
 @Controller('configuracoes')
@@ -77,6 +78,27 @@ export class ConfiguracoesController {
         ...(body.whatsapp !== undefined ? { whatsapp: body.whatsapp } : {}),
         ...(body.horarios !== undefined ? { horarios: body.horarios as never } : {}),
         ...(body.notificacoes !== undefined ? { notificacoes: body.notificacoes as never } : {}),
+        ...(body.lembretesAtivos !== undefined ? { lembretesAtivos: body.lembretesAtivos } : {}),
+        ...(body.templateLembrete !== undefined ? { templateLembrete: body.templateLembrete } : {}),
+      },
+    });
+    return { ok: true };
+  }
+
+  /**
+   * Lembretes automáticos de agendamento via WhatsApp (toggle + template).
+   */
+  @Patch('notificacoes')
+  @ApiOperation({ summary: 'Atualizar configurações de lembretes WhatsApp' })
+  @ApiResponse({ status: 200, description: 'Configurações atualizadas' })
+  async atualizarNotificacoes(@Body() body: AtualizarLembretesDto) {
+    const ctx = getTenantContext();
+    if (!ctx) return { ok: false };
+    await this.prisma.client.empresa.update({
+      where: { id: ctx.tenantId },
+      data: {
+        ...(body.lembretesAtivos !== undefined ? { lembretesAtivos: body.lembretesAtivos } : {}),
+        ...(body.templateLembrete !== undefined ? { templateLembrete: body.templateLembrete } : {}),
       },
     });
     return { ok: true };

@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
@@ -43,9 +44,31 @@ export class VendasService {
    * @throws NotFoundException se algum produto não existir.
    * @throws ConflictException se algum produto não tiver saldo suficiente.
    */
-  async criar(clienteId: string | undefined, itens: ItemVendaDto[], opcoes?: { formaPagamento?: string; desconto?: number }) {
+  async criar(
+    clienteId: string | undefined,
+    itens: ItemVendaDto[],
+    opcoes?: { formaPagamento?: string; desconto?: number; cupomCodigo?: string },
+  ) {
     if (itens.length === 0) {
       throw new BadRequestException('A venda deve ter ao menos um item');
+    }
+
+    // 1. Valida o cupom (se informado) antes de calcular o total.
+    let cupom: { id: string; tipo: 'PERCENTUAL' | 'FIXO'; valor: number } | null = null;
+    if (opcoes?.cupomCodigo) {
+      const c = await this.prisma.client.cupom.findFirst({
+        where: { codigo: opcoes.cupomCodigo },
+      });
+      if (!c || !c.ativo) {
+        throw new UnprocessableEntityException('Cupom inválido ou inativo');
+      }
+      if (c.validade && c.validade < new Date()) {
+        throw new UnprocessableEntityException('Cupom expirado');
+      }
+      if (c.usoMaximo !== null && c.usoAtual >= c.usoMaximo) {
+        throw new UnprocessableEntityException('Cupom esgotado');
+      }
+      cupom = { id: c.id, tipo: c.tipo, valor: Number(c.valor) };
     }
 
     const idsUnicos = [...new Set(itens.map((i) => i.produtoId))];
@@ -54,7 +77,7 @@ export class VendasService {
     });
     const produtoMap = new Map(produtos.map((p) => [p.id, p]));
 
-    // 1. Valida que todos os produtos existem e têm saldo suficiente.
+    // 2. Valida que todos os produtos existem e têm saldo suficiente.
     for (const item of itens) {
       const produto = produtoMap.get(item.produtoId);
       if (!produto) {
@@ -65,17 +88,30 @@ export class VendasService {
       }
     }
 
-    // 2. Calcula o total com base nos preços atuais.
+    // 3. Calcula o total com base nos preços atuais + descontos (manual + cupom).
     const totalBruto = itens.reduce((acc, item) => {
       const produto = produtoMap.get(item.produtoId);
       return acc + Number(produto?.preco ?? 0) * item.quantidade;
     }, 0);
-    const total = Math.max(0, totalBruto - (opcoes?.desconto || 0));
+    const descontoManual = opcoes?.desconto || 0;
+    const descontoCupom = cupom
+      ? cupom.tipo === 'PERCENTUAL'
+        ? (totalBruto * cupom.valor) / 100
+        : cupom.valor
+      : 0;
+    const descontoTotal = Math.min(descontoManual + descontoCupom, totalBruto);
+    const total = Math.max(0, totalBruto - descontoTotal);
 
-    // 3-7. Transação: cria venda + itens + baixa de estoque (rollback em falha).
+    // 4-8. Transação: cria venda + itens + baixa de estoque + incrementa cupom.
     const venda = await this.prisma.client.$transaction(async (tx) => {
       const v = await tx.venda.create({
-        data: { clienteId, total, formaPagamento: opcoes?.formaPagamento || undefined, desconto: opcoes?.desconto || 0 } as Prisma.VendaUncheckedCreateInput,
+        data: {
+          clienteId,
+          cupomId: cupom?.id ?? null,
+          total,
+          formaPagamento: opcoes?.formaPagamento || undefined,
+          desconto: descontoTotal,
+        } as Prisma.VendaUncheckedCreateInput,
       });
 
       for (const item of itens) {
@@ -86,7 +122,7 @@ export class VendasService {
             produtoId: item.produtoId,
             quantidade: item.quantidade,
             precoUnitario: produto?.preco ?? 0,
-          } as Prisma.ItemVendaUncheckedCreateInput,
+          },
         });
         await this.estoqueService.registrarSaidaTx(
           tx as unknown as Tx,
@@ -94,6 +130,13 @@ export class VendasService {
           item.quantidade,
           `Venda #${v.id}`,
         );
+      }
+
+      if (cupom) {
+        await tx.cupom.update({
+          where: { id: cupom.id },
+          data: { usoAtual: { increment: 1 } },
+        });
       }
 
       return v;

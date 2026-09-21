@@ -22,7 +22,6 @@ describe('AgendamentosService', () => {
   };
   let emitter: { emit: jest.Mock };
 
-  const empresaId = 'e1';
   const servico = { id: 's1', duracaoMin: 60 };
   const profissional = { id: 'p1' };
   const cliente = { id: 'c1' };
@@ -197,16 +196,16 @@ describe('AgendamentosService', () => {
 
     it('rejeita CONCLUIDO → CONFIRMADO (estado terminal)', async () => {
       prisma.client.agendamento.findFirst.mockResolvedValue({ ...base, status: 'CONCLUIDO' });
-      await expect(
-        service.atualizarStatus('a1', StatusAgendamento.CONFIRMADO),
-      ).rejects.toThrow(UnprocessableEntityException);
+      await expect(service.atualizarStatus('a1', StatusAgendamento.CONFIRMADO)).rejects.toThrow(
+        UnprocessableEntityException,
+      );
     });
 
     it('rejeita CANCELADO → qualquer (estado terminal)', async () => {
       prisma.client.agendamento.findFirst.mockResolvedValue({ ...base, status: 'CANCELADO' });
-      await expect(
-        service.atualizarStatus('a1', StatusAgendamento.CONCLUIDO),
-      ).rejects.toThrow(UnprocessableEntityException);
+      await expect(service.atualizarStatus('a1', StatusAgendamento.CONCLUIDO)).rejects.toThrow(
+        UnprocessableEntityException,
+      );
     });
 
     it('emite evento agendamento.concluido ao concluir', async () => {
@@ -230,9 +229,9 @@ describe('AgendamentosService', () => {
 
     it('lança NotFound se agendamento não existe', async () => {
       prisma.client.agendamento.findFirst.mockResolvedValue(null);
-      await expect(
-        service.atualizarStatus('x', StatusAgendamento.CONFIRMADO),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.atualizarStatus('x', StatusAgendamento.CONFIRMADO)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

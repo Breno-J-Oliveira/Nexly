@@ -9,12 +9,22 @@ datasource db {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Migrations
+// Baseline inicial: prisma/migrations/20260920000000_baseline/.
+//   - dev:  npm run db:migrate:dev  (ou `npm run migrate`) cria nova migration
+//   - prod: npm run db:migrate      (ou `npm run migrate:deploy`) aplica migrations
+//   - RLS:  apps/api/prisma/seed-rls.sql aplicado à parte (não entra nas migrations)
+// ─────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────
 // Enums
 // ─────────────────────────────────────────────────────────────
 
 enum Role {
   ADMIN
+  GESTOR
   PROFISSIONAL
+  RECEPCIONISTA
   CAIXA
 }
 
@@ -35,6 +45,26 @@ enum StatusAgendamento {
 enum TipoMovimentacao {
   ENTRADA
   SAIDA
+}
+
+enum TipoCupom {
+  PERCENTUAL
+  FIXO
+}
+
+enum StatusPedido {
+  RASCUNHO
+  ENVIADO
+  RECEBIDO
+  CANCELADO
+}
+
+enum AuditAcao {
+  CRIAR
+  EDITAR
+  EXCLUIR
+  LOGIN
+  LOGOUT
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -61,9 +91,17 @@ model Empresa {
   dadosPagamento Json?   @map("dados_pagamento")
   horarios       Json?   @map("horarios")
   notificacoes   Json?   @map("notificacoes")
+  lembretesAtivos Boolean  @default(false) @map("lembretes_ativos")
+  templateLembrete String? @map("template_lembrete")
   createdAt DateTime @default(now()) @map("created_at")
 
   usuarios Usuario[]
+  cupons   Cupom[]
+  fornecedores Fornecedor[]
+  pedidosCompra PedidoCompra[]
+  convites ConviteUsuario[]
+  auditLogs AuditLog[]
+  exclusoesConta ExclusaoConta[]
 
   @@map("empresas")
 }
@@ -76,10 +114,15 @@ model Usuario {
   senhaHash  String   @map("senha_hash")
   role       Role     @default(CAIXA)
   ativo      Boolean  @default(true)
+  twoFactorSecret       String?  @map("two_factor_secret")
+  twoFactorEnabled      Boolean  @default(false) @map("two_factor_enabled")
+  twoFactorBackupCodes  String[] @map("two_factor_backup_codes")
   createdAt  DateTime @default(now()) @map("created_at")
 
   empresa       Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+  termosAceite  TermoAceite[]
 
   @@index([empresaId])
   @@map("usuarios")
@@ -214,6 +257,7 @@ model Produto {
   movimentacoes MovimentacaoEstoque[]
   itensVenda    ItemVenda[]
   insumos       InsumoServico[]
+  itensPedidoCompra ItemPedidoCompra[]
 
   @@unique([empresaId, sku])
   @@index([empresaId, categoria])
@@ -241,6 +285,7 @@ model Venda {
   empresaId     String   @map("empresa_id")
   clienteId     String?  @map("cliente_id")
   agendamentoId String?  @map("agendamento_id")
+  cupomId       String?  @map("cupom_id")
   total         Decimal  @db.Decimal(10, 2)
   formaPagamento String? @default("DINHEIRO") @map("forma_pagamento")
   desconto       Decimal? @default(0) @db.Decimal(10, 2)
@@ -250,6 +295,7 @@ model Venda {
 
   cliente     Cliente?     @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   agendamento Agendamento? @relation(fields: [agendamentoId], references: [id], onDelete: SetNull)
+  cupom       Cupom?       @relation(fields: [cupomId], references: [id], onDelete: SetNull)
   itens       ItemVenda[]
 
   @@index([empresaId, createdAt])
@@ -294,4 +340,135 @@ model Notificacao {
   createdAt DateTime @default(now()) @map("created_at")
   @@index([empresaId, usuarioId, lida])
   @@map("notificacoes")
+}
+
+model Cupom {
+  id        String    @id @default(cuid())
+  empresaId String    @map("empresa_id")
+  codigo    String
+  tipo      TipoCupom
+  valor     Decimal   @db.Decimal(10, 2)
+  usoMaximo Int?      @map("uso_maximo")
+  usoAtual  Int       @default(0) @map("uso_atual")
+  validade  DateTime?
+  ativo     Boolean   @default(true)
+  criadoEm  DateTime  @default(now()) @map("criado_em")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  vendas  Venda[]
+
+  @@unique([empresaId, codigo])
+  @@index([empresaId])
+  @@map("cupons")
+}
+
+model Fornecedor {
+  id        String  @id @default(cuid())
+  empresaId String  @map("empresa_id")
+  nome      String
+  cnpj      String?
+  telefone  String?
+  email     String?
+  ativo     Boolean @default(true)
+  criadoEm  DateTime @default(now()) @map("criado_em")
+
+  empresa Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  pedidos PedidoCompra[]
+
+  @@index([empresaId])
+  @@map("fornecedores")
+}
+
+model PedidoCompra {
+  id           String       @id @default(cuid())
+  empresaId    String       @map("empresa_id")
+  fornecedorId String?      @map("fornecedor_id")
+  status       StatusPedido @default(RASCUNHO)
+  observacoes  String?
+  criadoEm     DateTime     @default(now()) @map("criado_em")
+  atualizadoEm DateTime     @updatedAt @map("atualizado_em")
+
+  empresa    Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  fornecedor Fornecedor?         @relation(fields: [fornecedorId], references: [id], onDelete: SetNull)
+  itens      ItemPedidoCompra[]
+
+  @@index([empresaId, status])
+  @@map("pedidos_compra")
+}
+
+model ItemPedidoCompra {
+  id            String   @id @default(cuid())
+  pedidoId      String   @map("pedido_id")
+  produtoId     String   @map("produto_id")
+  quantidade    Int
+  precoEsperado Decimal? @db.Decimal(10, 2) @map("preco_esperado")
+
+  pedido  PedidoCompra @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  produto Produto      @relation(fields: [produtoId], references: [id], onDelete: Restrict)
+
+  @@index([pedidoId])
+  @@map("itens_pedido_compra")
+}
+
+model ConviteUsuario {
+  id        String   @id @default(uuid())
+  empresaId String   @map("empresa_id")
+  email     String
+  role      Role
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  usado     Boolean  @default(false)
+  criadoEm  DateTime @default(now()) @map("criado_em")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@map("convites_usuario")
+}
+
+model AuditLog {
+  id           String    @id @default(cuid())
+  empresaId    String    @map("empresa_id")
+  usuarioId    String?   @map("usuario_id")
+  acao         AuditAcao
+  recurso      String
+  recursoId    String?   @map("recurso_id")
+  dadosAntigos Json?     @map("dados_antigos")
+  dadosNovos   Json?     @map("dados_novos")
+  ip           String?
+  userAgent    String?   @map("user_agent")
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([empresaId, criadoEm])
+  @@index([empresaId, acao])
+  @@map("audit_logs")
+}
+
+model TermoAceite {
+  id        String   @id @default(cuid())
+  usuarioId String   @map("usuario_id")
+  versao    String
+  ip        String?
+  aceitoEm  DateTime @default(now()) @map("aceito_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("termos_aceite")
+}
+
+model ExclusaoConta {
+  id           String   @id @default(cuid())
+  empresaId    String   @map("empresa_id")
+  solicitadaEm DateTime @default(now()) @map("solicitada_em")
+  executarEm   DateTime @map("executar_em")
+  executada    Boolean  @default(false)
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@map("exclusoes_conta")
 }

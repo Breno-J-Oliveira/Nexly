@@ -16,6 +16,10 @@ const TENANT_MODELS = new Set<string>([
   'Venda',
   'Configuracao',
   'Notificacao',
+  'Cupom',
+  'Fornecedor',
+  'PedidoCompra',
+  'ItemPedidoCompra',
 ]);
 
 /**

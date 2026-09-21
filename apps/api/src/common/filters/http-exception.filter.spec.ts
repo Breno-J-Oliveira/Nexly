@@ -1,4 +1,11 @@
-import { ArgumentsHost, BadRequestException, ConflictException, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  BadRequestException,
+  ConflictException,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { HttpExceptionFilter } from './http-exception.filter';
 
 interface MockResponse {
@@ -6,10 +13,13 @@ interface MockResponse {
   json: jest.Mock;
 }
 
-function makeHost(req: { id?: string } = {}, res: MockResponse = {
-  status: jest.fn().mockReturnThis(),
-  json: jest.fn().mockReturnThis(),
-}): ArgumentsHost {
+function makeHost(
+  req: { id?: string } = {},
+  res: MockResponse = {
+    status: jest.fn().mockReturnThis(),
+    json: jest.fn().mockReturnThis(),
+  },
+): ArgumentsHost {
   return {
     switchToHttp: () => ({
       getRequest: <T = unknown>() => req as unknown as T,
@@ -72,7 +82,7 @@ describe('HttpExceptionFilter', () => {
 
     filter.catch(new HttpException('Erro qualquer', HttpStatus.FORBIDDEN), host);
 
-    const body = (res.json as jest.Mock).mock.calls[0][0];
+    const body = res.json.mock.calls[0][0];
     expect(body).not.toHaveProperty('code');
     expect(body).toMatchObject({ statusCode: 403, message: 'Erro qualquer' });
   });
@@ -83,9 +93,7 @@ describe('HttpExceptionFilter', () => {
 
     filter.catch(new ConflictException('Boom'), host);
 
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ requestId: 'req-abc' }),
-    );
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ requestId: 'req-abc' }));
   });
 
   it('retorna 500 com mensagem genérica para erros não-HttpException', () => {
@@ -95,7 +103,7 @@ describe('HttpExceptionFilter', () => {
     filter.catch(new Error('Banco de dados caiu'), host);
 
     expect(res.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
+    const body = res.json.mock.calls[0][0];
     expect(body).toMatchObject({
       statusCode: 500,
       message: 'Erro interno do servidor',

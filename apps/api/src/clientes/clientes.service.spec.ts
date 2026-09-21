@@ -22,10 +22,7 @@ describe('ClientesService', () => {
       updateMany: jest.fn(),
     };
     const moduleRef = await Test.createTestingModule({
-      providers: [
-        ClientesService,
-        { provide: PrismaService, useValue: { client: { cliente } } },
-      ],
+      providers: [ClientesService, { provide: PrismaService, useValue: { client: { cliente } } }],
     }).compile();
     service = moduleRef.get(ClientesService);
   });

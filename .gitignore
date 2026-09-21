@@ -24,6 +24,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Playwright
+e2e/.auth/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
 # Sistema / IDE
 .DS_Store
 Thumbs.db

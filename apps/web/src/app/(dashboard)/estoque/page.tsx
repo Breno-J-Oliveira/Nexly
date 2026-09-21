@@ -3,9 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { VencimentoAlert } from '@/components/ui/VencimentoAlert';
 import { api } from '@/lib/api';
-import { toastSuccess } from '@/components/ui/Toaster';
-import { Skeleton } from '@/components/ui/Skeleton';
 
 interface Produto {
   id: string;
@@ -74,6 +73,8 @@ export default function EstoquePage() {
   return (
     <div>
       <h2 className="text-xl font-semibold text-[#FAFAFA]">Estoque</h2>
+
+      <VencimentoAlert />
 
       {/* Banner de produtos em alerta */}
       {alertas.length > 0 && (

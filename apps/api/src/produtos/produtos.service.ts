@@ -11,13 +11,21 @@ export class ProdutosService {
   async listar(
     page: number,
     limit: number,
-    filtros: { categoria?: string; search?: string; estoqueAbaixoDe?: number },
+    filtros: { categoria?: string; search?: string; estoqueAbaixoDe?: number; vencendoEm?: number },
   ) {
     const where: Prisma.ProdutoWhereInput = {
       ativo: true,
       ...(filtros.categoria ? { categoria: filtros.categoria } : {}),
       ...(filtros.estoqueAbaixoDe !== undefined
         ? { estoqueAtual: { lt: filtros.estoqueAbaixoDe } }
+        : {}),
+      ...(filtros.vencendoEm !== undefined
+        ? {
+            dataVencimento: {
+              not: null,
+              lte: new Date(Date.now() + filtros.vencendoEm * 86_400_000),
+            },
+          }
         : {}),
       ...(filtros.search
         ? {
@@ -65,6 +73,8 @@ export class ProdutosService {
           estoqueAtual: dto.estoqueAtual ?? 0,
           estoqueMinimo: dto.estoqueMinimo ?? 5,
           categoria: dto.categoria,
+          dataVencimento: dto.dataVencimento ? new Date(dto.dataVencimento) : null,
+          lote: dto.lote ?? null,
         } as Prisma.ProdutoUncheckedCreateInput,
       });
     } catch (error) {
@@ -84,6 +94,10 @@ export class ProdutosService {
         preco: dto.preco,
         estoqueMinimo: dto.estoqueMinimo,
         categoria: dto.categoria,
+        ...(dto.dataVencimento !== undefined
+          ? { dataVencimento: dto.dataVencimento ? new Date(dto.dataVencimento) : null }
+          : {}),
+        ...(dto.lote !== undefined ? { lote: dto.lote ?? null } : {}),
       },
     });
     return this.obter(id);

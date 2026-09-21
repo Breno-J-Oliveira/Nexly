@@ -58,9 +58,9 @@ describe('VendasService', () => {
         { id: 'p1', nome: 'Shampoo', preco: 20, estoqueAtual: 1, ativo: true },
       ]);
 
-      await expect(
-        service.criar(undefined, [{ produtoId: 'p1', quantidade: 10 }]),
-      ).rejects.toThrow(/Saldo insuficiente/);
+      await expect(service.criar(undefined, [{ produtoId: 'p1', quantidade: 10 }])).rejects.toThrow(
+        /Saldo insuficiente/,
+      );
     });
 
     it('cria a venda, os itens e baixa estoque em uma transação', async () => {
@@ -71,12 +71,14 @@ describe('VendasService', () => {
 
       const txVenda = { id: 'v1' };
       let receivedData: { clienteId?: string; total: number; desconto?: number } | null = null;
-      prisma.client.$transaction.mockImplementation(async (cb) => {
+      prisma.client.$transaction.mockImplementation((cb) => {
         const fakeTx = {
-          venda: { create: jest.fn().mockImplementation(({ data }) => {
-            receivedData = data;
-            return txVenda;
-          }) },
+          venda: {
+            create: jest.fn().mockImplementation(({ data }) => {
+              receivedData = data;
+              return txVenda;
+            }),
+          },
           itemVenda: { create: jest.fn().mockResolvedValue({}) },
         };
         return cb(fakeTx);
@@ -90,7 +92,13 @@ describe('VendasService', () => {
       ]);
 
       // total: 2*25 + 1*30 = 80
-      expect(receivedData).toEqual({ clienteId: 'c1', total: 80, desconto: 0, formaPagamento: undefined });
+      expect(receivedData).toEqual({
+        clienteId: 'c1',
+        cupomId: null,
+        total: 80,
+        desconto: 0,
+        formaPagamento: undefined,
+      });
       expect(result.id).toBe('v1');
       // registrarSaidaTx chamado para cada item
       expect(estoque.registrarSaidaTx).toHaveBeenCalledTimes(2);

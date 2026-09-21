@@ -8,7 +8,7 @@ export interface Column<T> {
   render: (row: T, index: number) => ReactNode;
 }
 
-export function DataTable<T extends Record<string, any>>(props: {
+export function DataTable<T extends object>(props: {
   columns: Column<T>[];
   data: T[];
   keyField: keyof T;

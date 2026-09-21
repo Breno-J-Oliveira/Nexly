@@ -7,8 +7,9 @@ export function middleware(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
 
   const isAuthPage = AUTH_PAGES.some((p) => pathname.startsWith(p));
-  // Página pública de agendamento online (não exige login)
-  const isPublicPage = pathname.startsWith('/booking');
+  // Páginas públicas (não exigem login)
+  const isPublicPage =
+    pathname.startsWith('/booking') || pathname.startsWith('/aceitar-convite');
 
   if (!refreshToken && !isAuthPage && !isPublicPage && pathname !== '/') {
     const url = request.nextUrl.clone();

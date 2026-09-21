@@ -48,7 +48,7 @@ export default function HomePage() {
               {features.map((f, i) => (
                 <div key={i} className="rounded-2xl border p-6" style={{ backgroundColor: '#18181F', borderColor: 'rgba(255,255,255,0.08)' }}>
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg" style={{ backgroundColor: 'rgba(99,102,241,0.12)' }}>
-                    <Icon name={f.icon as any} className="text-[#818CF8]" size="lg" />
+                    <Icon name={f.icon} className="text-[#818CF8]" size="lg" />
                   </div>
                   <h3 className="mt-4 text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>{f.title}</h3>
                   <p className="mt-2 text-[13px] leading-relaxed" style={{ color: '#A1A1AA' }}>{f.desc}</p>

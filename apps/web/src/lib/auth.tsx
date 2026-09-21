@@ -18,10 +18,18 @@ export async function fetchMe(): Promise<UsuarioPublico | null> {
   }
 }
 
+export interface LoginResponse {
+  accessToken?: string;
+  usuario?: UsuarioPublico | null;
+  requiresTwoFactor?: boolean;
+  tempToken?: string;
+}
+
 interface AuthContextValue {
   user: UsuarioPublico | null;
   loading: boolean;
-  login: (email: string, senha: string) => Promise<void>;
+  login: (email: string, senha: string) => Promise<LoginResponse>;
+  completeLogin: (accessToken: string, usuario: UsuarioPublico) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -48,13 +56,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (email: string, senha: string): Promise<void> => {
-    const res = await api.post<{ accessToken: string; usuario: UsuarioPublico }>('/auth/login', {
-      email,
-      senha,
-    });
-    setAccessToken(res.data.accessToken);
-    setUser(res.data.usuario);
+  const login = async (email: string, senha: string): Promise<LoginResponse> => {
+    const res = await api.post<LoginResponse>('/auth/login', { email, senha });
+    if (res.data.accessToken && res.data.usuario) {
+      setAccessToken(res.data.accessToken);
+      setUser(res.data.usuario);
+    }
+    return res.data;
+  };
+
+  const completeLogin = (accessToken: string, usuario: UsuarioPublico): void => {
+    setAccessToken(accessToken);
+    setUser(usuario);
   };
 
   const logout = async (): Promise<void> => {
@@ -78,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, completeLogin, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
