@@ -1,0 +1,13 @@
+# Nexly API — configuração de build para Railway/Nixpacks
+[phases.install]
+cmds = ["npm ci --include=dev"]
+
+[phases.build]
+cmds = [
+  "npm run build --workspace @nexly/shared",
+  "npx prisma generate --schema apps/api/prisma/schema.prisma",
+  "npm run build --workspace @nexly/api"
+]
+
+[start]
+cmd = "NODE_ENV=production node apps/api/dist/src/main.js"

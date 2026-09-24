@@ -4,6 +4,7 @@
   "private": true,
   "description": "Nexly API — NestJS + Prisma + PostgreSQL",
   "scripts": {
+    "prebuild": "prisma generate",
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "nest start",
