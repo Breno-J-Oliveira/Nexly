@@ -6,7 +6,11 @@ import { z } from 'zod';
 dotenvConfig();
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z
+    .preprocess(
+      (val) => (val === '' || val === undefined || val === null ? 'production' : val),
+      z.enum(['development', 'production', 'test']),
+    ),
   PORT: z.coerce.number().default(3001),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL é obrigatória'),
   REDIS_URL: z.string().min(1, 'REDIS_URL é obrigatória'),
