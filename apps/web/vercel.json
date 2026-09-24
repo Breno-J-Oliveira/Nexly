@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
   "regions": ["gru1"],
-  "buildCommand": "npx next build"
+  "buildCommand": "cd ../.. && npm run build --workspace @nexly/shared && cd apps/web && npx next build"
 }
