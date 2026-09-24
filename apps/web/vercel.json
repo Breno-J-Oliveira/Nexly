@@ -1,4 +1,5 @@
 {
   "framework": "nextjs",
-  "regions": ["gru1"]
+  "regions": ["gru1"],
+  "buildCommand": "npx next build"
 }
