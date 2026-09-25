@@ -15,6 +15,15 @@ async function bootstrap(): Promise<void> {
   // Confia nos proxies para extrair IP real (necessário para rate limit e logs).
   server.set('trust proxy', 1);
 
+  // CORS deve vir ANTES do rate limit: assim até respostas de erro (429)
+  // carregam os headers CORS, e o navegador não bloqueia o preflight.
+  app.enableCors({
+    origin: env.CORS_ORIGIN.split(',').map((o) => o.trim()),
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   // Headers de segurança HTTP.
   app.use(
     helmet({
@@ -81,13 +90,6 @@ async function bootstrap(): Promise<void> {
       },
     }),
   );
-
-  app.enableCors({
-    origin: env.CORS_ORIGIN.split(',').map((o) => o.trim()),
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  });
 
   app.setGlobalPrefix('api');
 
