@@ -53,10 +53,10 @@ describe('AuthService', () => {
       issueRefreshToken: jest.fn().mockResolvedValue('refresh-token'),
     };
     throttle = {
-      isBlocked: jest.fn().mockReturnValue(false),
-      registerFailure: jest.fn(),
-      registerSuccess: jest.fn(),
-      retryAfterSeconds: jest.fn().mockReturnValue(0),
+      isBlocked: jest.fn().mockResolvedValue(false),
+      registerFailure: jest.fn().mockResolvedValue(undefined),
+      registerSuccess: jest.fn().mockResolvedValue(undefined),
+      retryAfterSeconds: jest.fn().mockResolvedValue(0),
     };
     auditService = { registrar: jest.fn() };
 
@@ -105,8 +105,8 @@ describe('AuthService', () => {
 
   describe('login com throttle', () => {
     it('lança LOGIN_TOO_MANY_ATTEMPTS quando o throttle indica bloqueado', async () => {
-      throttle.isBlocked.mockReturnValue(true);
-      throttle.retryAfterSeconds.mockReturnValue(120);
+      throttle.isBlocked.mockResolvedValue(true);
+      throttle.retryAfterSeconds.mockResolvedValue(120);
 
       await expect(
         service.login({ email: 'x@y.com', senha: 'qualquer' }, KEY),

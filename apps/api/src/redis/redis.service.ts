@@ -44,6 +44,31 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  /**
+   * Incrementa o contador e garante o TTL (renovado a cada incremento).
+   * Retorna `null` quando o Redis está indisponível — quem chama decide o fallback.
+   */
+  async incr(key: string, ttlSeconds: number): Promise<number | null> {
+    if (!this.client) return null;
+    try {
+      const value = await this.client.incr(key);
+      await this.client.expire(key, ttlSeconds);
+      return value;
+    } catch {
+      return null;
+    }
+  }
+
+  /** TTL restante em segundos (-1 sem TTL, -2 inexistente, null se indisponível). */
+  async ttl(key: string): Promise<number | null> {
+    if (!this.client) return null;
+    try {
+      return await this.client.ttl(key);
+    } catch {
+      return null;
+    }
+  }
+
   async onModuleDestroy(): Promise<void> {
     if (this.client) {
       await this.client.quit().catch(() => undefined);

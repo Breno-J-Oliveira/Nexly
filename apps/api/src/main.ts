@@ -82,7 +82,7 @@ async function bootstrap(): Promise<void> {
       standardHeaders: true,
       legacyHeaders: false,
       message: { statusCode: 429, message: 'Muitas requisições. Tente novamente mais tarde.' },
-      skip: (req) => req.path === '/api/health',
+      skip: (req) => req.path === '/api/health' || req.path.startsWith('/api/docs'),
     }),
   );
 
@@ -112,6 +112,21 @@ async function bootstrap(): Promise<void> {
       message: {
         statusCode: 429,
         message: 'Muitas solicitações de agendamento. Tente novamente mais tarde.',
+      },
+    }),
+  );
+
+  // Rate limit para operações pesadas (exportação de dados / LGPD): 3 req / hora por IP.
+  app.use(
+    ['/api/export', '/api/lgpd'],
+    rateLimit({
+      windowMs: 60 * 60 * 1000,
+      max: 3,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: {
+        statusCode: 429,
+        message: 'Limite de exportações atingido. Tente novamente em 1 hora.',
       },
     }),
   );

@@ -99,8 +99,8 @@ export class AuthService {
     throttleKey: string,
   ): Promise<AuthResult | { requiresTwoFactor: true; tempToken: string }> {
     // Checagem de throttle ANTES de bater no DB / hash de senha.
-    if (this.throttle.isBlocked(throttleKey)) {
-      const retry = this.throttle.retryAfterSeconds(throttleKey);
+    if (await this.throttle.isBlocked(throttleKey)) {
+      const retry = await this.throttle.retryAfterSeconds(throttleKey);
       throw new UnauthorizedException({
         code: 'LOGIN_TOO_MANY_ATTEMPTS',
         message: `Muitas tentativas. Tente novamente em ${retry}s.`,
@@ -113,17 +113,17 @@ export class AuthService {
 
     // Mensagem genérica para não revelar se o e-mail existe
     if (!usuario || !usuario.ativo) {
-      this.throttle.registerFailure(throttleKey);
+      await this.throttle.registerFailure(throttleKey);
       throw new UnauthorizedException('E-mail ou senha incorretos');
     }
 
     const senhaValida = await argon2.verify(usuario.senhaHash, dto.senha);
     if (!senhaValida) {
-      this.throttle.registerFailure(throttleKey);
+      await this.throttle.registerFailure(throttleKey);
       throw new UnauthorizedException('E-mail ou senha incorretos');
     }
 
-    this.throttle.registerSuccess(throttleKey);
+    await this.throttle.registerSuccess(throttleKey);
 
     this.auditService.registrar({
       empresaId: usuario.empresaId,
