@@ -292,7 +292,7 @@ main()
 
   console.log('\n────────────────────────────────────────');
   console.log('  Seed concluído!');
-  console.log('  Login: ' + EMAIL_DEMO + ' / ' + SENHA_DEMO);
+  console.log('  Login: ' + EMAIL_DEMO + ' / ' + 'senha definida em SENHA_DEMO');
   console.log('────────────────────────────────────────');
 }
 

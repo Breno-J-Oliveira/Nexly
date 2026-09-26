@@ -2,6 +2,12 @@ import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nes
 import { Prisma } from '@prisma/client';
 import { map, Observable } from 'rxjs';
 
+// Campos que NUNCA devem ser serializados para o cliente, mesmo que um
+// service retorne o objeto Prisma completo por engano. É uma defesa em
+// profundidade: o hash da senha, o secret do TOTP e os códigos de backup
+// (que ficam armazenados apenas como hash) nunca saem da API.
+const SENSITIVE_KEYS = new Set(['senhaHash', 'twoFactorSecret', 'twoFactorBackupCodes']);
+
 function toPlain(value: unknown): unknown {
   if (value === null || value === undefined) return value;
   if (value instanceof Prisma.Decimal) return value.toNumber();
@@ -10,6 +16,7 @@ function toPlain(value: unknown): unknown {
   if (typeof value === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+      if (SENSITIVE_KEYS.has(key)) continue;
       result[key] = toPlain(val);
     }
     return result;

@@ -13,7 +13,6 @@ export interface Usuario {
   empresaId: string;
   nome: string;
   email: string;
-  senhaHash: string;
   role: Role;
   ativo: boolean;
   createdAt: Date;
