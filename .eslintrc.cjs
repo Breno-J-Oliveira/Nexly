@@ -23,5 +23,21 @@ module.exports = {
       'error',
       { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
     ],
+    // Card 06 (S0) — previne SQL Injection: proíbe as variantes "Unsafe" do
+    // Prisma, que aceitam string concatenada. Use $queryRaw/$executeRaw com
+    // Prisma.sql`...` (template parametrizado).
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: "MemberExpression[property.name='$queryRawUnsafe']",
+        message:
+          'Use $queryRaw com Prisma.sql`...` (parametrizado). $queryRawUnsafe aceita SQL concatenado e permite SQL Injection.',
+      },
+      {
+        selector: "MemberExpression[property.name='$executeRawUnsafe']",
+        message:
+          'Use $executeRaw com Prisma.sql`...` (parametrizado). $executeRawUnsafe aceita SQL concatenado e permite SQL Injection.',
+      },
+    ],
   },
 };

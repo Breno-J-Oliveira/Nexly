@@ -1,6 +1,8 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import compression from 'compression';
+import type { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { AppModule } from './app.module';
@@ -14,6 +16,9 @@ async function bootstrap(): Promise<void> {
 
   // Confia nos proxies para extrair IP real (necessário para rate limit e logs).
   server.set('trust proxy', 1);
+
+  // Não expõe a stack na resposta (X-Powered-By: Express).
+  server.disable('x-powered-by');
 
   // CORS deve vir ANTES do rate limit: assim até respostas de erro (429)
   // carregam os headers CORS, e o navegador não bloqueia o preflight.
@@ -41,11 +46,31 @@ async function bootstrap(): Promise<void> {
         },
       },
       crossOriginEmbedderPolicy: false,
+      // A API só serve JSON — nada de embutir em frame.
+      frameguard: { action: 'deny' },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
       hsts: {
         maxAge: 31536000,
         includeSubDomains: true,
         preload: true,
       },
+    }),
+  );
+
+  // Permissions-Policy + remoção do header que revela a stack.
+  server.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Permissions-Policy', 'camera=(), geolocation=(), microphone=()');
+    res.removeHeader('X-Powered-By');
+    next();
+  });
+
+  // Compressão das respostas JSON (corte de ~75% nos bytes na rede).
+  // Depois do helmet e antes do rate limit: não interfere no CORS.
+  app.use(
+    compression({
+      threshold: 1024,
+      level: 6,
+      filter: (req, res) => !res.getHeader('Content-Encoding') && compression.filter(req, res),
     }),
   );
 
