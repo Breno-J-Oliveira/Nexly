@@ -165,6 +165,8 @@ model Cliente {
   vendas       Venda[]
 
   @@index([empresaId])
+  @@index([empresaId, nome])
+  @@index([empresaId, createdAt])
   @@map("clientes")
 }
 
@@ -232,6 +234,8 @@ model Agendamento {
   avaliacoes   Avaliacao[]
 
   @@index([empresaId, dataHora])
+  @@index([empresaId, status, dataHora])
+  @@index([empresaId, profissionalId, dataHora])
   @@index([profissionalId, status])
   @@map("agendamentos")
 }
@@ -277,6 +281,7 @@ model MovimentacaoEstoque {
   produto Produto @relation(fields: [produtoId], references: [id], onDelete: Restrict)
 
   @@index([empresaId, produtoId, createdAt])
+  @@index([empresaId, createdAt])
   @@map("movimentacoes_estoque")
 }
 
@@ -299,6 +304,7 @@ model Venda {
   itens       ItemVenda[]
 
   @@index([empresaId, createdAt])
+  @@index([empresaId, clienteId])
   @@map("vendas")
 }
 
