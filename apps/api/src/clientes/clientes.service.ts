@@ -1,14 +1,46 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Cliente, Prisma } from '@prisma/client';
+import {
+  decodeCursor,
+  encodeCursor,
+  montarPagina,
+  normalizarLimite,
+} from '../common/pagination/cursor';
 import { PrismaService } from '../database/prisma.service';
 import { AtualizarClienteDto } from './dto/atualizar-cliente.dto';
 import { CriarClienteDto } from './dto/criar-cliente.dto';
+
+/**
+ * Retorno da listagem: o modo offset inclui `total`/`page` (retrocompatível),
+ * o modo keyset (`cursor`) omite — contar o total seria O(n) e não faz sentido
+ * quando o cliente pagina por cursor.
+ */
+export interface ListaClientesResult {
+  data: Cliente[];
+  limit: number;
+  hasNext: boolean;
+  nextCursor: string | null;
+  total?: number;
+  page?: number;
+}
 
 @Injectable()
 export class ClientesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listar(page: number, limit: number, search?: string) {
+  /**
+   * Lista clientes ativos.
+   *
+   * - Sem `cursor`: paginação por offset (`?page=`/`?limit=`), retrocompatível.
+   * - Com `cursor`: paginação **keyset** por `(nome, id)`, O(1) por página e
+   *   estável mesmo com cadastros concorrentes (offset pula/repeita itens).
+   */
+  async listar(
+    page: number,
+    limit: number,
+    search?: string,
+    cursor?: string,
+  ): Promise<ListaClientesResult> {
     const where: Prisma.ClienteWhereInput = {
       ativo: true,
       ...(search
@@ -21,17 +53,46 @@ export class ClientesService {
         : {}),
     };
 
+    const limite = normalizarLimite(limit);
+
+    if (cursor) {
+      const c = decodeCursor<{ nome: string; id: string }>(cursor);
+      const itens = await this.prisma.client.cliente.findMany({
+        where: {
+          AND: [
+            where,
+            {
+              OR: [{ nome: { gt: c.nome } }, { nome: c.nome, id: { gt: c.id } }],
+            },
+          ],
+        },
+        orderBy: [{ nome: 'asc' }, { id: 'asc' }],
+        take: limite + 1,
+      });
+      const pagina = montarPagina(itens, limite, (cl) => ({ nome: cl.nome, id: cl.id }));
+      return { ...pagina, limit: limite };
+    }
+
     const [data, total] = await Promise.all([
       this.prisma.client.cliente.findMany({
         where,
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: (page - 1) * limite,
+        take: limite,
         orderBy: { nome: 'asc' },
       }),
       this.prisma.client.cliente.count({ where }),
     ]);
 
-    return { data, total, page, limit };
+    const ultimo = data.at(-1);
+    const hasNext = page * limite < total;
+    return {
+      data,
+      total,
+      page,
+      limit: limite,
+      hasNext,
+      nextCursor: hasNext && ultimo ? encodeCursor({ nome: ultimo.nome, id: ultimo.id }) : null,
+    };
   }
 
   async obter(id: string) {

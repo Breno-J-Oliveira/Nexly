@@ -11,6 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { LIMITE_PADRAO } from '../common/pagination/cursor';
 import { ClientesService } from './clientes.service';
 import { AtualizarClienteDto } from './dto/atualizar-cliente.dto';
 import { CriarClienteDto } from './dto/criar-cliente.dto';
@@ -21,12 +22,16 @@ export class ClientesController {
   constructor(private readonly clientesService: ClientesService) {}
 
   @Get()
+  @ApiOperation({
+    summary: 'Lista clientes ativos (offset por page/limit ou keyset por cursor)',
+  })
   listar(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('limit', new DefaultValuePipe(LIMITE_PADRAO), ParseIntPipe) limit: number,
     @Query('search') search?: string,
+    @Query('cursor') cursor?: string,
   ) {
-    return this.clientesService.listar(page, limit, search);
+    return this.clientesService.listar(page, limit, search, cursor);
   }
 
   @Get(':id/metricas')

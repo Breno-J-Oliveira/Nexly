@@ -1,5 +1,6 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { encodeCursor } from '../common/pagination/cursor';
 import { PrismaService } from '../database/prisma.service';
 import { ClientesService } from './clientes.service';
 
@@ -58,11 +59,77 @@ describe('ClientesService', () => {
       expect(args.take).toBe(25);
     });
 
-    it('retorna metadados de paginação', async () => {
-      cliente.findMany.mockResolvedValue([{ id: '1' }]);
+    it('retorna metadados de paginação (offset)', async () => {
+      cliente.findMany.mockResolvedValue([{ id: '1', nome: 'Ana' }]);
       cliente.count.mockResolvedValue(42);
       const result = await service.listar(1, 10);
-      expect(result).toEqual({ data: [{ id: '1' }], total: 42, page: 1, limit: 10 });
+      expect(result).toEqual({
+        data: [{ id: '1', nome: 'Ana' }],
+        total: 42,
+        page: 1,
+        limit: 10,
+        hasNext: true,
+        nextCursor: expect.any(String) as string,
+      });
+    });
+
+    it('não gera nextCursor quando é a última página', async () => {
+      cliente.findMany.mockResolvedValue([{ id: '1', nome: 'Ana' }]);
+      cliente.count.mockResolvedValue(1);
+      const result = await service.listar(1, 10);
+      expect(result.hasNext).toBe(false);
+      expect(result.nextCursor).toBeNull();
+    });
+
+    it('aplica o teto de 100 itens por página', async () => {
+      cliente.findMany.mockResolvedValue([]);
+      cliente.count.mockResolvedValue(0);
+      const result = await service.listar(1, 5000);
+      expect(result.limit).toBe(100);
+    });
+
+    describe('com cursor (keyset)', () => {
+      it('ordena por (nome, id) e pede limit+1 (sem skip)', async () => {
+        cliente.findMany.mockResolvedValue([]);
+        await service.listar(1, 10, undefined, encodeCursor({ nome: 'Maria', id: 'c1' }));
+
+        const args = cliente.findMany.mock.calls[0][0];
+        expect(args.orderBy).toEqual([{ nome: 'asc' }, { id: 'asc' }]);
+        expect(args.take).toBe(11);
+        expect(args.skip).toBeUndefined();
+        expect(args.where.AND[1].OR).toEqual([
+          { nome: { gt: 'Maria' } },
+          { nome: 'Maria', id: { gt: 'c1' } },
+        ]);
+        // keyset não conta o total (seria O(n) e não faz sentido)
+        expect(cliente.count).not.toHaveBeenCalled();
+      });
+
+      it('mantém o filtro de busca junto do keyset', async () => {
+        cliente.findMany.mockResolvedValue([]);
+        await service.listar(1, 10, 'ana', encodeCursor({ nome: 'Maria', id: 'c1' }));
+        const args = cliente.findMany.mock.calls[0][0];
+        expect(args.where.AND[0].OR).toEqual([
+          { nome: { contains: 'ana', mode: 'insensitive' } },
+          { telefone: { contains: 'ana' } },
+        ]);
+      });
+
+      it('devolve hasNext e nextCursor', async () => {
+        cliente.findMany.mockResolvedValue([
+          { id: 'id0', nome: 'N0' },
+          { id: 'id1', nome: 'N1' },
+          { id: 'id2', nome: 'N2' },
+        ]);
+        const result = await service.listar(1, 2, undefined, encodeCursor({ nome: 'A', id: 'z' }));
+        expect(result.data).toHaveLength(2);
+        expect(result.hasNext).toBe(true);
+        expect(result.nextCursor).not.toBeNull();
+      });
+
+      it('lança 400 quando o cursor é malformado', async () => {
+        await expect(service.listar(1, 10, undefined, '%%%')).rejects.toThrow(BadRequestException);
+      });
     });
   });
 
