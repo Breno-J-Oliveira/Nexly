@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AuditAcao, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { RECURSO_PARA_MODELO, paraJson, sanitizar } from './audit-diff';
 
 export interface RegistrarAuditoriaParams {
   empresaId: string;
@@ -41,6 +42,50 @@ export class AuditService {
         userAgent: params.userAgent ?? null,
       },
     });
+  }
+
+  /**
+   * Estado ATUAL do registro, para o AuditLog guardar o **diff real**
+   * (`dadosAntigos` × `dadosNovos`) de uma edição ou exclusão.
+   *
+   * Retorna `undefined` quando o recurso não tem model mapeado ou quando o
+   * `recursoId` não pertence ao tenant. O resultado é sanitizado — credenciais
+   * e segredos nunca entram no log de auditoria.
+   */
+  async buscarAntes(
+    recurso: string,
+    recursoId: string | undefined,
+    empresaId: string,
+  ): Promise<Record<string, unknown> | undefined> {
+    if (!recursoId || !RECURSO_PARA_MODELO[recurso]) return undefined;
+    const where = { id: recursoId, empresaId };
+
+    switch (recurso) {
+      case 'Clientes':
+        return sanitizar(paraJson(await this.prisma.client.cliente.findFirst({ where })));
+      case 'Produtos':
+        return sanitizar(paraJson(await this.prisma.client.produto.findFirst({ where })));
+      case 'Servicos':
+        return sanitizar(paraJson(await this.prisma.client.servico.findFirst({ where })));
+      case 'Profissionais':
+        return sanitizar(paraJson(await this.prisma.client.profissional.findFirst({ where })));
+      case 'Agendamentos':
+        return sanitizar(paraJson(await this.prisma.client.agendamento.findFirst({ where })));
+      case 'Vendas':
+        return sanitizar(paraJson(await this.prisma.client.venda.findFirst({ where })));
+      case 'Usuarios':
+        return sanitizar(paraJson(await this.prisma.client.usuario.findFirst({ where })));
+      case 'Fornecedores':
+        return sanitizar(paraJson(await this.prisma.client.fornecedor.findFirst({ where })));
+      case 'Cupons':
+        return sanitizar(paraJson(await this.prisma.client.cupom.findFirst({ where })));
+      case 'Avaliacoes':
+        return sanitizar(paraJson(await this.prisma.client.avaliacao.findFirst({ where })));
+      case 'Notificacoes':
+        return sanitizar(paraJson(await this.prisma.client.notificacao.findFirst({ where })));
+      default:
+        return undefined;
+    }
   }
 
   async listar(params: {

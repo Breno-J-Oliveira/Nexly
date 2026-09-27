@@ -2,8 +2,9 @@ import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nes
 import { AuditAcao } from '@prisma/client';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { Observable, tap } from 'rxjs';
+import { Observable, from, switchMap, tap } from 'rxjs';
 import { AuditService } from '../../audit/audit.service';
+import { sanitizar } from '../../audit/audit-diff';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 const IGNORADOS = ['/auth/refresh', '/health'];
@@ -40,18 +41,33 @@ export class AuditInterceptor implements NestInterceptor {
     const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? req.ip;
     const userAgent = req.headers['user-agent'];
 
-    return next.handle().pipe(
-      tap(() => {
-        this.auditService.registrar({
-          empresaId,
-          usuarioId: req.user?.id,
-          acao,
-          recurso,
-          recursoId,
-          ip,
-          userAgent,
-        });
-      }),
+    // Para edição/exclusão o estado anterior precisa ser lido ANTES do handler
+    // rodar — depois o registro já foi alterado/removido.
+    const precisaDoAntes = acao === 'EDITAR' || acao === 'EXCLUIR';
+
+    return from(
+      precisaDoAntes
+        ? this.auditService.buscarAntes(recurso, recursoId, empresaId)
+        : Promise.resolve(undefined),
+    ).pipe(
+      switchMap((dadosAntigos) =>
+        next.handle().pipe(
+          tap(() => {
+            this.auditService.registrar({
+              empresaId,
+              usuarioId: req.user?.id,
+              acao,
+              recurso,
+              recursoId,
+              // A senha nunca é gravada: `sanitizar` troca por [REDACTED].
+              dadosAntigos,
+              dadosNovos: acao === 'EXCLUIR' ? undefined : sanitizar(req.body),
+              ip,
+              userAgent,
+            });
+          }),
+        ),
+      ),
     );
   }
 }
