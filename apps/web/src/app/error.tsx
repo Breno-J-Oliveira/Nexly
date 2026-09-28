@@ -29,7 +29,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html>
+    <html lang="pt-BR">
       <body className="min-h-screen bg-[#060608] text-[#FAFAFA]">
         <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 text-center">
           <p className="text-5xl">⚠️</p>

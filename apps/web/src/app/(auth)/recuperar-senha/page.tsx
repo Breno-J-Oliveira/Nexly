@@ -26,8 +26,8 @@ export default function RecuperarSenhaPage() {
       {!enviado ? (
         <form onSubmit={onSubmit} className="mt-8 space-y-4">
           <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium" style={{ color: '#A1A1AA' }}>E-mail</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="voce@empresa.com" className="w-full rounded-xl border bg-[#111116] px-4 py-3 text-[14px] text-[#FAFAFA] placeholder:text-[#71717A] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+            <label htmlFor="recuperar-email" className="text-[13px] font-medium" style={{ color: '#A1A1AA' }}>E-mail</label>
+            <input id="recuperar-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="voce@empresa.com" className="w-full rounded-xl border bg-[#111116] px-4 py-3 text-[14px] text-[#FAFAFA] placeholder:text-[#71717A] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
           </div>
           <Button type="submit" className="w-full rounded-xl py-3 text-[14px] font-semibold shadow-lg shadow-[#6366F1]/20">Enviar instruções</Button>
         </form>

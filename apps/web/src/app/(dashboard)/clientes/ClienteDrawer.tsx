@@ -123,6 +123,7 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar }: Props) {
       {aberto && (
         <div
           className="fixed inset-0 bg-black/40"
+          role="presentation"
           onClick={onClose}
           style={{ zIndex: 39 }}
         />

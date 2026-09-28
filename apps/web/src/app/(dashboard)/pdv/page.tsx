@@ -202,9 +202,10 @@ export default function PdvPage() {
           </div>
           <div className="mt-4 space-y-2">
             {resultados.map((p) => (
-              <div
+              <button
                 key={p.id}
-                className="flex cursor-pointer items-center justify-between rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#060608] p-3 hover:bg-[#18181F]"
+                type="button"
+                className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#060608] p-3 text-left hover:bg-[#18181F]"
                 onClick={() => adicionar(p)}
               >
                 <div>
@@ -216,7 +217,7 @@ export default function PdvPage() {
                     Number(p.preco),
                   )}
                 </p>
-              </div>
+              </button>
             ))}
 
             {/* Empty state: nenhuma busca iniciada */}
@@ -312,10 +313,11 @@ export default function PdvPage() {
 
         <div className="mt-4 border-t border-[rgba(255,255,255,0.08)] pt-4">
           <div className="mb-4">
-            <label className="mb-1 block text-sm font-medium text-[#D4D4D8]">
+            <label htmlFor="pdv-cliente" className="mb-1 block text-sm font-medium text-[#D4D4D8]">
               Cliente (opcional)
             </label>
             <select
+              id="pdv-cliente"
               className="w-full rounded-lg border border-[rgba(255,255,255,0.10)] bg-[#111116] px-3 py-2 text-sm text-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
               value={clienteId}
               onChange={(e) => setClienteId(e.target.value)}
@@ -369,7 +371,7 @@ export default function PdvPage() {
 
               <div className="mt-3">
                 <div className="mb-1 flex items-center justify-between">
-                  <label className="text-sm font-medium text-[#D4D4D8]">Desconto</label>
+                  <label htmlFor="pdv-desconto" className="text-sm font-medium text-[#D4D4D8]">Desconto</label>
                   <div className="flex overflow-hidden rounded-md border border-[rgba(255,255,255,0.10)] text-xs">
                     {(['R$', '%'] as const).map((t) => (
                       <button
@@ -388,6 +390,7 @@ export default function PdvPage() {
                   </div>
                 </div>
                 <input
+                  id="pdv-desconto"
                   type="number"
                   min={0}
                   value={descontoValor}
@@ -403,7 +406,7 @@ export default function PdvPage() {
               </div>
 
               <div className="mt-3">
-                <label className="mb-1 block text-sm font-medium text-[#D4D4D8]">Cupom</label>
+                <label htmlFor="pdv-cupom" className="mb-1 block text-sm font-medium text-[#D4D4D8]">Cupom</label>
                 {cupom ? (
                   <div className="flex items-center justify-between rounded-lg border border-[rgba(34,197,94,0.30)] bg-[rgba(34,197,94,0.06)] px-3 py-2">
                     <span className="text-[13px] font-medium text-[#22C55E]">
@@ -425,6 +428,7 @@ export default function PdvPage() {
                 ) : (
                   <div className="flex items-center gap-2">
                     <input
+                      id="pdv-cupom"
                       value={cupomCodigo}
                       onChange={(e) => setCupomCodigo(e.target.value)}
                       placeholder="Código do cupom"

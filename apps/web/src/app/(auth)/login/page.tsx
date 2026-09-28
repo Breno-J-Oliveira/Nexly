@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { forwardRef, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
@@ -62,6 +62,13 @@ export default function LoginPage() {
   const [twoFactor, setTwoFactor] = useState<{ tempToken: string } | null>(null);
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [backupMode, setBackupMode] = useState(false);
+  const twoFactorInputRef = useRef<HTMLInputElement>(null);
+
+  // Foca o campo do código quando a etapa de 2FA aparece. Equivale ao
+  // `autoFocus`, mas sem o atributo (que prejudica leitores de tela).
+  useEffect(() => {
+    if (twoFactor) twoFactorInputRef.current?.focus();
+  }, [twoFactor]);
   const {
     register,
     handleSubmit,
@@ -144,6 +151,7 @@ export default function LoginPage() {
               : 'Digite o código do seu app autenticador'}
           </p>
           <input
+            ref={twoFactorInputRef}
             value={twoFactorCode}
             onChange={(e) =>
               setTwoFactorCode(backupMode ? e.target.value : e.target.value.replace(/\D/g, ''))
@@ -153,7 +161,7 @@ export default function LoginPage() {
             maxLength={backupMode ? 16 : 6}
             className="w-full rounded-xl border bg-[#111116] px-4 py-3 text-center font-mono text-[40px] tracking-widest text-[#FAFAFA] placeholder:text-[#3F3F46] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30"
             style={{ borderColor: 'rgba(255,255,255,0.08)' }}
-            autoFocus
+            aria-label="Código de verificação em dois fatores"
           />
           <div className="text-center">
             <button

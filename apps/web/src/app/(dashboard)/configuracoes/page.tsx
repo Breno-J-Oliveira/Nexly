@@ -689,10 +689,11 @@ return (
                 />
               </div>
               <div className="mt-4">
-                <label className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>
+                <label htmlFor="empresa-descricao" className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>
                   Descrição do negócio
                 </label>
                 <textarea
+                  id="empresa-descricao"
                   value={empresa.descricao}
                   onChange={(e) => setEmp('descricao', e.target.value)}
                   rows={3}
@@ -710,7 +711,7 @@ return (
                 </p>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>
+                    <label htmlFor="empresa-instagram" className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>
                       Instagram
                     </label>
                     <div
@@ -721,6 +722,7 @@ return (
                         @
                       </span>
                       <input
+                        id="empresa-instagram"
                         value={empresa.instagram}
                         onChange={(e) => setEmp('instagram', e.target.value)}
                         placeholder="seu.negocio"
@@ -902,10 +904,11 @@ return (
                 </div>
                 {empresa.lembretesAtivos && (
                   <div className="mt-4">
-                    <label className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>
+                    <label htmlFor="empresa-template-lembrete" className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>
                       Template
                     </label>
                     <textarea
+                      id="empresa-template-lembrete"
                       value={empresa.templateLembrete}
                       onChange={(e) => setEmpresa((p) => ({ ...p, templateLembrete: e.target.value }))}
                       rows={3}
@@ -1160,10 +1163,11 @@ return (
                     />
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-[#A1A1AA]">
+                        <label htmlFor="cupom-tipo" className="mb-1 block text-sm font-medium text-[#A1A1AA]">
                           Tipo
                         </label>
                         <select
+                          id="cupom-tipo"
                           value={cupomForm.tipo}
                           onChange={(e) =>
                             setCupomForm({
@@ -1649,11 +1653,16 @@ return (
       {auditDetalhe && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          onClick={() => setAuditDetalhe(null)}
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setAuditDetalhe(null);
+          }}
         >
           <div
             className="w-full max-w-lg rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-6"
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detalhe do evento"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-[#FAFAFA]">Detalhe do evento</h3>

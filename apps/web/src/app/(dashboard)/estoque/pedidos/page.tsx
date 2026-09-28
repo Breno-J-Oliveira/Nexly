@@ -370,10 +370,11 @@ export default function PedidosPage() {
             <h3 className="text-lg font-semibold text-[#FAFAFA]">Novo pedido</h3>
             <div className="mt-4 space-y-3">
               <div>
-                <label className="mb-1 block text-sm font-medium text-[#A1A1AA]">
+                <label htmlFor="pedido-fornecedor" className="mb-1 block text-sm font-medium text-[#A1A1AA]">
                   Fornecedor (opcional)
                 </label>
                 <select
+                  id="pedido-fornecedor"
                   value={pedidoFornecedorId}
                   onChange={(e) => setPedidoFornecedorId(e.target.value)}
                   className="w-full rounded-lg border border-[rgba(255,255,255,0.10)] bg-[#0C0C10] px-3 py-2 text-sm text-[#FAFAFA] outline-none"
@@ -388,10 +389,11 @@ export default function PedidosPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-[#A1A1AA]">
+                <label htmlFor="pedido-busca-produto" className="mb-1 block text-sm font-medium text-[#A1A1AA]">
                   Buscar produto
                 </label>
                 <input
+                  id="pedido-busca-produto"
                   value={buscaProduto}
                   onChange={(e) => setBuscaProduto(e.target.value)}
                   placeholder="Digite para buscar..."
@@ -456,10 +458,11 @@ export default function PedidosPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-[#A1A1AA]">
+                <label htmlFor="pedido-observacoes" className="mb-1 block text-sm font-medium text-[#A1A1AA]">
                   Observações (opcional)
                 </label>
                 <textarea
+                  id="pedido-observacoes"
                   value={pedidoObservacoes}
                   onChange={(e) => setPedidoObservacoes(e.target.value)}
                   rows={2}

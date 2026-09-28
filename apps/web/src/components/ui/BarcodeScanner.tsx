@@ -17,6 +17,7 @@ export function BarcodeScanner({
   title = 'Escanear produto',
 }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const manualRef = useRef<HTMLInputElement>(null);
   const [erroCamera, setErroCamera] = useState(false);
   const [flash, setFlash] = useState(false);
   const [manual, setManual] = useState('');
@@ -25,6 +26,11 @@ export function BarcodeScanner({
   const onCloseRef = useRef(onClose);
   onScanRef.current = onScan;
   onCloseRef.current = onClose;
+
+  // Quando a câmera falha, o fallback manual é a única entrada — foca nele.
+  useEffect(() => {
+    if (isOpen && erroCamera) manualRef.current?.focus();
+  }, [isOpen, erroCamera]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -70,11 +76,16 @@ export function BarcodeScanner({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(0,0,0,0.8)] p-4"
-      onClick={onClose}
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         className="relative w-full max-w-sm rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
       >
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-[#FAFAFA]">{title}</h3>
@@ -107,10 +118,11 @@ export function BarcodeScanner({
               Câmera indisponível. Digite o código manualmente:
             </p>
             <input
+              ref={manualRef}
               value={manual}
               onChange={(e) => setManual(e.target.value)}
               placeholder="Ex: 7891234567890"
-              autoFocus
+              aria-label="Código de barras"
               className="mt-2 w-full rounded-lg border border-[rgba(255,255,255,0.10)] bg-[#060608] px-3 py-2 text-sm text-[#FAFAFA] outline-none focus:ring-2 focus:ring-[#6366F1]"
             />
             <button

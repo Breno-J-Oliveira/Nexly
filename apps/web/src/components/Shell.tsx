@@ -112,6 +112,7 @@ export function Shell({ children }: { children: ReactNode }) {
       {sidebarAberta && (
         <div
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+          role="presentation"
           onClick={() => setSidebarAberta(false)}
         />
       )}

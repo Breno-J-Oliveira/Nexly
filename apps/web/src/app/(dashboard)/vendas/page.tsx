@@ -64,8 +64,9 @@ export default function VendasPage() {
 
       <div className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-4">
         <div>
-          <label className="block text-xs text-[#71717A]">De</label>
+          <label htmlFor="vendas-data-inicio" className="block text-xs text-[#71717A]">De</label>
           <input
+            id="vendas-data-inicio"
             type="date"
             value={dataInicio}
             onChange={(e) => setDataInicio(e.target.value)}
@@ -73,8 +74,9 @@ export default function VendasPage() {
           />
         </div>
         <div>
-          <label className="block text-xs text-[#71717A]">Até</label>
+          <label htmlFor="vendas-data-fim" className="block text-xs text-[#71717A]">Até</label>
           <input
+            id="vendas-data-fim"
             type="date"
             value={dataFim}
             onChange={(e) => setDataFim(e.target.value)}

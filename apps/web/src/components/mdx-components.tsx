@@ -6,14 +6,20 @@ import type { MDXComponents } from 'mdx/types';
  * brand-500 #6366F1, bg-elevated #18181F, border-subtle rgba(255,255,255,0.06).
  */
 export const mdxComponents: MDXComponents = {
-  h1: (props) => (
-    <h1 className="mb-4 mt-8 text-2xl font-semibold" style={{ color: '#FAFAFA' }} {...props} />
+  h1: ({ children, ...props }) => (
+    <h1 className="mb-4 mt-8 text-2xl font-semibold" style={{ color: '#FAFAFA' }} {...props}>
+      {children}
+    </h1>
   ),
-  h2: (props) => (
-    <h2 className="mb-3 mt-8 text-xl font-semibold" style={{ color: '#FAFAFA' }} {...props} />
+  h2: ({ children, ...props }) => (
+    <h2 className="mb-3 mt-8 text-xl font-semibold" style={{ color: '#FAFAFA' }} {...props}>
+      {children}
+    </h2>
   ),
-  h3: (props) => (
-    <h3 className="mb-2 mt-6 text-lg font-semibold" style={{ color: '#FAFAFA' }} {...props} />
+  h3: ({ children, ...props }) => (
+    <h3 className="mb-2 mt-6 text-lg font-semibold" style={{ color: '#FAFAFA' }} {...props}>
+      {children}
+    </h3>
   ),
   p: (props) => (
     <p
@@ -22,14 +28,16 @@ export const mdxComponents: MDXComponents = {
       {...props}
     />
   ),
-  a: (props) => (
+  a: ({ children, ...props }) => (
     <a
       className="underline"
       style={{ color: '#818CF8' }}
       target="_blank"
       rel="noopener noreferrer"
       {...props}
-    />
+    >
+      {children}
+    </a>
   ),
   ul: (props) => (
     <ul className="my-4 list-disc space-y-2 pl-6" style={{ color: '#A1A1AA' }} {...props} />

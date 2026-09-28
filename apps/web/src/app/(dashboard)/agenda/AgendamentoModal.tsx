@@ -161,8 +161,9 @@ export function AgendamentoModal({
         {step === 2 && (
           <div className="mt-4 space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-[#E4E4E7]">Profissional</label>
+              <label htmlFor="agendamento-profissional" className="mb-1 block text-sm font-medium text-[#E4E4E7]">Profissional</label>
               <select
+                id="agendamento-profissional"
                 value={profissionalId}
                 onChange={(e) => setProfissionalId(e.target.value)}
                 className="w-full rounded-lg border border-[rgba(255,255,255,0.10)] px-3 py-2 text-sm"
@@ -176,8 +177,9 @@ export function AgendamentoModal({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-[#E4E4E7]">Serviço</label>
+              <label htmlFor="agendamento-servico" className="mb-1 block text-sm font-medium text-[#E4E4E7]">Serviço</label>
               <select
+                id="agendamento-servico"
                 value={servicoId}
                 onChange={(e) => setServicoId(e.target.value)}
                 className="w-full rounded-lg border border-[rgba(255,255,255,0.10)] px-3 py-2 text-sm"

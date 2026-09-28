@@ -162,8 +162,8 @@ export default function UsuariosPage() {
           {!editandoId && <Input label="E-mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@empresa.com" />}
           {!editandoId && <Input label="Senha" type="password" value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} placeholder="••••••••" />}
           <div>
-            <label className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>Função</label>
-            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" style={{ backgroundColor: '#0C0C10', borderColor: 'rgba(255,255,255,0.10)', color: '#FAFAFA' }}>
+            <label htmlFor="usuario-role" className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>Função</label>
+            <select id="usuario-role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" style={{ backgroundColor: '#0C0C10', borderColor: 'rgba(255,255,255,0.10)', color: '#FAFAFA' }}>
               <option value="ADMIN">Administrador</option>
               <option value="GESTOR">Gestor</option>
               <option value="PROFISSIONAL">Profissional</option>
@@ -185,10 +185,11 @@ export default function UsuariosPage() {
             placeholder="email@empresa.com"
           />
           <div>
-            <label className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>
+            <label htmlFor="convite-role" className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>
               Função
             </label>
             <select
+              id="convite-role"
               value={conviteForm.role}
               onChange={(e) => setConviteForm({ ...conviteForm, role: e.target.value })}
               className="w-full rounded-lg border px-3 py-2 text-sm"

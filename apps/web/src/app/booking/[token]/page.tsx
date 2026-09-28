@@ -675,8 +675,9 @@ export default function BookingPage() {
 
             <div className="mt-4 space-y-3">
               <div>
-                <label className="mb-1 block text-sm" style={{ color: '#A1A1AA' }}>Seu nome completo</label>
+                <label htmlFor="booking-nome" className="mb-1 block text-sm" style={{ color: '#A1A1AA' }}>Seu nome completo</label>
                 <input
+                  id="booking-nome"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Ex: Maria Silva"
@@ -685,8 +686,9 @@ export default function BookingPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm" style={{ color: '#A1A1AA' }}>WhatsApp</label>
+                <label htmlFor="booking-telefone" className="mb-1 block text-sm" style={{ color: '#A1A1AA' }}>WhatsApp</label>
                 <input
+                  id="booking-telefone"
                   value={telefone}
                   onChange={(e) => setTelefone(maskTelefone(e.target.value))}
                   placeholder="(00) 00000-0000"
@@ -696,8 +698,9 @@ export default function BookingPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm" style={{ color: '#A1A1AA' }}>E-mail <span style={{ color: '#71717A' }}>(opcional)</span></label>
+                <label htmlFor="booking-email" className="mb-1 block text-sm" style={{ color: '#A1A1AA' }}>E-mail <span style={{ color: '#71717A' }}>(opcional)</span></label>
                 <input
+                  id="booking-email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="voce@email.com"
