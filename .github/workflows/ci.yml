@@ -105,6 +105,74 @@ jobs:
       - run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
       - run: cd apps/api && npx jest --passWithNoTests
 
+  backup-scripts:
+    name: Scripts de backup/restore
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: nexly
+          POSTGRES_PASSWORD: nexly_test_password
+          POSTGRES_DB: nexly_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nexly -d nexly_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://nexly:nexly_test_password@localhost:5432/nexly_test?schema=public
+      DIRECT_URL: postgresql://nexly:nexly_test_password@localhost:5432/nexly_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
+      JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Instala cliente do Postgres
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - run: npm ci
+      - run: npx prisma generate --schema apps/api/prisma/schema.prisma
+      - run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+      - run: npm run seed --workspace @nexly/api
+      - name: Backup (dump cifrado)
+        env:
+          BACKUP_DATABASE_URL: postgresql://nexly:nexly_test_password@localhost:5432/nexly_test
+          BKP_PASSPHRASE: senha-de-teste
+        run: bash scripts/backup-db.sh
+      - name: Confere que o dump está de fato cifrado
+        run: |
+          DUMP="$(ls backups/*.dump.gpg | head -1)"
+          echo "arquivo: $DUMP ($(wc -c < "$DUMP") bytes)"
+          # pg_dump --format=custom começa com o magic "PGDMP" (5 bytes).
+          if head -c 5 "$DUMP" | grep -q PGDMP; then
+            echo "::error::O backup NÃO está cifrado (magic PGDMP visível)."
+            exit 1
+          fi
+          echo "✅ Backup cifrado."
+      - name: Restore em banco descartável
+        env:
+          RESTORE_ADMIN_URL: postgresql://nexly:nexly_test_password@localhost:5432/postgres
+          BKP_PASSPHRASE: senha-de-teste
+        run: |
+          export DUMP_FILE="$PWD/$(ls backups/*.dump.gpg | head -1)"
+          bash scripts/restore-test.sh
+      - name: Confere que não sobrou banco de teste
+        run: |
+          EXISTE="$(psql "postgresql://nexly:nexly_test_password@localhost:5432/postgres" -tAc \
+            "SELECT count(*) FROM pg_database WHERE datname = 'nexly_restore_test'")"
+          if [ "$EXISTE" != "0" ]; then
+            echo "::error::O banco de teste não foi limpo (cleanup falhou)."
+            exit 1
+          fi
+          echo "✅ Cleanup OK."
+
+
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest

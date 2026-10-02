@@ -68,3 +68,8 @@ services/nexusauth/dist/
 
 # Logos de exemplo (assets locais não versionados)
 img/
+
+# Backups do banco (dumps cifrados — nunca versionar)
+backups/
+*.dump
+*.dump.gpg
