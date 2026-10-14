@@ -22,8 +22,6 @@ const planos = [{ id: 'FREE', nome: 'Acesso gratuito', preco: 0, periodo: '', de
 
 const schemaPasso1 = z
   .object({
-    empresaNome: z.string().min(2, 'Nome da empresa obrigatório'),
-    cnpj: z.string().refine((v) => validarCnpj(soDigitos(v)), 'CNPJ inválido'),
     responsavelNome: z.string().min(2, 'Nome do responsável obrigatório'),
     email: z.string().email('E-mail inválido'),
     senha: z.string().min(8, 'Senha deve ter ao menos 8 caracteres'),
@@ -31,7 +29,13 @@ const schemaPasso1 = z
   })
   .refine((d) => d.senha === d.confirmacaoSenha, { message: 'As senhas não coincidem', path: ['confirmacaoSenha'] });
 
-const schemaPasso2 = z.object({ telefone: z.string().min(14, 'Telefone inválido'), segmento: z.string().min(2, 'Segmento obrigatório'), cidade: z.string().min(2, 'Cidade obrigatória') });
+const schemaPasso2 = z.object({
+  empresaNome: z.string().min(2, 'Nome da empresa obrigatório'),
+  cnpj: z.string().refine((v) => validarCnpj(soDigitos(v)), 'CNPJ inválido'),
+  telefone: z.string().min(14, 'Telefone inválido'),
+  segmento: z.string().min(2, 'Segmento obrigatório'),
+  cidade: z.string().min(2, 'Cidade obrigatória'),
+});
 const schemaPasso3 = z.object({ plano: z.string().min(1, 'Selecione um plano') });
 
 type Passo1 = z.infer<typeof schemaPasso1>;
@@ -128,8 +132,6 @@ export default function CadastroPage() {
       case 1:
         return (
           <div className="space-y-4">
-            <AuthInput label="Nome da empresa" placeholder="Salão Beleza Total" error={form1.formState.errors.empresaNome?.message} {...form1.register('empresaNome')} defaultValue={form.empresaNome} />
-            <AuthInput label="CNPJ" placeholder="00.000.000/0000-00" error={form1.formState.errors.cnpj?.message} defaultValue={form.cnpj} onChange={(e) => form1.setValue('cnpj', maskCnpj(e.target.value))} />
             <AuthInput label="Nome do responsável" placeholder="Seu nome" error={form1.formState.errors.responsavelNome?.message} {...form1.register('responsavelNome')} defaultValue={form.responsavelNome} />
             <AuthInput label="E-mail" type="email" placeholder="voce@empresa.com" error={form1.formState.errors.email?.message} {...form1.register('email')} defaultValue={form.email} />
             <AuthInput label="Senha" type={showPassword ? 'text' : 'password'} placeholder="Mínimo 8 caracteres" error={form1.formState.errors.senha?.message} defaultValue={form.senha} {...form1.register('senha')} right={
@@ -147,6 +149,8 @@ export default function CadastroPage() {
       case 2:
         return (
           <div className="space-y-4">
+            <AuthInput label="Nome da empresa" placeholder="Salão Beleza Total" error={form2.formState.errors.empresaNome?.message} {...form2.register('empresaNome')} defaultValue={form.empresaNome} />
+            <AuthInput label="CNPJ" placeholder="00.000.000/0000-00" error={form2.formState.errors.cnpj?.message} defaultValue={form.cnpj} onChange={(e) => form2.setValue('cnpj', maskCnpj(e.target.value))} />
             <AuthInput label="Telefone do negócio" placeholder="(00) 00000-0000" error={form2.formState.errors.telefone?.message} defaultValue={form.telefone} onChange={(e) => form2.setValue('telefone', maskTelefone(e.target.value))} />
             <Select label="Segmento" error={form2.formState.errors.segmento?.message} defaultValue={form.segmento} {...form2.register('segmento')}>
               <option value="">Selecione o segmento</option>
@@ -213,7 +217,7 @@ export default function CadastroPage() {
           <Image src="/logo.svg" alt="Nexly" width={40} height={40} className="h-10 w-10 object-contain" />
         </div>
       </div>
-      <h1 className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>Crie sua conta no Nexly</h1>
+      <h1 className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>{['Boas-vindas ao Nexly', 'Configure seu negócio', 'O Nexly se adapta ao seu negócio.', 'Complete seu perfil'][passo - 1]}</h1>
       <p className="mt-2 text-center text-[14px]" style={{ color: '#A1A1AA' }}>{passo === 4 ? 'Confira seus dados antes de criar a conta' : 'Gerencie seu negócio de forma inteligente'}</p>
       <div className="mt-8 flex rounded-xl border p-1" style={{ borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#0C0C10' }}>
         <Link href="/login" className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ color: '#A1A1AA' }}>Entrar</Link>

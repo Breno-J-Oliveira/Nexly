@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 
@@ -14,10 +15,10 @@ export default function RecuperarSenhaPage() {
   };
 
   return (
-    <div className="rounded-3xl border p-8 shadow-2xl" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+    <div className="rounded-2xl border px-6 py-8 shadow-2xl sm:p-10" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
       <div className="flex justify-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ backgroundColor: '#6366F1' }}>
-          <img src="/logo.svg" alt="Nexly" className="h-6 w-6 object-contain" />
+        <div className="flex h-12 w-12 items-center justify-center">
+          <Image src="/logo.svg" alt="Nexly" width={40} height={40} className="h-10 w-10 object-contain" />
         </div>
       </div>
       <h1 className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>Recuperar senha</h1>
