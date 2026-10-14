@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 const colunas = [
   {
@@ -36,8 +37,8 @@ export function LandingFooter() {
         <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
           <div className="col-span-2">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: '#6366F1' }}>
-                <img src="/logo.svg" alt="Nexly" className="h-4 w-4 object-contain" />
+              <div className="flex h-10 w-8 items-center justify-center">
+                <Image src="/logo.svg" alt="Nexly" width={28} height={36} className="h-9 w-7 object-contain" />
               </div>
               <span className="text-lg font-bold" style={{ color: '#FAFAFA' }}>Nexly</span>
             </div>

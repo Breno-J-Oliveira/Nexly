@@ -16,11 +16,11 @@ export default function PrecosPage() {
 
       <main className="px-4 py-16 md:px-6 md:py-24">
         <div className="mx-auto max-w-4xl text-center">
-          <h1 className="text-3xl font-bold md:text-5xl" style={{ color: '#FAFAFA' }}>Planos e preços</h1>
+          <h1 className="text-3xl font-bold tracking-tight md:text-5xl" style={{ color: '#FAFAFA' }}>Planos que cabem no seu bolso</h1>
           <p className="mt-4 text-[16px]" style={{ color: '#A1A1AA' }}>Escolha o plano ideal para o tamanho do seu negócio.</p>
         </div>
 
-        <div className="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-5 md:grid-cols-3">
           {planos.map((plano) => (
             <div key={plano.id} className="relative rounded-2xl border p-6" style={{ backgroundColor: '#111116', borderColor: plano.destaque ? '#6366F1' : 'rgba(255,255,255,0.08)' }}>
               {plano.destaque && (
@@ -46,8 +46,18 @@ export default function PrecosPage() {
         </div>
 
         <p className="mx-auto mt-12 max-w-2xl text-center text-[14px]" style={{ color: '#71717A' }}>
-          Todos os planos incluem 7 dias de teste gratuito. Cancele a qualquer momento. Sem taxa de setup.
+          O cadastro disponível hoje é gratuito e não exige cartão. Os planos pagos estão em preparação; a contratação ainda não está habilitada.
         </p>
+        <section className="mx-auto mt-24 max-w-3xl">
+          <h2 className="mb-8 text-center text-2xl font-semibold">Perguntas comuns sobre os planos</h2>
+          <div className="space-y-3">{[
+            ['Preciso de cartão para começar?', 'Não. Você pode criar sua conta gratuita sem informar dados de cartão.'],
+            ['Como escolho o plano ideal?', 'Comece pelo acesso gratuito e conheça os módulos. Os planos pagos serão disponibilizados quando a contratação estiver pronta.'],
+            ['Posso usar no celular?', 'Sim. A interface se adapta ao computador, tablet e celular.'],
+            ['O estoque é integrado às vendas?', 'Sim. As vendas registradas no PDV atualizam o estoque dos produtos vendidos.'],
+          ].map(([question, answer]) => <details key={question} className="rounded-lg border border-white/10 bg-[#111116] px-5 py-4"><summary className="cursor-pointer text-sm font-medium">{question}</summary><p className="mt-3 text-sm leading-relaxed text-[#A1A1AA]">{answer}</p></details>)}</div>
+        </section>
+        <section className="mx-auto mt-24 max-w-5xl rounded-xl bg-[#6366F1] p-10 text-center"><h2 className="text-2xl font-semibold">Comece a conhecer o Nexly</h2><p className="mt-3 text-sm text-white/80">Organize sua rotina com agenda, clientes e estoque integrados.</p><Link href="/cadastro" className="mt-6 inline-block rounded-lg bg-white px-5 py-3 text-sm font-semibold text-[#4F46E5]">Criar minha conta grátis</Link></section>
       </main>
 
       <LandingFooter />
