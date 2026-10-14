@@ -10,6 +10,8 @@ interface Cliente {
   nome: string;
   createdAt?: string;
   observacoes?: string | null;
+  email?: string | null;
+  telefone?: string | null;
 }
 
 interface Metricas {
@@ -32,6 +34,7 @@ interface Props {
   cliente: Cliente | null;
   onClose: () => void;
   onAtualizar?: () => void;
+  inline?: boolean;
 }
 
 const brl = (v: number): string =>
@@ -63,7 +66,7 @@ function iniciais(nome: string): string {
   return (primeira + segunda).toUpperCase();
 }
 
-export function ClienteDrawer({ cliente, onClose, onAtualizar }: Props) {
+export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }: Props) {
   const [aba, setAba] = useState<'historico' | 'observacoes'>('historico');
   const [metricas, setMetricas] = useState<Metricas | null>(null);
   const [historico, setHistorico] = useState<HistoricoItem[]>([]);
@@ -120,7 +123,7 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar }: Props) {
   return (
     <>
       {/* Overlay */}
-      {aberto && (
+      {aberto && !inline && (
         <div
           className="fixed inset-0 bg-black/40"
           role="presentation"
@@ -131,19 +134,20 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar }: Props) {
 
       {/* Drawer */}
       <div
-        className="fixed right-0 top-0 flex h-screen w-[400px] flex-col bg-[#111116] transition-transform duration-200 ease-out"
+        className={inline ? 'flex h-[calc(100dvh-136px)] min-h-[620px] min-w-0 flex-col overflow-hidden rounded-xl bg-[#111116]' : 'fixed right-0 top-0 flex h-screen w-[min(400px,100vw)] flex-col bg-[#111116] transition-transform duration-200 ease-out'}
         style={{
           borderLeft: '1px solid rgba(255,255,255,0.06)',
           zIndex: 40,
-          transform: aberto ? 'translateX(0)' : 'translateX(100%)',
+          transform: inline || aberto ? 'translateX(0)' : 'translateX(100%)',
+          visibility: inline || aberto ? 'visible' : 'hidden',
         }}
       >
         {cliente && (
           <>
             {/* Header */}
-            <div className="flex items-center gap-3 border-b px-5 py-4" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+            <div className={`flex items-center gap-3 border-b px-5 py-5 ${inline ? 'flex-col text-center' : ''}`} style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
               <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                className={`flex shrink-0 items-center justify-center rounded-full font-semibold ${inline ? 'h-20 w-20 border-2 border-[#818CF8] text-xl' : 'h-10 w-10 text-sm'}`}
                 style={{ backgroundColor: '#6366F1', color: '#FFFFFF' }}
               >
                 {iniciais(cliente.nome)}
@@ -156,20 +160,21 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar }: Props) {
                   Cliente desde {formatarDesde(cliente.createdAt)}
                 </p>
               </div>
-              <button
+              {!inline && <button
                 onClick={onClose}
                 aria-label="Fechar"
                 className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-white/5"
                 style={{ color: '#A1A1AA' }}
               >
                 ✕
-              </button>
+              </button>}
             </div>
 
             {/* Conteúdo */}
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+              {inline && <div className="mb-5 space-y-2 text-[13px] text-[#A1A1AA]"><p className="mb-3 text-xs font-medium text-[#71717A]">INFORMAÇÕES DE CONTATO</p><p className="break-all">Email: {cliente.email || 'Não informado'}</p><p>Telefone: {cliente.telefone || 'Não informado'}</p><p>Total Gasto: {brl(metricas?.totalGasto ?? 0)}</p></div>}
               {/* Stat boxes */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className={inline ? 'hidden' : 'grid grid-cols-2 gap-3'}>
                 <div className="rounded-xl p-4" style={{ backgroundColor: '#0C0C10', border: '1px solid rgba(255,255,255,0.06)' }}>
                   <p className="text-xs" style={{ color: '#71717A' }}>Total de visitas</p>
                   <p className="mt-1 text-2xl font-semibold" style={{ color: '#FAFAFA' }}>

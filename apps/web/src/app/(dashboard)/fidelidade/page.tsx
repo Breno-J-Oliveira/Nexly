@@ -1,5 +1,7 @@
 'use client';
 
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatarMoeda } from '@/lib/format';
@@ -59,8 +61,8 @@ export default function FidelidadePage() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-[#FAFAFA]">Fidelidade</h2>
-      <p className="mt-1 text-sm text-[#71717A]">Programa de pontos e segmentação de clientes</p>
+      <PageToolbar><h2 className="text-xl font-semibold text-[#FAFAFA]">Fidelidade</h2>
+      <p className="mt-1 text-sm text-[#71717A]">Programa de pontos e segmentação de clientes</p></PageToolbar>
 
       <div className="mt-6 flex gap-3">
         {(['ranking', 'segmentos'] as Aba[]).map((t) => (

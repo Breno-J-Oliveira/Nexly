@@ -1,5 +1,9 @@
 'use client';
 
+import { MetricGrid } from '@/components/ui/MetricGrid';
+import { Icon } from '@/components/ui/Icon';
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -24,6 +28,7 @@ interface Insumo {
 }
 
 export default function ServicosPage() {
+  const [busca, setBusca] = useState('');
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [selecionado, setSelecionado] = useState<Servico | null>(null);
   const [insumos, setInsumos] = useState<Insumo[]>([]);
@@ -59,11 +64,13 @@ export default function ServicosPage() {
     void carregar();
   }, [carregar]);
 
-  const selecionar = async (s: Servico): Promise<void> => {
+  const selecionar = useCallback(async (s: Servico): Promise<void> => {
     setSelecionado(s);
     const r = await api.get<Insumo[]>(`/servicos/${s.id}/insumos`);
     setInsumos(r.data);
-  };
+  }, []);
+
+  useEffect(() => { if (!selecionado && servicos[0]) void selecionar(servicos[0]); }, [servicos, selecionado, selecionar]);
 
   const salvarServico = async (): Promise<void> => {
     if (!formServico.nome || !formServico.duracaoMin || !formServico.preco) return;
@@ -124,14 +131,20 @@ export default function ServicosPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <PageToolbar><div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[#FAFAFA]">Serviços</h2>
           <p className="mt-1 text-sm text-[#A1A1AA]">Cadastre serviços e configure insumos</p>
         </div>
-        <Button onClick={() => { setEditandoServicoId(null); setFormServico({ nome: '', duracaoMin: '', preco: '' }); setModalServicoAberto(true); }}>+ Novo serviço</Button>
-      </div>
+        <div className="flex flex-wrap items-center gap-3"><Input aria-label="Buscar serviço" placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)} /><Button onClick={() => { setEditandoServicoId(null); setFormServico({ nome: '', duracaoMin: '', preco: '' }); setModalServicoAberto(true); }}>+ Novo serviço</Button></div>
+      </div></PageToolbar>
 
+      <MetricGrid items={[
+        { label: 'Total de Serviços', value: servicos.length },
+        { label: 'Preço Médio', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(servicos.length ? servicos.reduce((sum, s) => sum + Number(s.preco), 0) / servicos.length : 0) },
+        { label: 'Duração Média', value: `${servicos.length ? Math.round(servicos.reduce((sum, s) => sum + s.duracaoMin, 0) / servicos.length) : 0} min` },
+        { label: 'Produtos Disponíveis', value: produtos.length, note: 'Para associar aos serviços' },
+      ]} />
       {carregando ? (
         <p className="mt-8 text-sm text-[#A1A1AA]">Carregando…</p>
       ) : servicos.length === 0 ? (
@@ -142,57 +155,25 @@ export default function ServicosPage() {
           action={<Button onClick={() => { setEditandoServicoId(null); setFormServico({ nome: '', duracaoMin: '', preco: '' }); setModalServicoAberto(true); }}>+ Novo serviço</Button>}
         />
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="space-y-2">
-            {servicos.map((s) => (
-              <div key={s.id} className="group">
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => void selecionar(s)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      void selecionar(s);
-                    }
-                  }}
-                  className={`w-full cursor-pointer rounded-lg border p-4 text-left ${
-                    selecionado?.id === s.id
-                      ? 'border-[#6366F1] bg-[rgba(99,102,241,0.10)]'
-                      : 'border-[rgba(255,255,255,0.08)] bg-[#111116] hover:border-[rgba(255,255,255,0.10)]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-[#FAFAFA]">{s.nome}</p>
-                    <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setEditandoServicoId(s.id); setFormServico({ nome: s.nome, duracaoMin: String(s.duracaoMin), preco: String(s.preco) }); setModalServicoAberto(true); }}
-                        className="text-[13px] text-[#818CF8] hover:underline"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); void excluirServico(s); }}
-                        className="text-[13px] text-red-400 hover:underline"
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-sm text-[#A1A1AA]">
-                    {s.duracaoMin} min · {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(s.preco))}
-                  </p>
-                </div>
-              </div>
-            ))}
+        <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0 overflow-x-auto rounded-xl border border-white/10 bg-[#111116]">
+            <table className="w-full text-left">
+              <thead><tr>{['Serviço', 'Duração', 'Preço', 'Ações'].map(h => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
+              <tbody>{servicos.filter(s => s.nome.toLocaleLowerCase('pt-BR').includes(busca.toLocaleLowerCase('pt-BR'))).map(s => <tr key={s.id} className={selecionado?.id === s.id ? 'bg-[#6366F1]/10' : ''}>
+                <td className="px-4 py-4"><button className="text-left font-medium text-[#FAFAFA] hover:text-[#818CF8]" onClick={() => void selecionar(s)}>{s.nome}</button></td>
+                <td className="whitespace-nowrap px-4 py-4 text-[#A1A1AA]">{s.duracaoMin} min</td>
+                <td className="whitespace-nowrap px-4 py-4">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(s.preco))}</td>
+                <td className="px-4 py-4"><button className="text-xs text-[#818CF8]" onClick={() => { setEditandoServicoId(s.id); setFormServico({ nome: s.nome, duracaoMin: String(s.duracaoMin), preco: String(s.preco) }); setModalServicoAberto(true); }}>Editar</button><button className="ml-3 text-xs text-red-400" onClick={() => void excluirServico(s)}>Excluir</button></td>
+              </tr>)}</tbody>
+            </table>
           </div>
 
         <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
           {selecionado ? (
             <>
-              <div className="flex items-center justify-between">
+              <p className="mb-5 text-sm font-medium text-[#A1A1AA]">Detalhes do Serviço</p>
+              <div className="mb-5 flex flex-col items-center gap-3 border-b border-white/10 pb-5 text-center"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#6366F1]/10"><Icon name="scissors" color="#818CF8" /></span><h3 className="font-semibold">{selecionado.nome}</h3><p className="text-xs text-[#71717A]">{selecionado.duracaoMin} minutos</p></div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-semibold text-[#FAFAFA]">Insumos — {selecionado.nome}</h3>
                 <Button onClick={() => setModalInsumoAberto(true)}>+ Insumo</Button>
               </div>

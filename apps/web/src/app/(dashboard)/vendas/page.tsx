@@ -1,5 +1,9 @@
 'use client';
 
+import Link from 'next/link';
+import { MetricGrid } from '@/components/ui/MetricGrid';
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { Fragment, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
@@ -49,18 +53,20 @@ export default function VendasPage() {
   const totalGeral = vendas.reduce((acc, v) => acc + Number(v.total), 0);
   const totalItens = vendas.reduce((acc, v) => acc + v.itens.length, 0);
 
+  const selecionada = vendas.find(v => v.id === expandida) || vendas[0];
+
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <PageToolbar><div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-[#FAFAFA]">Histórico de vendas</h2>
+          <h2 className="text-xl font-semibold text-[#FAFAFA]">Vendas</h2>
           <p className="mt-1 text-sm text-[#A1A1AA]">
             {vendas.length} {vendas.length === 1 ? 'venda' : 'vendas'} · {totalItens}{' '}
             {totalItens === 1 ? 'item' : 'itens'} ·{' '}
             <span className="font-semibold text-[#FAFAFA]">{formatarMoeda(totalGeral)}</span>
           </p>
-        </div>
-      </div>
+        </div><Link href="/pdv" className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium">+ Nova Venda</Link>
+      </div></PageToolbar>
 
       <div className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-4">
         <div>
@@ -104,7 +110,14 @@ export default function VendasPage() {
           </a>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
+      <MetricGrid items={[
+        { label: 'Faturamento do Período', value: formatarMoeda(totalGeral) },
+        { label: 'Total de Vendas', value: vendas.length },
+        { label: 'Ticket Médio', value: formatarMoeda(vendas.length ? totalGeral / vendas.length : 0) },
+        { label: 'Itens Vendidos', value: totalItens },
+      ]} />
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-[rgba(255,255,255,0.08)] bg-[#18181F]/40">
             <tr>
@@ -133,7 +146,6 @@ export default function VendasPage() {
                 </td></tr>
               )}
             {vendas.map((v) => {
-              const aberto = expandida === v.id;
               return (
                 <Fragment key={v.id}>
                   <tr className="hover:bg-[#18181F]/30">
@@ -151,38 +163,20 @@ export default function VendasPage() {
                       <Button
                         variant="ghost"
                         className="text-xs"
-                        onClick={() => setExpandida(aberto ? null : v.id)}
+                        onClick={() => setExpandida(v.id)}
                       >
-                        {aberto ? 'Ocultar' : 'Detalhes'}
+                        Detalhes
                       </Button>
                     </td>
                   </tr>
-                  {aberto && (
-                    <tr className="bg-[#18181F]/20">
-                      <td colSpan={5} className="px-4 py-3">
-                        <div className="space-y-1 pl-4 text-sm">
-                          {v.itens.map((it) => (
-                            <div
-                              key={it.id}
-                              className="flex items-center justify-between text-[#D4D4D8]"
-                            >
-                              <span>
-                                {it.quantidade}× {it.produto.nome}
-                              </span>
-                              <span className="text-[#A1A1AA]">
-                                {formatarMoeda(Number(it.precoUnitario) * it.quantidade)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
+
                 </Fragment>
               );
             })}
           </tbody>
         </table>
+      </div>
+        {selecionada && <aside className="detail-panel"><div className="border-b border-white/10 pb-5 text-center"><span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#6366F1]/15 text-xl text-[#818CF8]">{(selecionada.cliente?.nome || 'V').slice(0, 1)}</span><h3 className="text-xl font-semibold">{selecionada.cliente?.nome || 'Venda avulsa'}</h3><p className="mt-2 text-xs text-[#71717A]">{formatarDataHora(selecionada.createdAt)}</p></div><p className="mb-3 mt-6 text-xs text-[#71717A]">ITENS DA VENDA</p><div className="space-y-3">{selecionada.itens.map(it => <div key={it.id} className="rounded-lg border border-white/10 bg-[#18181F] p-3"><p className="text-sm font-medium">{it.produto.nome}</p><div className="mt-2 flex justify-between text-xs text-[#A1A1AA]"><span>{it.quantidade} unidades</span><span>{formatarMoeda(Number(it.precoUnitario) * it.quantidade)}</span></div></div>)}</div><div className="mt-6 flex justify-between border-t border-white/10 pt-4 font-semibold"><span>Total</span><span className="text-[#818CF8]">{formatarMoeda(selecionada.total)}</span></div><Link href="/pdv" className="mt-6 block rounded-lg bg-[#6366F1] px-4 py-2 text-center text-sm font-medium">Nova Venda</Link></aside>}
       </div>
     </div>
   );

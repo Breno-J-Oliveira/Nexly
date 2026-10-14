@@ -1,5 +1,8 @@
 'use client';
 
+import { MetricGrid } from '@/components/ui/MetricGrid';
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -124,27 +127,35 @@ export default function ClientesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <PageToolbar><div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[#FAFAFA]">Clientes</h2>
           <p className="mt-1 text-sm text-[#A1A1AA]">
-            Gerencie os clientes do seu negócio · {totalClientes}{' '}
+            CRM de clientes e acompanhamento de fidelidade · {totalClientes}{' '}
             {totalClientes === 1 ? 'registrado' : 'registrados'}
           </p>
         </div>
-        <Button onClick={abrirNovo}>+ Novo cliente</Button>
-      </div>
-
-      <div className="mt-6 max-w-md">
+        <div className="flex flex-wrap items-center gap-3">      <div className="w-full sm:w-56">
         <Input
           ref={buscaRef}
-          placeholder="Buscar por nome ou telefone... (pressione /)"
+          aria-label="Buscar cliente" placeholder="Buscar cliente..."
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
-      </div>
+      </div><Button onClick={abrirNovo}>+ Novo cliente</Button></div>
+      </div></PageToolbar>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0">
+          <MetricGrid items={[
+            { label: 'Total de Clientes', value: totalClientes },
+            { label: 'Novos este Mês', value: clientes.filter(c => c.createdAt && new Date(c.createdAt).getMonth() === new Date().getMonth() && new Date(c.createdAt).getFullYear() === new Date().getFullYear()).length, note: 'Na lista atual' },
+            { label: 'Com E-mail', value: clientes.filter(c => c.email).length },
+            { label: 'Com Telefone', value: clientes.filter(c => c.telefone).length },
+          ]} />
+
+
+      <div className="hidden overflow-x-auto md:block rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-[rgba(255,255,255,0.08)] bg-[#18181F]/40">
             <tr>
@@ -211,11 +222,25 @@ export default function ClientesPage() {
         </table>
       </div>
 
+
+          <div className="space-y-3 md:hidden">
+            {clientes.map(c => <button key={c.id} onClick={() => setClienteDrawer(c)} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#111116] p-4 text-left">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#6366F1]/15 font-semibold text-[#818CF8]">{c.nome.slice(0, 1)}</span>
+              <span className="min-w-0 flex-1"><strong className="block truncate text-sm">{c.nome}</strong><span className="block truncate text-xs text-[#71717A]">{c.email || c.telefone || 'Sem contato informado'}</span></span><span className="text-[#71717A]">&rsaquo;</span>
+            </button>)}
+            {!carregando && clientes.length === 0 && <EmptyState icon="users" title="Nenhum cliente encontrado" description="Cadastre um cliente ou ajuste a busca" />}
+          </div>
+        </div>
+        <div className="hidden xl:block"><ClienteDrawer inline cliente={clienteDrawer || clientes[0] || null} onClose={() => setClienteDrawer(null)} onAtualizar={() => void carregar(busca || undefined)} /></div>
+      </div>
+      <div className="xl:hidden">
       <ClienteDrawer
         cliente={clienteDrawer}
         onClose={() => setClienteDrawer(null)}
         onAtualizar={() => void carregar(busca || undefined)}
       />
+
+      </div>
 
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">

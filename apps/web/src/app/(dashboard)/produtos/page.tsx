@@ -1,5 +1,7 @@
 'use client';
 
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { useCallback, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -198,7 +200,7 @@ export default function ProdutosPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <PageToolbar><div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[#FAFAFA]">Produtos</h2>
           <p className="mt-1 text-sm text-[#A1A1AA]">
@@ -207,7 +209,7 @@ export default function ProdutosPage() {
           </p>
         </div>
         <Button onClick={abrirNovo}>+ Novo produto</Button>
-      </div>
+      </div></PageToolbar>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <div className="max-w-md flex-1">

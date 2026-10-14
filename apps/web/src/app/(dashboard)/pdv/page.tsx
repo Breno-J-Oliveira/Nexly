@@ -1,5 +1,7 @@
 'use client';
 
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -26,6 +28,7 @@ interface Item {
 }
 
 export default function PdvPage() {
+  const [catalogo, setCatalogo] = useState<Produto[]>([]);
   const [busca, setBusca] = useState('');
   const [resultados, setResultados] = useState<Produto[]>([]);
   const [itens, setItens] = useState<Item[]>([]);
@@ -47,6 +50,10 @@ export default function PdvPage() {
   } | null>(null);
   const [cupomErro, setCupomErro] = useState<string | null>(null);
   const [aplicandoCupom, setAplicandoCupom] = useState(false);
+
+  useEffect(() => {
+    api.get<{ data: Produto[] }>('/produtos', { params: { limit: 100 } }).then(r => setCatalogo(r.data.data)).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -73,6 +80,7 @@ export default function PdvPage() {
     setItens((prev) => {
       const existente = prev.find((i) => i.produto.id === produto.id);
       if (existente) {
+        if (existente.quantidade >= produto.estoqueAtual) return prev;
         return prev.map((i) =>
           i.produto.id === produto.id ? { ...i, quantidade: i.quantidade + 1 } : i,
         );
@@ -86,7 +94,7 @@ export default function PdvPage() {
   const mudarQuantidade = (id: string, delta: number): void => {
     setItens((prev) =>
       prev.map((i) =>
-        i.produto.id === id ? { ...i, quantidade: Math.max(1, i.quantidade + delta) } : i,
+        i.produto.id === id ? { ...i, quantidade: Math.min(i.produto.estoqueAtual, Math.max(1, i.quantidade + delta)) } : i,
       ),
     );
   };
@@ -119,6 +127,7 @@ export default function PdvPage() {
         desconto: descontoAplicado > 0 ? Number(descontoAplicado.toFixed(2)) : undefined,
         cupomCodigo: cupom?.codigo,
       });
+      setCatalogo(prev => prev.map(p => ({ ...p, estoqueAtual: p.estoqueAtual - (itens.find(i => i.produto.id === p.id)?.quantidade || 0) })));
       setItens([]);
       setClienteId('');
       setSucesso(true);
@@ -173,16 +182,16 @@ export default function PdvPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] gap-6">
-      <div className="flex flex-1 flex-col rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-[#FAFAFA]">Produtos</h2>
+    <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="flex min-w-0 flex-col">
+        <PageToolbar><div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-[#FAFAFA]">Ponto de Venda</h2>
           <span className="text-xs text-[#71717A]" title="Total de produtos carregados">
             {resultados.length}{' '}
             {resultados.length === 1 ? 'resultado' : 'resultados'}
           </span>
-        </div>
-        <div className="mt-4 flex-1 overflow-y-auto">
+        </div></PageToolbar>
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <Input
@@ -200,12 +209,13 @@ export default function PdvPage() {
               <Icon name="barcode" size="lg" />
             </button>
           </div>
-          <div className="mt-4 space-y-2">
-            {resultados.map((p) => (
+          <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-3">
+            {(busca.trim().length >= 2 ? resultados : catalogo).map((p) => (
               <button
                 key={p.id}
                 type="button"
-                className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#060608] p-3 text-left hover:bg-[#18181F]"
+                className="flex min-h-32 min-w-0 flex-col items-start justify-between rounded-lg border border-white/10 bg-[#111116] p-4 text-left hover:border-[#6366F1]/50 disabled:opacity-40"
+                disabled={p.estoqueAtual <= (itens.find(i => i.produto.id === p.id)?.quantidade || 0)}
                 onClick={() => adicionar(p)}
               >
                 <div>
@@ -221,7 +231,7 @@ export default function PdvPage() {
             ))}
 
             {/* Empty state: nenhuma busca iniciada */}
-            {busca.trim().length < 2 && (
+            {busca.trim().length < 2 && catalogo.length === 0 && (
               <div className="rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] bg-[#060608]/50 px-4 py-10 text-center">
                 <p className="text-sm text-[#A1A1AA]">
                   Digite o nome ou SKU do produto para começar
@@ -247,9 +257,9 @@ export default function PdvPage() {
         </div>
       </div>
 
-      <div className="flex w-96 flex-col rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
-        <h2 className="text-xl font-semibold text-[#FAFAFA]">Venda Atual</h2>
-        <div className="mt-4 flex-1 overflow-y-auto pr-2">
+      <div className="flex min-w-0 flex-col rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
+        <h2 className="text-xl font-semibold text-[#FAFAFA]">Carrinho</h2>
+        <div className="mt-4 min-h-32 flex-1 overflow-y-auto pr-2">
           {itens.length === 0 ? (
             <div className="rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] bg-[#060608]/50 px-4 py-10 text-center">
               <p className="text-sm text-[#A1A1AA]">Nenhum produto no carrinho</p>

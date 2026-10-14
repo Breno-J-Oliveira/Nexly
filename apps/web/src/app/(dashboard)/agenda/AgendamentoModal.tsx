@@ -22,6 +22,7 @@ interface Servico {
 }
 
 interface Props {
+  inline?: boolean;
   onClose: () => void;
   onSuccess: () => void;
   /** Cliente pré-selecionado (ex: vindo do drawer de histórico). */
@@ -31,6 +32,7 @@ interface Props {
 }
 
 export function AgendamentoModal({
+  inline = false,
   onClose,
   onSuccess,
   clienteIdInicial,
@@ -105,8 +107,8 @@ export function AgendamentoModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-[#111116] p-6">
+    <div className={inline ? 'min-w-0 xl:w-[300px] xl:shrink-0' : 'fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4'}>
+      <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl bg-[#111116] p-6">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-[#FAFAFA]">Novo agendamento</h3>
           <button onClick={onClose} className="text-[#71717A] hover:text-[#D4D4D8]">

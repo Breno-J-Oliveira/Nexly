@@ -1,5 +1,7 @@
 'use client';
 
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -566,6 +568,8 @@ export default function ConfiguracoesPage() {
     setNotificacoes((p) => ({ ...p, [key]: { ...(p?.[key] ?? {}), ...patch } }));
 
 return (
+    <>
+    <PageToolbar><div><h2 className="font-semibold">Configurações</h2><p className="mt-1">Personalize seu sistema e preferências</p></div></PageToolbar>
     <div className="flex gap-6">
       {/* Nav lateral */}
       <div
@@ -1705,5 +1709,6 @@ return (
         </div>
       )}
     </div>
+    </>
   );
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 
@@ -25,8 +27,8 @@ export default function ComissaoPage() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>Comissões</h2>
-      <p className="mt-1 text-sm" style={{ color: '#71717A' }}>Cálculo de comissão por profissional no período</p>
+      <PageToolbar><h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>Comissões</h2>
+      <p className="mt-1 text-sm" style={{ color: '#71717A' }}>Cálculo de comissão por profissional no período</p></PageToolbar>
 
       <div className="mt-4 flex gap-3">
         <input type="date" value={inicio} onChange={e => setInicio(e.target.value)} className="rounded-lg border px-3 py-2 text-[13px]" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.10)', color: '#FAFAFA' }} />

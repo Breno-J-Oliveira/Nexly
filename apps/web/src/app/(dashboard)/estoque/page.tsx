@@ -1,5 +1,10 @@
 'use client';
 
+import Link from 'next/link';
+import { MetricGrid } from '@/components/ui/MetricGrid';
+import { formatarMoeda } from '@/lib/format';
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -13,6 +18,7 @@ interface Produto {
   preco: number;
   estoqueAtual: number;
   estoqueMinimo: number;
+  categoria?: string | null;
 }
 interface Resumo {
   totalProdutos: number;
@@ -28,6 +34,10 @@ interface AlertaItem {
 }
 
 export default function EstoquePage() {
+  const [busca, setBusca] = useState('');
+  const [categoria, setCategoria] = useState('');
+  const [erroEntrada, setErroEntrada] = useState('');
+  const [salvando, setSalvando] = useState(false);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [resumo, setResumo] = useState<Resumo | null>(null);
   const [alertas, setAlertas] = useState<AlertaItem[]>([]);
@@ -52,28 +62,35 @@ export default function EstoquePage() {
 
   const darEntrada = async (): Promise<void> => {
     if (!entradaProduto) return;
-    await api.post('/estoque/entrada', {
-      produtoId: entradaProduto.id,
-      quantidade: Number(quantidade),
-      motivo: motivo || 'Entrada manual',
-    });
-    setEntradaProduto(null);
-    setQuantidade('');
-    setMotivo('');
-    await carregar();
+    setSalvando(true);
+    setErroEntrada('');
+    try {
+      await api.post('/estoque/entrada', { produtoId: entradaProduto.id, quantidade: Number(quantidade), motivo: motivo || 'Entrada manual' });
+      setQuantidade(''); setMotivo(''); await carregar();
+    } catch { setErroEntrada('Não foi possível registrar a entrada. Confira os dados.'); }
+    finally { setSalvando(false); }
+
   };
 
   const status = (p: Produto): { label: string; color: string } => {
-    if (p.estoqueAtual === 0) return { label: 'Zerado', color: 'bg-red-500/10 text-red-700' };
+    if (p.estoqueAtual === 0) return { label: 'Zerado', color: 'bg-red-500/10 text-red-400' };
     if (p.estoqueAtual < p.estoqueMinimo)
-      return { label: 'Baixo', color: 'bg-yellow-100 text-yellow-700' };
-    return { label: 'OK', color: 'bg-green-100 text-green-700' };
+      return { label: 'Baixo', color: 'bg-yellow-500/10 text-yellow-400' };
+    return { label: 'OK', color: 'bg-green-500/10 text-green-400' };
   };
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-[#FAFAFA]">Estoque</h2>
-
+      <PageToolbar><div className="flex items-center justify-between"><div><h2 className="font-semibold">Estoque</h2><p className="mt-1">Controle e acompanhamento de produtos e insumos</p></div><div className="flex flex-wrap items-center gap-3"><Input aria-label="Buscar produto" placeholder="Buscar produto..." value={busca} onChange={e => setBusca(e.target.value)} /><Link href="/produtos" className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium">+ Novo Produto</Link></div></div></PageToolbar>
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="min-w-0">
+      <MetricGrid items={[
+        { label: 'Total de Produtos', value: resumo?.totalProdutos || 0 },
+        { label: 'Valor em Estoque', value: formatarMoeda(resumo?.valorTotalEstoque || 0) },
+        { label: 'Estoque Baixo', value: resumo?.produtosAbaixoDoMinimo || 0 },
+        { label: 'Sem Estoque', value: produtos.filter(p => p.estoqueAtual === 0).length, note: 'Na lista atual' },
+      ]} />
+      <div className="mb-6 flex flex-wrap gap-2">{['', ...Array.from(new Set(produtos.map(p => p.categoria).filter((c): c is string => !!c)))].map(c => <button key={c} onClick={() => setCategoria(c)} className={`rounded-full border border-white/10 px-3 py-1 text-xs ${categoria === c ? 'bg-[#6366F1] text-white' : 'bg-[#18181F] text-[#A1A1AA]'}`}>{c || 'Todos'}</button>)}</div>
       <VencimentoAlert />
 
       {/* Banner de produtos em alerta */}
@@ -125,28 +142,7 @@ export default function EstoquePage() {
         </div>
       )}
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
-          <p className="text-sm text-[#A1A1AA]">Total de produtos</p>
-          <p className="mt-1 text-2xl font-semibold text-[#FAFAFA]">
-            {resumo?.totalProdutos ?? '—'}
-          </p>
-        </div>
-        <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
-          <p className="text-sm text-[#A1A1AA]">Valor em estoque</p>
-          <p className="mt-1 text-2xl font-semibold text-[#FAFAFA]">
-            R$ {(resumo?.valorTotalEstoque ?? 0).toFixed(2)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
-          <p className="text-sm text-[#A1A1AA]">Em alerta</p>
-          <p className="mt-1 text-2xl font-semibold text-red-400">
-            {resumo?.produtosAbaixoDoMinimo ?? '—'}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-6 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
+      <div className="mt-6 overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-[rgba(255,255,255,0.08)] bg-[#18181F]/50">
             <tr>
@@ -159,7 +155,7 @@ export default function EstoquePage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[rgba(255,255,255,0.08)]">
-            {produtos.map((p) => {
+            {produtos.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()) && (!categoria || p.categoria === categoria)).map((p) => {
               const s = status(p);
               return (
                 <tr key={p.id}>
@@ -182,35 +178,15 @@ export default function EstoquePage() {
         </table>
       </div>
 
-      {entradaProduto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#111116] p-6">
-            <h3 className="font-semibold text-[#FAFAFA]">Dar entrada — {entradaProduto.nome}</h3>
-            <div className="mt-4 space-y-3">
-              <Input
-                label="Quantidade"
-                type="number"
-                value={quantidade}
-                onChange={(e) => setQuantidade(e.target.value)}
-              />
-              <Input
-                label="Motivo"
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                placeholder="Ex: compra fornecedor"
-              />
-              <div className="flex gap-2">
-                <Button variant="secondary" onClick={() => setEntradaProduto(null)}>
-                  Cancelar
-                </Button>
-                <Button onClick={() => void darEntrada()} disabled={!quantidade}>
-                  Confirmar
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
+      <aside className="detail-panel self-start"><h3 className="text-lg font-semibold">Registrar Entrada</h3><div className="mt-6 space-y-4">
+        <label className="block text-sm text-[#A1A1AA]">Produto<select aria-label="Produto da entrada" value={entradaProduto?.id || ''} onChange={e => { setEntradaProduto(produtos.find(p => p.id === e.target.value) || null); setErroEntrada(''); }} className="mt-2 w-full rounded-lg border border-white/10 bg-[#18181F] px-3 py-2 text-sm text-white"><option value="">Selecione um produto</option>{produtos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></label>
+        <Input label="Quantidade" type="number" min="1" step="1" value={quantidade} onChange={e => setQuantidade(e.target.value)} />
+        <Input label="Observações / motivo" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ex: compra fornecedor" />
+        {erroEntrada && <p role="alert" className="text-sm text-red-400">{erroEntrada}</p>}
+        <div className="flex flex-wrap gap-3 pt-4"><Button variant="secondary" onClick={() => { setEntradaProduto(null); setQuantidade(''); setMotivo(''); }}>Cancelar</Button><Button onClick={() => void darEntrada()} loading={salvando} disabled={!entradaProduto || !Number.isSafeInteger(Number(quantidade)) || Number(quantidade) <= 0}>Registrar Entrada</Button></div>
+      </div></aside>
+      </div>
     </div>
   );
 }

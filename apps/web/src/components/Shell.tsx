@@ -172,20 +172,21 @@ export function Shell({ children }: { children: ReactNode }) {
       {/* Main */}
       <div className="flex min-h-screen flex-col min-w-0 md:pl-[240px]">
         {/* Header */}
-        <header className="sticky top-0 z-10 flex min-h-[76px] items-center gap-3 border-b px-4 py-3 backdrop-blur-md md:px-9" style={{ backgroundColor: 'rgba(6,6,8,0.90)', borderColor: 'rgba(255,255,255,0.06)' }}>
+        <header className="sticky top-0 z-10 flex min-h-[72px] items-center gap-3 border-b px-4 py-3 backdrop-blur-md md:px-8" style={{ backgroundColor: 'rgba(6,6,8,0.90)', borderColor: 'rgba(255,255,255,0.06)' }}>
           {/* Hamburger (mobile) */}
           <button onClick={() => setSidebarAberta(true)} className="md:hidden" style={{ color: '#A1A1AA' }} aria-label="Abrir menu">
             <Icon name="bars" size="sm" color="#A1A1AA" />
           </button>
 
           {/* Breadcrumb */}
-          <div className="min-w-0">
-            <h1 className="truncate text-[20px] font-semibold tracking-tight text-[#FAFAFA]">{pageLabel || 'Nexly'}</h1>
+          <div className="shell-default-heading min-w-0">
+            <h1 className="truncate text-[24px] font-semibold tracking-tight text-[#FAFAFA]">{pageLabel || 'Nexly'}</h1>
             {pathname === '/dashboard' && <p className="mt-0.5 text-[12px] capitalize text-[#A1A1AA]">{dataHoje}</p>}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            <div className="relative hidden lg:block">
+          <div id="page-toolbar" className="min-w-0 flex-1 empty:hidden" />
+          <div className="shell-header-tools ml-auto flex items-center gap-2">
+            <div className="shell-global-search relative hidden lg:block">
               <label className="sr-only" htmlFor="nav-search">Buscar página</label>
               <input id="nav-search" value={busca} onChange={event => setBusca(event.target.value)} placeholder="Buscar página..." className="h-9 w-56 rounded-lg border border-white/10 bg-[#111116] px-3 text-[13px] text-[#FAFAFA] placeholder:text-[#71717A]" />
               {busca.trim() && <div className="absolute right-0 top-11 z-50 max-h-80 w-64 overflow-y-auto rounded-xl border border-white/10 bg-[#18181F] p-2 shadow-2xl">{resultados.length ? resultados.map(item => <Link key={item.href} href={item.href} onClick={() => setBusca('')} className="block rounded-lg px-3 py-2 text-[13px] text-[#FAFAFA] hover:bg-white/5">{item.label}</Link>) : <p className="p-3 text-xs text-[#A1A1AA]">Nenhuma página encontrada</p>}</div>}
@@ -251,7 +252,7 @@ export function Shell({ children }: { children: ReactNode }) {
                 <div className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold" style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}>
                   {iniciais}
                 </div>
-                <span className="hidden text-[13px] font-medium sm:block" style={{ color: '#A1A1AA' }}>{nome}</span>
+                <span className="sr-only text-[13px] font-medium" style={{ color: '#A1A1AA' }}>{nome}</span>
                 <Icon name="chevron-down" size="xs" color="#71717A" />
               </button>
 
@@ -284,7 +285,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </header>
 
         {/* Content */}
-        <main className="min-w-0 flex-1 px-4 pb-24 pt-6 md:px-9 md:py-8" style={{ color: '#E4E4E7' }}>
+        <main className="dashboard-content min-w-0 flex-1 px-4 pb-24 pt-6 md:px-8 md:py-8" style={{ color: '#E4E4E7' }}>
           {children}
         </main>
       </div>
@@ -292,8 +293,7 @@ export function Shell({ children }: { children: ReactNode }) {
         {[
           { href: '/dashboard', label: 'Início', icon: 'gauge-high' },
           { href: '/agenda', label: 'Agenda', icon: 'calendar-days' },
-          { href: '/estoque', label: 'Estoque', icon: 'boxes-stacked' },
-          { href: '/pdv', label: 'PDV', icon: 'cash-register' },
+          ...(NAV_GROUPS.flatMap(group => group.items).find(item => item.href === pathname && !['/dashboard', '/agenda'].includes(pathname)) ? [NAV_GROUPS.flatMap(group => group.items).find(item => item.href === pathname)!] : [{ href: '/clientes', label: 'Clientes', icon: 'users' }]),
         ].filter(item => hasAccess(item.href, role)).map(item => (
           <Link key={item.href} href={item.href} aria-current={pathname === item.href ? 'page' : undefined}
             className={`flex min-h-16 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium ${pathname === item.href ? 'text-[#818CF8]' : 'text-[#A1A1AA]'}`}>

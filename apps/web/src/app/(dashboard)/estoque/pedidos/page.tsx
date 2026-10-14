@@ -1,5 +1,7 @@
 'use client';
 
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -192,7 +194,7 @@ export default function PedidosPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <PageToolbar><div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>
             Pedidos de compra
@@ -215,7 +217,7 @@ export default function PedidosPage() {
             Fornecedores
           </Button>
         </div>
-      </div>
+      </div></PageToolbar>
 
       {aba === 'pedidos' && (
         <div className="mt-6">

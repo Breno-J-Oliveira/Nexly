@@ -1,8 +1,11 @@
 'use client';
 
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { env } from '@/lib/env';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 function fmt(v: number): string { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v); }
 
@@ -37,7 +40,7 @@ export default function RelatoriosPage() {
   useEffect(() => {
     setCarregando(true);
     const params = { dataInicio: inicio, dataFim: fim };
-    Promise.allSettled([
+    void Promise.allSettled([
       api.get<DRE>('/financeiro/dre', { params }),
       api.get<Fluxo>('/financeiro/fluxo-caixa', { params }),
       api.get<AgendaRel>('/relatorios/agenda', { params }),
@@ -75,7 +78,7 @@ export default function RelatoriosPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <PageToolbar><div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>Relatórios</h2>
           <p className="mt-1 text-sm" style={{ color: '#71717A' }}>Análise do período selecionado</p>
@@ -89,7 +92,7 @@ export default function RelatoriosPage() {
         >
           Exportar CSV
         </a>
-      </div>
+      </div></PageToolbar>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className="rounded-lg border px-3 py-2 text-[13px]" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.10)', color: '#FAFAFA' }} />
@@ -131,6 +134,31 @@ export default function RelatoriosPage() {
             </div>
           ) : (
             <p className="text-sm" style={{ color: '#71717A' }}>Não foi possível carregar o DRE do período.</p>
+          )}
+
+          {fluxo && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <section className="min-w-0 rounded-xl border border-white/10 bg-[#111116] p-5">
+                <h3 className="text-sm font-semibold">Faturamento do Período</h3>
+                <p className="mt-1 text-xs text-[#71717A]">Receita diária das vendas registradas</p>
+                <div className="mt-6 h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={fluxo.fluxo}>
+                      <CartesianGrid stroke="rgba(255,255,255,.04)" vertical={false} />
+                      <XAxis dataKey="data" tickFormatter={value => String(value).slice(5)} tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#71717A', fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
+                      <Tooltip contentStyle={{ background: '#18181F', border: '1px solid rgba(255,255,255,.1)', borderRadius: 8 }} formatter={value => fmt(Number(value))} />
+                      <Bar dataKey="total" name="Faturamento" fill="#6366F1" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </section>
+              <section className="min-w-0 rounded-xl border border-white/10 bg-[#111116] p-5">
+                <h3 className="text-sm font-semibold">Ranking de Profissionais</h3>
+                <p className="mt-1 text-xs text-[#71717A]">Receita individual no período selecionado</p>
+                <div className="mt-6 space-y-5">{[...profs].sort((a, b) => b.receita - a.receita).slice(0, 5).map((p, i) => <div key={p.id}><div className="mb-2 flex justify-between gap-3 text-xs"><span className="text-[#A1A1AA]">{i + 1}. {p.nome}</span><span>{fmt(p.receita)}</span></div><div className="h-2 overflow-hidden rounded-full bg-white/5"><div className="h-full rounded-full bg-[#6366F1]" style={{ width: `${Math.max(0, Math.min(100, p.receita / Math.max(1, ...profs.map(item => item.receita)) * 100))}%` }} /></div></div>)}</div>
+              </section>
+            </div>
           )}
 
           {fluxo && (

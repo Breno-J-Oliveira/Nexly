@@ -1,5 +1,7 @@
 'use client';
 
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { StatusAgendamento } from '@nexly/shared';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -57,8 +59,9 @@ function AgendaContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  useEffect(() => { if (window.matchMedia('(max-width: 767px)').matches) setView('lista'); }, []);
   const [data, setData] = useState<Date>(new Date());
-  const [view, setView] = useState<'lista' | 'semana'>('lista');
+  const [view, setView] = useState<'lista' | 'semana'>('semana');
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
@@ -132,7 +135,7 @@ function AgendaContent() {
 
   return (
     <div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <PageToolbar><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[#FAFAFA]">Agenda</h2>
           <p className="mt-1 text-sm text-[#A1A1AA]">
@@ -144,7 +147,7 @@ function AgendaContent() {
             {statusLabel ? ` · ${statusLabel}` : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#0C0C10] p-1">
             <button
               type="button"
@@ -163,7 +166,7 @@ function AgendaContent() {
           </div>
           <Button onClick={() => setModalAberto(true)}>+ Novo agendamento</Button>
         </div>
-      </div>
+      </div></PageToolbar>
 
       {/* Filtros */}
       <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -223,6 +226,7 @@ function AgendaContent() {
         </Button>
       </div>
 
+      <div className="flex min-w-0 flex-col gap-6 xl:flex-row"><div className="min-w-0 flex-1">
       {view === 'semana' ? (
         <div className="mt-6">
           <AgendaSemana dataInicio={data} onConcluir={() => void carregar()} />
@@ -280,8 +284,9 @@ function AgendaContent() {
         </div>
       )}
 
+      </div>
       {modalAberto && (
-        <AgendamentoModal
+        <AgendamentoModal inline
           onClose={() => setModalAberto(false)}
           onSuccess={() => {
             setModalAberto(false);
@@ -289,6 +294,7 @@ function AgendaContent() {
           }}
         />
       )}
+      </div>
     </div>
   );
 }

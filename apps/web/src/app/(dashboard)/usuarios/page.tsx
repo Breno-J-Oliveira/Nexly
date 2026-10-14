@@ -1,5 +1,7 @@
 'use client';
 
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -96,7 +98,7 @@ export default function UsuariosPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <PageToolbar><div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>Usuários</h2>
           <p className="mt-1 text-sm" style={{ color: '#71717A' }}>Gerencie quem acessa o sistema</p>
@@ -122,7 +124,7 @@ export default function UsuariosPage() {
             + Novo usuário
           </Button>
         </div>
-      </div>
+      </div></PageToolbar>
 
       <div className="mt-6 overflow-x-auto rounded-xl" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
         {usuarios.length === 0 ? (

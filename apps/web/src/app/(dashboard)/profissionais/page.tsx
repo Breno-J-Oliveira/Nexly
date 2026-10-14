@@ -1,5 +1,8 @@
 'use client';
 
+import { MetricGrid } from '@/components/ui/MetricGrid';
+import { PageToolbar } from '@/components/ui/PageToolbar';
+
 import { useCallback, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -17,6 +20,8 @@ interface Profissional {
 }
 
 export default function ProfissionaisPage() {
+  const [busca, setBusca] = useState('');
+  const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
@@ -83,16 +88,24 @@ export default function ProfissionaisPage() {
     await carregar();
   };
 
+  const selecionado = profissionais.find(p => p.id === selecionadoId) || profissionais[0];
+
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <PageToolbar><div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[#FAFAFA]">Profissionais</h2>
           <p className="mt-1 text-sm text-[#A1A1AA]">Equipe de atendimento do seu negócio</p>
         </div>
-        <Button onClick={abrirNovo}>+ Novo profissional</Button>
-      </div>
+        <div className="flex flex-wrap items-center gap-3"><Input aria-label="Buscar profissional" placeholder="Buscar profissional..." value={busca} onChange={e => setBusca(e.target.value)} /><Button onClick={abrirNovo}>+ Novo profissional</Button></div>
+      </div></PageToolbar>
 
+      <MetricGrid items={[
+        { label: 'Total Profissionais', value: profissionais.length },
+        { label: 'Atendimentos', value: profissionais.reduce((sum, p) => sum + (p.agendamentos?.length || 0), 0), note: 'Agendamentos registrados' },
+        { label: 'Especialidades', value: new Set(profissionais.map(p => p.especialidade).filter(Boolean)).size },
+        { label: 'Com Agenda', value: profissionais.filter(p => p.agendamentos?.length).length },
+      ]} />
       {carregando ? (
         <p className="mt-8 text-sm text-[#A1A1AA]">Carregando…</p>
       ) : profissionais.length === 0 ? (
@@ -103,15 +116,15 @@ export default function ProfissionaisPage() {
           action={<Button onClick={abrirNovo}>+ Novo profissional</Button>}
         />
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {profissionais.map((p) => (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]"><div className="grid content-start grid-cols-1 gap-4 sm:grid-cols-2">
+          {profissionais.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase())).map((p) => (
             <div key={p.id} className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[rgba(99,102,241,0.15)] text-sm font-semibold text-[#A5B4FC]">
                   {p.nome.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-[#FAFAFA]">{p.nome}</p>
+                  <button onClick={() => setSelecionadoId(p.id)} className="truncate text-left font-medium text-[#FAFAFA] hover:text-[#818CF8]">{p.nome}</button>
                   <p className="truncate text-xs text-[#71717A]">
                     {p.especialidade ?? 'Sem especialidade'}
                   </p>
@@ -138,6 +151,8 @@ export default function ProfissionaisPage() {
               </div>
             </div>
           ))}
+        </div>
+          {selecionado && <aside className="detail-panel"><div className="flex flex-col items-center border-b border-white/10 pb-6 text-center"><span className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border-2 border-[#6366F1] bg-[#6366F1]/10 text-2xl text-[#818CF8]">{selecionado.nome.slice(0, 1)}</span><h3 className="text-xl font-semibold">{selecionado.nome}</h3><p className="mt-2 text-xs text-[#A1A1AA]">{selecionado.especialidade || 'Sem especialidade'}</p></div><p className="mt-6 text-xs text-[#71717A]">ATENDIMENTOS REGISTRADOS</p><p className="mt-2 text-2xl font-semibold">{selecionado.agendamentos?.length || 0}</p><div className="mt-8 flex flex-wrap gap-3"><Button variant="secondary" onClick={() => abrirEdicao(selecionado)}>Editar Perfil</Button><a href={`/agenda?profissionalId=${selecionado.id}`} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium">Ver Agenda</a></div></aside>}
         </div>
       )}
 
