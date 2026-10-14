@@ -164,9 +164,9 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi) => (
-          <div key={kpi.label} className="rounded-2xl border p-6" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div key={kpi.label} className="rounded-xl border p-5" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
             <div className="flex items-start justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#71717A' }}>{kpi.label}</span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: kpi.iconBg }}>{kpi.icon}</div>
@@ -187,7 +187,7 @@ export default function DashboardPage() {
       {produtosVencendo > 0 && (
         <Link
           href="/produtos"
-          className="mt-4 flex items-center justify-between rounded-2xl border p-6 transition-colors hover:bg-white/[0.02]"
+          className="mt-4 flex items-center justify-between rounded-xl border p-5 transition-colors hover:bg-white/[0.02]"
           style={{ borderColor: 'rgba(234,179,8,0.30)', backgroundColor: 'rgba(234,179,8,0.06)' }}
         >
           <div className="flex items-center gap-3">
@@ -210,7 +210,7 @@ export default function DashboardPage() {
         </Link>
       )}
 
-      <div className="mt-6 rounded-2xl border p-6" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div className="mt-6 rounded-xl border p-5" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>Evolução de Vendas Semanal</h3>
@@ -221,7 +221,7 @@ export default function DashboardPage() {
             Faturamento (R$)
           </div>
         </div>
-        <div className="mt-4 h-72">
+        <div className="mt-4 h-56">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={dados.evolucaoVendasSemanal} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
@@ -241,7 +241,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-2xl border p-6 lg:col-span-2" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="rounded-xl border p-5 lg:col-span-2" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>Próximos Compromissos</h3>
@@ -279,7 +279,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border p-6" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="rounded-xl border p-5" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>Alertas Operacionais</h3>

@@ -19,6 +19,9 @@ interface Cliente {
   email: string | null;
   createdAt?: string;
   observacoes?: string | null;
+  totalGasto?: number | string | null;
+  ultimaVisita?: string | null;
+  tag?: string | null;
 }
 
 interface FormState {
@@ -126,7 +129,7 @@ export default function ClientesPage() {
   };
 
   return (
-    <div>
+    <div className="clients-page">
       <PageToolbar><div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[#FAFAFA]">Clientes</h2>
@@ -159,23 +162,26 @@ export default function ClientesPage() {
         <table className="w-full text-left text-sm">
           <thead className="border-b border-[rgba(255,255,255,0.08)] bg-[#18181F]/40">
             <tr>
-              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Nome</th>
-              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Telefone</th>
-              <th className="px-4 py-3 font-medium text-[#A1A1AA]">E-mail</th>
-              <th className="px-4 py-3" />
+              <th className="px-3 py-3 font-medium text-[#A1A1AA]">Nome</th>
+              <th className="px-3 py-3 font-medium text-[#A1A1AA]">E-mail</th>
+              <th className="px-3 py-3 font-medium text-[#A1A1AA]">Telefone</th>
+              <th className="px-3 py-3 font-medium text-[#A1A1AA]">Última Visita</th>
+              <th className="px-3 py-3 font-medium text-[#A1A1AA]">Total Gasto</th>
+              <th className="px-3 py-3 font-medium text-[#A1A1AA]">Status</th>
+              <th className="px-3 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-[rgba(255,255,255,0.08)]">
             {carregando && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-[#A1A1AA]">
+                <td colSpan={7} className="px-4 py-6 text-center text-[#A1A1AA]">
                   Carregando…
                 </td>
               </tr>
             )}
             {!carregando && clientes.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-16">
+                <td colSpan={7} className="px-4 py-16">
                   <EmptyState
                     icon="users-slash"
                     title={busca ? `Nenhum cliente encontrado para "${busca}"` : "Nenhum cliente cadastrado"}
@@ -187,35 +193,20 @@ export default function ClientesPage() {
             )}
             {clientes.map((c) => (
               <tr key={c.id} className="hover:bg-[#18181F]/30">
-                <td className="px-4 py-3">
+                <td className="px-3 py-3">
                   <button
-                    className="font-medium text-[#FAFAFA] hover:text-[#818CF8]"
+                    className="whitespace-nowrap font-medium text-[#FAFAFA] hover:text-[#818CF8]"
                     onClick={() => setClienteDrawer(c)}
                   >
                     {c.nome}
                   </button>
                 </td>
-                <td className="px-4 py-3 text-[#D4D4D8]">{c.telefone ?? '—'}</td>
-                <td className="px-4 py-3 text-[#D4D4D8]">{c.email ?? '—'}</td>
-                <td className="px-4 py-3 text-right">
-                  <Button
-                    variant="ghost"
-                    className="mr-1 text-xs"
-                    onClick={() => setClienteDrawer(c)}
-                  >
-                    Histórico
-                  </Button>
-                  <Button variant="ghost" className="mr-1 text-xs" onClick={() => abrirEdicao(c)}>
-                    Editar
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="text-xs text-red-400"
-                    onClick={() => void excluir(c)}
-                  >
-                    Excluir
-                  </Button>
-                </td>
+                <td className="max-w-[110px] truncate px-3 py-3 text-[#D4D4D8]" title={c.email || undefined}>{c.email ?? '—'}</td>
+                <td className="whitespace-nowrap px-3 py-3 text-[#D4D4D8]">{c.telefone ? maskTelefone(c.telefone) : '—'}</td>
+                <td className="whitespace-nowrap px-3 py-3 text-[#A1A1AA]">{c.ultimaVisita ? new Date(c.ultimaVisita).toLocaleDateString('pt-BR') : '—'}</td>
+                <td className="whitespace-nowrap px-3 py-3 font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(c.totalGasto || 0))}</td>
+                <td className="px-3 py-3"><span className={`rounded px-2 py-1 text-[10px] ${c.tag === 'VIP' ? 'bg-[#6366F1]/10 text-[#818CF8]' : 'bg-green-500/10 text-green-400'}`}>{c.tag || 'Ativo'}</span></td>
+                <td className="px-3 py-3 text-right"><details className="relative"><summary aria-label={`Acoes de ${c.nome}`} className="cursor-pointer list-none text-lg text-[#A1A1AA]">&#8942;</summary><div className="absolute right-0 z-20 w-28 rounded-lg border border-white/10 bg-[#18181F] p-1 shadow-xl"><button className="block w-full rounded px-3 py-2 text-left text-xs hover:bg-white/5" onClick={() => abrirEdicao(c)}>Editar</button><button className="block w-full rounded px-3 py-2 text-left text-xs text-red-400 hover:bg-white/5" onClick={() => void excluir(c)}>Excluir</button></div></details></td>
               </tr>
             ))}
           </tbody>
@@ -226,7 +217,7 @@ export default function ClientesPage() {
           <div className="space-y-3 md:hidden">
             {clientes.map(c => <button key={c.id} onClick={() => setClienteDrawer(c)} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#111116] p-4 text-left">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#6366F1]/15 font-semibold text-[#818CF8]">{c.nome.slice(0, 1)}</span>
-              <span className="min-w-0 flex-1"><strong className="block truncate text-sm">{c.nome}</strong><span className="block truncate text-xs text-[#71717A]">{c.email || c.telefone || 'Sem contato informado'}</span></span><span className="text-[#71717A]">&rsaquo;</span>
+              <span className="min-w-0 flex-1"><strong className="block truncate text-sm">{c.nome}</strong><span className="block truncate text-xs text-[#71717A]">{c.email || c.telefone || 'Sem contato informado'}</span><span className="block text-xs text-[#A1A1AA]">Total: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(c.totalGasto || 0))}</span></span><span className="text-[#71717A]">&rsaquo;</span>
             </button>)}
             {!carregando && clientes.length === 0 && <EmptyState icon="users" title="Nenhum cliente encontrado" description="Cadastre um cliente ou ajuste a busca" />}
           </div>

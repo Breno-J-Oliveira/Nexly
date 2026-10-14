@@ -133,7 +133,7 @@ export function Shell({ children }: { children: ReactNode }) {
         }`}
         style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}
       >
-        <div className="flex h-[76px] shrink-0 items-center gap-3 border-b px-5" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="flex h-[72px] shrink-0 items-center gap-3 border-b px-5" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
           <div className="flex h-10 w-8 items-center justify-center">
             <Image src="/logo.svg" alt="Nexly" width={32} height={40} className="h-10 w-8 object-contain" />
           </div>
@@ -172,7 +172,7 @@ export function Shell({ children }: { children: ReactNode }) {
       {/* Main */}
       <div className="flex min-h-screen flex-col min-w-0 md:pl-[240px]">
         {/* Header */}
-        <header className="sticky top-0 z-10 flex min-h-[72px] items-center gap-3 border-b px-4 py-3 backdrop-blur-md md:px-8" style={{ backgroundColor: 'rgba(6,6,8,0.90)', borderColor: 'rgba(255,255,255,0.06)' }}>
+        <header className="sticky top-0 z-10 flex min-h-[72px] items-center gap-3 border-b px-4 py-2.5 backdrop-blur-md md:px-8" style={{ backgroundColor: 'rgba(6,6,8,0.90)', borderColor: 'rgba(255,255,255,0.06)' }}>
           {/* Hamburger (mobile) */}
           <button onClick={() => setSidebarAberta(true)} className="md:hidden" style={{ color: '#A1A1AA' }} aria-label="Abrir menu">
             <Icon name="bars" size="sm" color="#A1A1AA" />
@@ -293,7 +293,7 @@ export function Shell({ children }: { children: ReactNode }) {
         {[
           { href: '/dashboard', label: 'Início', icon: 'gauge-high' },
           { href: '/agenda', label: 'Agenda', icon: 'calendar-days' },
-          ...(NAV_GROUPS.flatMap(group => group.items).find(item => item.href === pathname && !['/dashboard', '/agenda'].includes(pathname)) ? [NAV_GROUPS.flatMap(group => group.items).find(item => item.href === pathname)!] : [{ href: '/clientes', label: 'Clientes', icon: 'users' }]),
+          { href: '/clientes', label: 'Clientes', icon: 'users' },
         ].filter(item => hasAccess(item.href, role)).map(item => (
           <Link key={item.href} href={item.href} aria-current={pathname === item.href ? 'page' : undefined}
             className={`flex min-h-16 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium ${pathname === item.href ? 'text-[#818CF8]' : 'text-[#A1A1AA]'}`}>

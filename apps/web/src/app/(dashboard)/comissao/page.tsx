@@ -30,7 +30,7 @@ export default function ComissaoPage() {
       <PageToolbar><h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>Comissões</h2>
       <p className="mt-1 text-sm" style={{ color: '#71717A' }}>Cálculo de comissão por profissional no período</p></PageToolbar>
 
-      <div className="mt-4 flex gap-3">
+      <div className="mt-4 flex flex-wrap gap-3">
         <input type="date" value={inicio} onChange={e => setInicio(e.target.value)} className="rounded-lg border px-3 py-2 text-[13px]" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.10)', color: '#FAFAFA' }} />
         <span style={{ color: '#71717A', alignSelf: 'center' }}>até</span>
         <input type="date" value={fim} onChange={e => setFim(e.target.value)} className="rounded-lg border px-3 py-2 text-[13px]" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.10)', color: '#FAFAFA' }} />
@@ -46,7 +46,7 @@ export default function ComissaoPage() {
             Período: {new Date(inicio + 'T00:00:00').toLocaleDateString('pt-BR')} até{' '}
             {new Date(fim + 'T00:00:00').toLocaleDateString('pt-BR')}
           </p>
-          <div className="mt-4 grid grid-cols-3 gap-4">
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-xl p-4" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
               <p className="text-xs" style={{ color: '#71717A' }}>Faturamento</p>
               <p className="mt-1 text-lg font-bold" style={{ color: '#FAFAFA' }}>{fmt(dados.total.faturamento)}</p>

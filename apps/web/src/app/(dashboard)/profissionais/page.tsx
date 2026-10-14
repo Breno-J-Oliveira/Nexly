@@ -17,6 +17,7 @@ interface Profissional {
   nome: string;
   especialidade: string | null;
   agendamentos?: { id: string }[];
+  comissaoPercentual?: number;
 }
 
 export default function ProfissionaisPage() {
@@ -102,9 +103,9 @@ export default function ProfissionaisPage() {
 
       <MetricGrid items={[
         { label: 'Total Profissionais', value: profissionais.length },
-        { label: 'Atendimentos', value: profissionais.reduce((sum, p) => sum + (p.agendamentos?.length || 0), 0), note: 'Agendamentos registrados' },
+        { label: 'Comissão Média', value: `${profissionais.length ? Math.round(profissionais.reduce((sum, p) => sum + (p.comissaoPercentual || 0), 0) / profissionais.length) : 0}%` },
         { label: 'Especialidades', value: new Set(profissionais.map(p => p.especialidade).filter(Boolean)).size },
-        { label: 'Com Agenda', value: profissionais.filter(p => p.agendamentos?.length).length },
+        { label: 'Comissão Configurada', value: profissionais.filter(p => p.comissaoPercentual).length },
       ]} />
       {carregando ? (
         <p className="mt-8 text-sm text-[#A1A1AA]">Carregando…</p>
@@ -134,7 +135,7 @@ export default function ProfissionaisPage() {
                 {p.agendamentos && p.agendamentos.length > 0 ? (
                   <Badge color="CONFIRMADO">{p.agendamentos.length} atendimentos</Badge>
                 ) : (
-                  <Badge>Disponível</Badge>
+                  <Badge>Ativo</Badge>
                 )}
                 <div>
                   <Button variant="ghost" className="mr-1 text-xs" onClick={() => abrirEdicao(p)}>
@@ -152,7 +153,7 @@ export default function ProfissionaisPage() {
             </div>
           ))}
         </div>
-          {selecionado && <aside className="detail-panel"><div className="flex flex-col items-center border-b border-white/10 pb-6 text-center"><span className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border-2 border-[#6366F1] bg-[#6366F1]/10 text-2xl text-[#818CF8]">{selecionado.nome.slice(0, 1)}</span><h3 className="text-xl font-semibold">{selecionado.nome}</h3><p className="mt-2 text-xs text-[#A1A1AA]">{selecionado.especialidade || 'Sem especialidade'}</p></div><p className="mt-6 text-xs text-[#71717A]">ATENDIMENTOS REGISTRADOS</p><p className="mt-2 text-2xl font-semibold">{selecionado.agendamentos?.length || 0}</p><div className="mt-8 flex flex-wrap gap-3"><Button variant="secondary" onClick={() => abrirEdicao(selecionado)}>Editar Perfil</Button><a href={`/agenda?profissionalId=${selecionado.id}`} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium">Ver Agenda</a></div></aside>}
+          {selecionado && <aside className="detail-panel"><div className="flex flex-col items-center border-b border-white/10 pb-6 text-center"><span className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border-2 border-[#6366F1] bg-[#6366F1]/10 text-2xl text-[#818CF8]">{selecionado.nome.slice(0, 1)}</span><h3 className="text-xl font-semibold">{selecionado.nome}</h3><p className="mt-2 text-xs text-[#A1A1AA]">{selecionado.especialidade || 'Sem especialidade'}</p></div><p className="mt-6 text-xs text-[#71717A]">COMISSÃO</p><p className="mt-2 text-2xl font-semibold">{selecionado.comissaoPercentual || 0}%</p><div className="mt-8 flex flex-wrap gap-3"><Button variant="secondary" onClick={() => abrirEdicao(selecionado)}>Editar Perfil</Button><a href={`/agenda?profissionalId=${selecionado.id}`} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium">Ver Agenda</a></div></aside>}
         </div>
       )}
 

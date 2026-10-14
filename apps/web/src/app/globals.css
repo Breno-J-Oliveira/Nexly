@@ -112,3 +112,8 @@ header:has(#page-toolbar .page-toolbar) .shell-global-search { display: none; }
   .metric-card p:nth-child(2) { font-size: 20px; }
   .dashboard-content { padding-top: 20px; }
 }
+
+@media (max-width: 767px) { .clients-page .metric-card:nth-child(n+3) { display: none; } }
+
+.page-toolbar p { line-height: 16px; }
+@media (max-width: 767px) { header:has(#page-toolbar .page-toolbar) > button { display: none; } #page-toolbar { flex-basis: 100%; } }

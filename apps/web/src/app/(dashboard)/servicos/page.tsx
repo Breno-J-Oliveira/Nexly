@@ -139,12 +139,12 @@ export default function ServicosPage() {
         <div className="flex flex-wrap items-center gap-3"><Input aria-label="Buscar serviço" placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)} /><Button onClick={() => { setEditandoServicoId(null); setFormServico({ nome: '', duracaoMin: '', preco: '' }); setModalServicoAberto(true); }}>+ Novo serviço</Button></div>
       </div></PageToolbar>
 
-      <MetricGrid items={[
+      <div className="hidden md:block"><MetricGrid items={[
         { label: 'Total de Serviços', value: servicos.length },
         { label: 'Preço Médio', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(servicos.length ? servicos.reduce((sum, s) => sum + Number(s.preco), 0) / servicos.length : 0) },
         { label: 'Duração Média', value: `${servicos.length ? Math.round(servicos.reduce((sum, s) => sum + s.duracaoMin, 0) / servicos.length) : 0} min` },
         { label: 'Produtos Disponíveis', value: produtos.length, note: 'Para associar aos serviços' },
-      ]} />
+      ]} /></div>
       {carregando ? (
         <p className="mt-8 text-sm text-[#A1A1AA]">Carregando…</p>
       ) : servicos.length === 0 ? (
@@ -156,7 +156,9 @@ export default function ServicosPage() {
         />
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-          <div className="min-w-0 overflow-x-auto rounded-xl border border-white/10 bg-[#111116]">
+          <div className="min-w-0">
+          <div className="space-y-3 md:hidden">{servicos.filter(s => s.nome.toLowerCase().includes(busca.toLowerCase())).map(s => <button key={s.id} onClick={() => void selecionar(s)} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#111116] p-4 text-left"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#18181F]"><Icon name="scissors" color="#818CF8" /></span><span className="min-w-0 flex-1"><strong className="block text-sm">{s.nome}</strong><span className="mt-1 block text-xs text-[#71717A]">{s.duracaoMin} min</span></span><span className="shrink-0 text-sm font-semibold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(s.preco))}</span></button>)}</div>
+          <div className="hidden min-w-0 overflow-x-auto rounded-xl border border-white/10 bg-[#111116] md:block">
             <table className="w-full text-left">
               <thead><tr>{['Serviço', 'Duração', 'Preço', 'Ações'].map(h => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
               <tbody>{servicos.filter(s => s.nome.toLocaleLowerCase('pt-BR').includes(busca.toLocaleLowerCase('pt-BR'))).map(s => <tr key={s.id} className={selecionado?.id === s.id ? 'bg-[#6366F1]/10' : ''}>
@@ -166,6 +168,7 @@ export default function ServicosPage() {
                 <td className="px-4 py-4"><button className="text-xs text-[#818CF8]" onClick={() => { setEditandoServicoId(s.id); setFormServico({ nome: s.nome, duracaoMin: String(s.duracaoMin), preco: String(s.preco) }); setModalServicoAberto(true); }}>Editar</button><button className="ml-3 text-xs text-red-400" onClick={() => void excluirServico(s)}>Excluir</button></td>
               </tr>)}</tbody>
             </table>
+          </div>
           </div>
 
         <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
