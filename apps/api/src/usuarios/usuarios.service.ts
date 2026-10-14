@@ -49,7 +49,14 @@ export class UsuariosService {
     const ok = await argon2.verify(u.senhaHash, senhaAtual);
     if (!ok) throw new BadRequestException('Senha atual incorreta');
     const senhaHash = await argon2.hash(novaSenha, { type: argon2.argon2id });
-    return this.prisma.client.usuario.updateMany({ where: { id }, data: { senhaHash } });
+    const [updated] = await this.prisma.client.$transaction([
+      this.prisma.client.usuario.updateMany({ where: { id }, data: { senhaHash } }),
+      this.prisma.client.refreshToken.updateMany({
+        where: { usuarioId: id, revogado: false },
+        data: { revogado: true },
+      }),
+    ]);
+    return updated;
   }
 
   async excluir(id: string) {
@@ -66,10 +73,12 @@ export class UsuariosService {
       data: { empresaId, email: dto.email, role: dto.role, token, expiresAt },
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3002';
     const link = `${appUrl}/aceitar-convite?token=${token}`;
     // Simula envio de e-mail — substituir por Resend quando RESEND_API_KEY existir.
-    this.logger.log(`[convite] ${dto.email} role=${dto.role} link=${link}`);
+    this.logger.warn(
+      'Provedor de e-mail não configurado: convite disponível para compartilhamento manual.',
+    );
 
     return { conviteId: convite.id, link };
   }

@@ -10,6 +10,8 @@ describe('AgendamentosService', () => {
   let prisma: {
     client: {
       servico: { findFirst: jest.Mock };
+      cliente: { findFirst: jest.Mock };
+      profissional: { findFirst: jest.Mock };
       agendamento: {
         findFirst: jest.Mock;
         findMany: jest.Mock;
@@ -30,6 +32,8 @@ describe('AgendamentosService', () => {
     prisma = {
       client: {
         servico: { findFirst: jest.fn() },
+        cliente: { findFirst: jest.fn().mockResolvedValue(cliente) },
+        profissional: { findFirst: jest.fn().mockResolvedValue(profissional) },
         agendamento: {
           findFirst: jest.fn(),
           findMany: jest.fn(),
@@ -55,6 +59,20 @@ describe('AgendamentosService', () => {
 
   describe('criar', () => {
     const dataHoraFutura = new Date(Date.now() + 86_400_000).toISOString();
+
+    it('rejeita referência a cliente de outra empresa antes de gravar', async () => {
+      prisma.client.servico.findFirst.mockResolvedValue(servico);
+      prisma.client.cliente.findFirst.mockResolvedValue(null);
+      await expect(
+        service.criar({
+          clienteId: 'foreign',
+          profissionalId: 'p1',
+          servicoId: 's1',
+          dataHora: dataHoraFutura,
+        }),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.client.agendamento.create).not.toHaveBeenCalled();
+    });
 
     it('cria agendamento quando não há conflito', async () => {
       prisma.client.servico.findFirst.mockResolvedValue(servico);
@@ -186,6 +204,15 @@ describe('AgendamentosService', () => {
 
   describe('atualizarStatus', () => {
     const base = { id: 'a1', status: StatusAgendamento.AGENDADO, servicoId: 's1' };
+
+    it('não emite baixa duplicada se outra requisição já mudou o status', async () => {
+      prisma.client.agendamento.findFirst.mockResolvedValue(base);
+      prisma.client.agendamento.updateMany.mockResolvedValue({ count: 0 });
+      await expect(service.atualizarStatus('a1', StatusAgendamento.CONCLUIDO)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(emitter.emit).not.toHaveBeenCalled();
+    });
 
     it('permite AGENDADO → CONFIRMADO', async () => {
       prisma.client.agendamento.findFirst.mockResolvedValue(base);

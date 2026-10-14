@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { getTenantIdOrFail } from '../database/tenant-context';
 import { PrismaService } from '../database/prisma.service';
@@ -49,15 +54,16 @@ export class EstoqueService {
     quantidade: number,
     motivo: string,
   ): Promise<void> {
-    if (quantidade <= 0) {
+    if (!Number.isSafeInteger(quantidade) || quantidade <= 0) {
       throw new BadRequestException('Quantidade deve ser maior que zero');
     }
 
     const empresaId = this.tenantIdOrFail();
-    await tx.produto.updateMany({
-      where: { id: produtoId },
+    const result = await tx.produto.updateMany({
+      where: { id: produtoId, empresaId, ativo: true },
       data: { estoqueAtual: { increment: quantidade } },
     });
+    if (result.count === 0) throw new NotFoundException('Produto não encontrado');
     await tx.movimentacaoEstoque.create({
       data: { produtoId, tipo: 'ENTRADA', quantidade, motivo, empresaId },
     });
@@ -96,14 +102,14 @@ export class EstoqueService {
     motivo: string,
     agendamentoId?: string,
   ): Promise<void> {
-    if (quantidade <= 0) {
+    if (!Number.isSafeInteger(quantidade) || quantidade <= 0) {
       throw new BadRequestException('Quantidade deve ser maior que zero');
     }
 
     const empresaId = this.tenantIdOrFail();
     // Decremento atômico: só aplica se houver saldo suficiente.
     const result = await tx.produto.updateMany({
-      where: { id: produtoId, estoqueAtual: { gte: quantidade } },
+      where: { id: produtoId, empresaId, ativo: true, estoqueAtual: { gte: quantidade } },
       data: { estoqueAtual: { decrement: quantidade } },
     });
 

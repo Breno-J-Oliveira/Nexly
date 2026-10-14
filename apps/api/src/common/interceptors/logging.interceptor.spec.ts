@@ -71,6 +71,20 @@ describe('LoggingInterceptor', () => {
     });
   });
 
+  it('não registra token de convite nem aceita quebra de linha no request id', (done) => {
+    const req: MockRequest = {
+      headers: { 'x-request-id': 'injected\nlog' },
+      method: 'GET',
+      originalUrl: '/api/auth/aceitar-convite?token=secret-token',
+    };
+    const res = { setHeader: jest.fn(), statusCode: 200 };
+    interceptor.intercept(makeContext(req, res), { handle: () => of({}) }).subscribe(() => {
+      expect(logSpy.mock.calls[0][0]).not.toContain('secret-token');
+      expect(res.setHeader.mock.calls[0][1]).not.toContain('\n');
+      done();
+    });
+  });
+
   it('loga request bem-sucedido com método, status e duração', (done) => {
     const res = { setHeader: jest.fn(), statusCode: 201 };
     const req: MockRequest = { headers: {}, method: 'GET', originalUrl: '/teste' };

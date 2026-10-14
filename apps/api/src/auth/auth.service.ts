@@ -36,6 +36,7 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto, ip?: string): Promise<AuthResult> {
+    if (dto.aceitouTermos !== true) throw new BadRequestException('Aceite dos termos obrigatório');
     const cnpj = dto.cnpj.replace(/\D/g, '');
     if (!validarCnpj(cnpj)) {
       throw new BadRequestException('CNPJ inválido');
@@ -60,21 +61,14 @@ export class AuthService {
         telefone: dto.telefone,
         segmento: dto.segmento,
         cidade: dto.cidade,
-        plano: (dto.plano?.toUpperCase() as Plano) ?? Plano.FREE,
-        dadosPagamento: dto.nomeCartao
-          ? {
-              nomeCartao: dto.nomeCartao,
-              numeroCartao: dto.numeroCartao ? dto.numeroCartao.slice(-4) : undefined,
-              validade: dto.validade,
-              // CVV é verificado no gateway, mas NUNCA persistido (PCI-DSS).
-            }
-          : undefined,
+        plano: Plano.FREE,
         usuarios: {
           create: {
             nome: dto.responsavelNome,
             email: dto.email,
             senhaHash,
             role: Role.ADMIN,
+            termosAceite: { create: { versao: '1.0', ip: ip ?? null } },
           },
         },
       },
@@ -82,14 +76,9 @@ export class AuthService {
     });
 
     const usuario = empresa.usuarios[0];
-    if (!usuario) {
+    if (!usuario || !usuario.ativo) {
       throw new InternalServerErrorException('Falha ao criar usuário administrador');
     }
-
-    // Registra o aceite dos Termos de Uso (LGPD).
-    await this.prisma.client.termoAceite.create({
-      data: { usuarioId: usuario.id, versao: '1.0', ip: ip ?? null },
-    });
 
     return this.buildAuthResult(usuario);
   }
@@ -175,7 +164,7 @@ export class AuthService {
     const usuario = await this.prisma.client.usuario.findUnique({
       where: { id: userId },
     });
-    if (!usuario) {
+    if (!usuario || !usuario.ativo) {
       throw new UnauthorizedException({
         code: 'USER_NOT_FOUND',
         message: 'Usuário não encontrado',
@@ -243,6 +232,9 @@ export class AuthService {
   async setup2fa(userId: string) {
     const usuario = await this.prisma.client.usuario.findUnique({ where: { id: userId } });
     if (!usuario) throw new UnauthorizedException('Usuário não encontrado');
+    if (usuario.twoFactorEnabled) {
+      throw new BadRequestException('Desative o 2FA antes de configurar um novo autenticador');
+    }
 
     const secret = authenticator.generateSecret();
     await this.prisma.client.usuario.updateMany({
@@ -296,8 +288,14 @@ export class AuthService {
   /** Verifica o código TOTP/backup e emite o JWT completo. */
   async verify2fa(tempToken: string, code: string): Promise<AuthResult> {
     const { sub } = await this.tokenService.verifyTempToken(tempToken);
+    const throttleKey = `2fa|${sub}`;
+    if (await this.throttle.isBlocked(throttleKey)) {
+      throw new UnauthorizedException(
+        'Muitas tentativas de verificação. Tente novamente mais tarde.',
+      );
+    }
     const usuario = await this.prisma.client.usuario.findUnique({ where: { id: sub } });
-    if (!usuario || !usuario.twoFactorEnabled) {
+    if (!usuario || !usuario.ativo || !usuario.twoFactorEnabled) {
       throw new UnauthorizedException('Usuário inválido');
     }
 
@@ -306,18 +304,20 @@ export class AuthService {
     const isTotp = !!usuario.twoFactorSecret && authenticator.check(code, usuario.twoFactorSecret);
 
     if (!isBackup && !isTotp) {
+      await this.throttle.registerFailure(throttleKey);
       throw new UnauthorizedException('Código inválido');
     }
 
     // Código de backup é de uso único: remove após uso.
     if (isBackup) {
       const restantes = usuario.twoFactorBackupCodes.filter((c) => c !== codeHash);
-      await this.prisma.client.usuario.updateMany({
-        where: { id: usuario.id },
+      const consumed = await this.prisma.client.usuario.updateMany({
+        where: { id: usuario.id, twoFactorBackupCodes: { equals: usuario.twoFactorBackupCodes } },
         data: { twoFactorBackupCodes: restantes },
       });
+      if (consumed.count !== 1) throw new UnauthorizedException('Código já utilizado');
     }
-
+    await this.throttle.registerSuccess(throttleKey);
     return this.buildAuthResult(usuario);
   }
 

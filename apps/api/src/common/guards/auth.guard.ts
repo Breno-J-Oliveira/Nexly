@@ -4,12 +4,15 @@ import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from '@nexly/shared';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { PrismaService } from '../../database/prisma.service';
+import { Role } from '@nexly/shared';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -26,13 +29,31 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
+      const payload = await this.jwtService.verifyAsync<JwtPayload & { scope?: string }>(token, {
+        algorithms: ['RS256'],
+      });
+      // Tokens de desafio 2FA nunca autenticam requisições de negócio.
+      if (
+        payload.scope ||
+        !payload.sub ||
+        !payload.empresaId ||
+        !Object.values(Role).includes(payload.role)
+      ) {
+        throw new UnauthorizedException('Token inválido');
+      }
+      const usuario = await this.prisma.client.usuario.findUnique({
+        where: { id: payload.sub },
+        select: { id: true, empresaId: true, ativo: true, role: true, email: true, nome: true },
+      });
+      if (!usuario?.ativo || usuario.empresaId !== payload.empresaId) {
+        throw new UnauthorizedException('Sessão inválida');
+      }
       request.user = {
-        id: payload.sub,
-        empresaId: payload.empresaId,
-        role: payload.role,
-        email: payload.email,
-        nome: payload.nome,
+        id: usuario.id,
+        empresaId: usuario.empresaId,
+        role: usuario.role,
+        email: usuario.email,
+        nome: usuario.nome,
       };
     } catch {
       throw new UnauthorizedException('Token inválido ou expirado');

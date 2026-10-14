@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
@@ -9,6 +10,7 @@ import { PrismaService } from '../database/prisma.service';
 import { EstoqueService } from '../estoque/estoque.service';
 import { AtualizarPedidoCompraDto } from './dto/atualizar-pedido-compra.dto';
 import { CriarPedidoCompraDto } from './dto/criar-pedido-compra.dto';
+import { getTenantIdOrFail } from '../database/tenant-context';
 
 @Injectable()
 export class PedidosCompraService {
@@ -36,6 +38,7 @@ export class PedidosCompraService {
     if (!dto.itens?.length) {
       throw new BadRequestException('O pedido deve ter ao menos um item');
     }
+    await this.validarReferencias(dto.fornecedorId, dto.itens);
     return this.prisma.client.pedidoCompra.create({
       data: {
         fornecedorId: dto.fornecedorId ?? null,
@@ -57,6 +60,7 @@ export class PedidosCompraService {
     if (pedido.status !== 'RASCUNHO') {
       throw new UnprocessableEntityException('Somente pedidos em rascunho podem ser editados');
     }
+    await this.validarReferencias(dto.fornecedorId, dto.itens);
 
     if (dto.itens) {
       await this.prisma.client.itemPedidoCompra.deleteMany({ where: { pedidoId: id } });
@@ -102,13 +106,23 @@ export class PedidosCompraService {
     if (pedido.status !== 'ENVIADO') {
       throw new UnprocessableEntityException('Somente pedidos enviados podem ser recebidos');
     }
-    for (const item of pedido.itens) {
-      await this.estoque.registrarEntrada(item.produtoId, item.quantidade, `Pedido #${id}`);
-    }
-    return this.prisma.client.pedidoCompra.update({
-      where: { id },
-      data: { status: 'RECEBIDO' },
+    const empresaId = getTenantIdOrFail();
+    await this.prisma.client.$transaction(async (tx) => {
+      const claimed = await tx.pedidoCompra.updateMany({
+        where: { id, empresaId, status: 'ENVIADO' },
+        data: { status: 'RECEBIDO' },
+      });
+      if (claimed.count !== 1) throw new ConflictException('Pedido já alterado por outra operação');
+      for (const item of pedido.itens) {
+        await this.estoque.registrarEntradaTx(
+          tx as unknown as Prisma.TransactionClient,
+          item.produtoId,
+          item.quantidade,
+          `Pedido #${id}`,
+        );
+      }
     });
+    return this.obter(id);
   }
 
   async cancelar(id: string) {
@@ -145,5 +159,23 @@ export class PedidosCompraService {
     });
     if (!pedido) throw new NotFoundException('Pedido de compra não encontrado');
     return pedido;
+  }
+
+  private async validarReferencias(fornecedorId?: string | null, itens?: { produtoId: string }[]) {
+    if (fornecedorId) {
+      const fornecedor = await this.prisma.client.fornecedor.findFirst({
+        where: { id: fornecedorId, ativo: true },
+        select: { id: true },
+      });
+      if (!fornecedor) throw new NotFoundException('Fornecedor não encontrado');
+    }
+    if (!itens) return;
+    if (itens.length === 0) throw new BadRequestException('O pedido deve ter ao menos um item');
+    const ids = [...new Set(itens.map((item) => item.produtoId))];
+    const produtos = await this.prisma.client.produto.findMany({
+      where: { id: { in: ids }, ativo: true },
+      select: { id: true },
+    });
+    if (produtos.length !== ids.length) throw new NotFoundException('Produto não encontrado');
   }
 }

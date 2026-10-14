@@ -18,8 +18,8 @@ type RequestComUsuario = Request & { user?: { role: Role; empresaId: string; id:
  * 3. Sem `@Roles` → deriva a permissão do path + método HTTP e checa contra
  *    `ROLE_PERMISSIONS` (RBAC granular). Isso fecha a lacuna de autorização
  *    em que qualquer papel autenticado acessava qualquer endpoint.
- * 4. Path não mapeado (ex.: `/auth/me`, `/auth/2fa`) → exige apenas
- *    autenticação válida.
+ * 4. Rotas pessoais de auth são explicitamente permitidas; outras rotas
+ *    sem política são negadas, inclusive para ADMIN.
  */
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -46,8 +46,11 @@ export class PermissionsGuard implements CanActivate {
 
     const permissao = permissaoDoRequest(request.path, request.method);
     if (permissao === null) {
-      // Rotas não mapeadas (ex.: /auth/me, /auth/2fa) — apenas autenticação.
-      return true;
+      const pessoais: Record<string, string[]> = {
+        GET: ['/api/auth/me', '/api/auth/2fa/setup', '/api/auth/2fa/status'],
+        POST: ['/api/auth/2fa/enable', '/api/auth/2fa/disable', '/api/usuarios/trocar-senha'],
+      };
+      return (pessoais[request.method] ?? []).includes(request.path.replace(/\/$/, ''));
     }
 
     return hasPermission(user.role, permissao);

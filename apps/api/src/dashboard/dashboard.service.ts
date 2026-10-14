@@ -24,7 +24,7 @@ export class DashboardService {
     const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
     const inicioMesAnterior = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
     const ultimos30d = new Date(agora.getTime() - 30 * 86_400_000);
-    const inicioSemana = new Date(agora.getTime() - agora.getDay() * 86_400_000);
+    const inicioSemana = new Date(inicioDia.getTime() - 6 * 86_400_000);
 
     const [
       agendamentosHoje,
@@ -34,7 +34,7 @@ export class DashboardService {
       vendasMesAnterior,
       qtdVendasMes,
       agendamentosConcluidos,
-      agendamentosSemana,
+      vendasSemana,
       profissionaisAtivos,
       saidasPorAgendamento,
       produtos,
@@ -65,12 +65,9 @@ export class DashboardService {
         where: { status: 'CONCLUIDO', dataHora: { gte: ultimos30d } },
         include: { servico: true },
       }),
-      this.prisma.client.agendamento.findMany({
-        where: {
-          dataHora: { gte: inicioSemana, lt: fimDia },
-          status: { in: ['AGENDADO', 'CONFIRMADO', 'CONCLUIDO'] },
-        },
-        select: { dataHora: true, status: true },
+      this.prisma.client.venda.findMany({
+        where: { createdAt: { gte: inicioSemana, lt: fimDia } },
+        select: { createdAt: true, total: true },
       }),
       this.prisma.client.profissional.count({ where: { ativo: true } }),
       this.prisma.client.movimentacaoEstoque.findMany({
@@ -121,14 +118,14 @@ export class DashboardService {
 
     // Evolução de vendas semanal (receita acumulada dos últimos 7 dias)
     const vendasPorDia = new Map<string, number>();
-    for (const a of agendamentosSemana) {
-      const chave = a.dataHora.toISOString().slice(0, 10);
-      vendasPorDia.set(chave, (vendasPorDia.get(chave) ?? 0) + 1);
+    for (const venda of vendasSemana) {
+      const chave = `${venda.createdAt.getFullYear()}-${venda.createdAt.getMonth()}-${venda.createdAt.getDate()}`;
+      vendasPorDia.set(chave, (vendasPorDia.get(chave) ?? 0) + Number(venda.total));
     }
     const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     const evolucaoVendasSemanal = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(inicioSemana.getTime() + i * 86_400_000);
-      const chave = d.toISOString().slice(0, 10);
+      const chave = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       const total = vendasPorDia.get(chave) ?? 0;
       return { dia: diasSemana[d.getDay()], total };
     });

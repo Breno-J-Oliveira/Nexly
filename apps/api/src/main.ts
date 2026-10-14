@@ -9,6 +9,7 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { env } from './config/env';
+import { cookieOriginGuard } from './common/middleware/cookie-origin';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -74,11 +75,13 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // Rate limit global: 100 req / 15min por IP.
+  app.use(cookieOriginGuard(env.CORS_ORIGIN.split(',')));
+
+  // Limite compatível com múltiplas telas/requisições no dashboard.
   app.use(
     rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 100,
+      windowMs: 60 * 1000,
+      max: 300,
       standardHeaders: true,
       legacyHeaders: false,
       message: { statusCode: 429, message: 'Muitas requisições. Tente novamente mais tarde.' },
@@ -86,12 +89,14 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // Rate limit extra restrito para autenticação: 10 req / 15min por IP.
+  // Restringe tentativas de credenciais sem bloquear /me e refresh durante o uso normal.
   app.use(
     '/api/auth',
     rateLimit({
       windowMs: 15 * 60 * 1000,
       max: 10,
+      skip: (req) =>
+        req.method !== 'POST' || !['/login', '/register', '/2fa/verify'].includes(req.path),
       standardHeaders: true,
       legacyHeaders: false,
       message: {
@@ -122,6 +127,7 @@ async function bootstrap(): Promise<void> {
     rateLimit({
       windowMs: 60 * 60 * 1000,
       max: 3,
+      skip: (req) => req.baseUrl === '/api/export' && req.path === '/produtos/vencendo',
       standardHeaders: true,
       legacyHeaders: false,
       message: {
@@ -158,7 +164,7 @@ async function bootstrap(): Promise<void> {
     SwaggerModule.setup('api/docs', app, document);
   }
 
-  await app.listen(env.PORT);
+  await app.listen(env.PORT, env.HOST);
 }
 
 void bootstrap();

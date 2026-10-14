@@ -65,10 +65,13 @@ export class TokenService {
       throw new UnauthorizedException('Usuário inativo');
     }
 
-    await this.prisma.client.refreshToken.update({
-      where: { id: stored.id },
+    const claimed = await this.prisma.client.refreshToken.updateMany({
+      where: { id: stored.id, revogado: false, expiresAt: { gt: new Date() } },
       data: { revogado: true },
     });
+    if (claimed.count !== 1) {
+      throw new UnauthorizedException('Refresh token já utilizado');
+    }
 
     const newToken = await this.issueRefreshToken(usuario.id);
     return { usuario, newToken };
@@ -88,8 +91,10 @@ export class TokenService {
   }
 
   async verifyTempToken(token: string): Promise<{ sub: string }> {
-    const payload = await this.jwtService.verifyAsync<{ sub: string; scope?: string }>(token);
-    if (payload.scope !== '2fa') {
+    const payload = await this.jwtService.verifyAsync<{ sub: string; scope?: string }>(token, {
+      algorithms: ['RS256'],
+    });
+    if (payload.scope !== '2fa' || !payload.sub) {
       throw new UnauthorizedException('Token inválido');
     }
     return { sub: payload.sub };

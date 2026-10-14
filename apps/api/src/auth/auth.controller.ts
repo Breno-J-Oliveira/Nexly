@@ -31,14 +31,16 @@ function getCookie(req: Request, name: string): string | undefined {
     .split(';')
     .map((c) => c.trim())
     .find((c) => c.startsWith(`${name}=`));
-  return entry ? decodeURIComponent(entry.slice(name.length + 1)) : undefined;
+  if (!entry) return undefined;
+  try {
+    return decodeURIComponent(entry.slice(name.length + 1));
+  } catch {
+    throw new BadRequestException('Cookie de sessão inválido');
+  }
 }
 
 function getClientIp(req: Request): string {
-  const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.length > 0) {
-    return xff.split(',')[0]?.trim() ?? 'unknown';
-  }
+  // Express aplica a configuração de trust proxy; não confiar no header bruto.
   return req.ip ?? 'unknown';
 }
 

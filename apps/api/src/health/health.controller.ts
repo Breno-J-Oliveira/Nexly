@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Optional } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { Public } from '../common/decorators/public.decorator';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
@@ -10,7 +10,7 @@ export class HealthController {
 
   constructor(
     private readonly prisma: PrismaService,
-    @Optional() @Inject('REDIS_SERVICE') private readonly redis?: RedisService,
+    private readonly redis: RedisService,
   ) {
     this.startedAt = Date.now();
   }
@@ -112,16 +112,6 @@ export class HealthController {
   }
 
   private async checkRedis(): Promise<{ ok: boolean; error?: string }> {
-    if (!this.redis) {
-      return { ok: true }; // Em testes ou sem Redis, não reporta falha.
-    }
-    try {
-      const pong = await (
-        this.redis as unknown as { client?: { ping: () => Promise<string> } }
-      ).client?.ping?.();
-      return { ok: pong === 'PONG' };
-    } catch (error) {
-      return { ok: false, error: String(error) };
-    }
+    return { ok: await this.redis.ping() };
   }
 }

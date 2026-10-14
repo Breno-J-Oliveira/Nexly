@@ -99,6 +99,19 @@ export class AgendamentosService {
 
     const dataHoraFim = new Date(dataHora.getTime() + servico.duracaoMin * 60_000);
 
+    const [cliente, profissional] = await Promise.all([
+      this.prisma.client.cliente.findFirst({
+        where: { id: dto.clienteId, ativo: true },
+        select: { id: true },
+      }),
+      this.prisma.client.profissional.findFirst({
+        where: { id: dto.profissionalId, ativo: true },
+        select: { id: true },
+      }),
+    ]);
+    if (!cliente) throw new NotFoundException('Cliente não encontrado');
+    if (!profissional) throw new NotFoundException('Profissional não encontrado');
+
     await this.validarConflito(dto.profissionalId, dataHora, dataHoraFim);
 
     return this.prisma.client.agendamento.create({
@@ -123,10 +136,15 @@ export class AgendamentosService {
       );
     }
 
-    await this.prisma.client.agendamento.updateMany({
-      where: { id },
+    const changed = await this.prisma.client.agendamento.updateMany({
+      where: { id, status: agendamento.status },
       data: { status: novoStatus },
     });
+    if (changed.count !== 1) {
+      throw new ConflictException(
+        'O agendamento foi alterado. Atualize a agenda e tente novamente.',
+      );
+    }
 
     const atualizado = await this.prisma.client.agendamento.findFirst({
       where: { id },

@@ -22,12 +22,20 @@ export class LoggingInterceptor implements NestInterceptor {
     const req = http.getRequest<Request & { id?: string }>();
     const res = http.getResponse<Response>();
 
-    const requestId = (req.headers['x-request-id'] as string) || randomUUID();
+    const providedId = req.headers['x-request-id'];
+    const requestId =
+      typeof providedId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(providedId)
+        ? providedId
+        : randomUUID();
     req.id = requestId;
     res.setHeader('X-Request-Id', requestId);
 
     const start = Date.now();
-    const { method, originalUrl } = req;
+    const { method } = req;
+    const originalUrl = (req.originalUrl.split('?')[0] ?? req.path).replace(
+      /^\/api\/booking\/[^/]+/,
+      '/api/booking/[token]',
+    );
     const isProd = process.env.NODE_ENV === 'production';
 
     return next.handle().pipe(

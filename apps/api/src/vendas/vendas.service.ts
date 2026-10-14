@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { EstoqueService, Tx } from '../estoque/estoque.service';
 import { ItemVendaDto } from './dto/criar-venda.dto';
+import { getTenantIdOrFail } from '../database/tenant-context';
 
 /**
  * Motor do PDV: orquestra a criação de uma venda completa em uma única
@@ -52,9 +53,33 @@ export class VendasService {
     if (itens.length === 0) {
       throw new BadRequestException('A venda deve ter ao menos um item');
     }
+    const empresaId = getTenantIdOrFail();
+    const consolidated = new Map<string, ItemVendaDto>();
+    for (const item of itens) {
+      if (!Number.isSafeInteger(item.quantidade) || item.quantidade <= 0) {
+        throw new BadRequestException('Quantidade deve ser um inteiro positivo');
+      }
+      const quantidade = (consolidated.get(item.produtoId)?.quantidade ?? 0) + item.quantidade;
+      if (!Number.isSafeInteger(quantidade)) throw new BadRequestException('Quantidade inválida');
+      consolidated.set(item.produtoId, { produtoId: item.produtoId, quantidade });
+    }
+    itens = [...consolidated.values()];
+    if (clienteId) {
+      const cliente = await this.prisma.client.cliente.findFirst({
+        where: { id: clienteId, empresaId, ativo: true },
+        select: { id: true },
+      });
+      if (!cliente) throw new NotFoundException('Cliente não encontrado');
+    }
 
     // 1. Valida o cupom (se informado) antes de calcular o total.
-    let cupom: { id: string; tipo: 'PERCENTUAL' | 'FIXO'; valor: number } | null = null;
+    let cupom: {
+      id: string;
+      tipo: 'PERCENTUAL' | 'FIXO';
+      valor: number;
+      usoAtual: number;
+      usoMaximo: number | null;
+    } | null = null;
     if (opcoes?.cupomCodigo) {
       const c = await this.prisma.client.cupom.findFirst({
         where: { codigo: opcoes.cupomCodigo },
@@ -68,7 +93,13 @@ export class VendasService {
       if (c.usoMaximo !== null && c.usoAtual >= c.usoMaximo) {
         throw new UnprocessableEntityException('Cupom esgotado');
       }
-      cupom = { id: c.id, tipo: c.tipo, valor: Number(c.valor) };
+      cupom = {
+        id: c.id,
+        tipo: c.tipo,
+        valor: Number(c.valor),
+        usoAtual: c.usoAtual,
+        usoMaximo: c.usoMaximo,
+      };
     }
 
     const idsUnicos = [...new Set(itens.map((i) => i.produtoId))];
@@ -91,27 +122,33 @@ export class VendasService {
     // 3. Calcula o total com base nos preços atuais + descontos (manual + cupom).
     const totalBruto = itens.reduce((acc, item) => {
       const produto = produtoMap.get(item.produtoId);
-      return acc + Number(produto?.preco ?? 0) * item.quantidade;
-    }, 0);
-    const descontoManual = opcoes?.desconto || 0;
+      return acc.plus(new Prisma.Decimal(produto?.preco ?? 0).times(item.quantidade));
+    }, new Prisma.Decimal(0));
+    const descontoManual = new Prisma.Decimal(opcoes?.desconto ?? 0);
+    if (!descontoManual.isFinite() || descontoManual.isNegative())
+      throw new BadRequestException('Desconto inválido');
     const descontoCupom = cupom
       ? cupom.tipo === 'PERCENTUAL'
-        ? (totalBruto * cupom.valor) / 100
+        ? totalBruto.times(cupom.valor).div(100)
         : cupom.valor
       : 0;
-    const descontoTotal = Math.min(descontoManual + descontoCupom, totalBruto);
-    const total = Math.max(0, totalBruto - descontoTotal);
+    const descontoTotal = Prisma.Decimal.min(
+      descontoManual.plus(descontoCupom),
+      totalBruto,
+    ).toDecimalPlaces(2);
+    const total = totalBruto.minus(descontoTotal).toDecimalPlaces(2);
 
     // 4-8. Transação: cria venda + itens + baixa de estoque + incrementa cupom.
     const venda = await this.prisma.client.$transaction(async (tx) => {
       const v = await tx.venda.create({
         data: {
+          empresaId,
           clienteId,
           cupomId: cupom?.id ?? null,
           total,
           formaPagamento: opcoes?.formaPagamento || undefined,
           desconto: descontoTotal,
-        } as Prisma.VendaUncheckedCreateInput,
+        },
       });
 
       for (const item of itens) {
@@ -133,10 +170,18 @@ export class VendasService {
       }
 
       if (cupom) {
-        await tx.cupom.update({
-          where: { id: cupom.id },
+        const claimed = await tx.cupom.updateMany({
+          where: {
+            id: cupom.id,
+            empresaId,
+            ativo: true,
+            usoAtual: cupom.usoAtual,
+            OR: [{ validade: null }, { validade: { gt: new Date() } }],
+          },
           data: { usoAtual: { increment: 1 } },
         });
+        if (claimed.count !== 1)
+          throw new ConflictException('Cupom alterado por outra venda. Tente novamente.');
       }
 
       return v;

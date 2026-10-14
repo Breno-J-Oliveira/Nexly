@@ -11,6 +11,7 @@ const envSchema = z.object({
     z.enum(['development', 'production', 'test']),
   ),
   PORT: z.coerce.number().default(3001),
+  HOST: z.string().default('0.0.0.0'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL é obrigatória'),
   REDIS_URL: z.string().min(1, 'REDIS_URL é obrigatória'),
   JWT_PRIVATE_KEY: z.string().optional(),

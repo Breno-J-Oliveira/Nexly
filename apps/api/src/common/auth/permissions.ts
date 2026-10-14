@@ -47,7 +47,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'notificacoes:read',
     'notificacoes:update',
   ],
-  PROFISSIONAL: ['agenda:read', 'dashboard:read', 'notificacoes:read'],
+  PROFISSIONAL: ['agenda:read', 'dashboard:read', 'notificacoes:read', 'notificacoes:update'],
   RECEPCIONISTA: [
     'agenda:read',
     'agenda:create',
@@ -56,9 +56,21 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'clientes:create',
     'clientes:update',
     'dashboard:read',
+    'profissionais:read',
+    'servicos:read',
     'notificacoes:read',
+    'notificacoes:update',
   ],
-  CAIXA: ['vendas:create', 'vendas:read', 'estoque:read', 'dashboard:read', 'notificacoes:read'],
+  CAIXA: [
+    'vendas:create',
+    'vendas:read',
+    'estoque:read',
+    'dashboard:read',
+    'notificacoes:read',
+    'notificacoes:update',
+    'cupons:read',
+    'clientes:read',
+  ],
 };
 
 /**
@@ -108,9 +120,10 @@ export function hasPermission(role: Role, permission: string): boolean {
  * Deriva a permissão (`recurso:acao`) a partir do path e do método HTTP.
  * Retorna `null` quando o path não está mapeado (ex.: `/auth`, `/health`,
  * `/booking`, `/usuarios`, `/audit`, `/lgpd`, `/whatsapp`) — nesses casos o
- * `PermissionsGuard` respeita o `@Roles()` explícito ou nega por padrão.
+ * `PermissionsGuard` exige uma exceção explícita ou nega por padrão.
  */
 export function permissaoDoRequest(path: string, method: string): string | null {
+  if (path.replace(/\/$/, '') === '/api/cupons/validar' && method === 'POST') return 'cupons:read';
   const semPrefixo = path.replace(/^\/api\//, '');
   const segmento = semPrefixo.split('/').filter(Boolean)[0] ?? '';
   const recurso = RECURSO_POR_PATH[segmento];

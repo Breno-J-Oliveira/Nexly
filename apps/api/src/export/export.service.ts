@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { csvCell } from './csv';
 
 @Injectable()
 export class ExportService {
@@ -23,12 +24,12 @@ export class ExportService {
       const itens = v.itens.map((i) => i.quantidade + 'x ' + i.produto.nome).join('; ');
       lines.push(
         [
-          v.createdAt.toISOString().slice(0, 10),
-          v.cliente?.nome ?? 'Avulso',
-          itens,
-          v.formaPagamento ?? 'Dinheiro',
-          String(v.desconto ?? 0),
-          String(v.total),
+          csvCell(v.createdAt.toISOString().slice(0, 10)),
+          csvCell(v.cliente?.nome ?? 'Avulso', true),
+          csvCell(itens, true),
+          csvCell(v.formaPagamento ?? 'Dinheiro', true),
+          csvCell(String(v.desconto ?? 0)),
+          csvCell(String(v.total)),
         ].join(';'),
       );
     }

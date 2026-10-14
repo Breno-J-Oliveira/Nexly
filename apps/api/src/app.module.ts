@@ -7,6 +7,7 @@ import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { TenantInterceptor } from './common/interceptors/tenant.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { CacheInvalidationInterceptor } from './common/interceptors/cache-invalidation.interceptor';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { env } from './config/env';
 import { getJwtKeys } from './config/jwt-keys';
@@ -91,6 +92,7 @@ import { RedisModule } from './redis/redis.module';
     { provide: APP_INTERCEPTOR, useClass: TenantInterceptor },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: CacheInvalidationInterceptor },
   ],
 })
 export class AppModule {}

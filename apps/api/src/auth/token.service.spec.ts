@@ -61,13 +61,16 @@ describe('TokenService', () => {
       revogado: false,
     });
     prisma.client.usuario.findUnique.mockResolvedValue(usuarioMock);
-    prisma.client.refreshToken.update.mockResolvedValue({});
+    prisma.client.refreshToken.updateMany.mockResolvedValue({ count: 1 });
     prisma.client.refreshToken.create.mockResolvedValue({});
 
     const result = await service.rotateRefreshToken('token-valido');
 
-    expect(prisma.client.refreshToken.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'rt1' }, data: { revogado: true } }),
+    expect(prisma.client.refreshToken.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'rt1', revogado: false }),
+        data: { revogado: true },
+      }),
     );
     expect(result.newToken).toBeDefined();
     expect(result.usuario.id).toBe('u1');
@@ -92,5 +95,18 @@ describe('TokenService', () => {
         data: { revogado: true },
       }),
     );
+  });
+
+  it('não emite token novo se outra requisição venceu a rotação', async () => {
+    prisma.client.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt1',
+      usuarioId: 'u1',
+      expiresAt: new Date(Date.now() + 60000),
+      revogado: false,
+    });
+    prisma.client.usuario.findUnique.mockResolvedValue(usuarioMock);
+    prisma.client.refreshToken.updateMany.mockResolvedValue({ count: 0 });
+    await expect(service.rotateRefreshToken('same-token')).rejects.toThrow(UnauthorizedException);
+    expect(prisma.client.refreshToken.create).not.toHaveBeenCalled();
   });
 });
