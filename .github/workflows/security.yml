@@ -1,0 +1,100 @@
+name: Segurança
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Varredura semanal completa (dependências novas vulneráveis aparecem com o tempo).
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      alvo_zap:
+        description: 'URL para o OWASP ZAP (ex.: https://staging.nexly.com.br). Vazio = pula o ZAP.'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  security-events: write
+  issues: write
+
+jobs:
+  segredos:
+    name: Segredos (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # O gitleaks precisa do histórico para varrer commits antigos.
+          fetch-depth: 0
+      - name: Instala o gitleaks
+        run: |
+          VERSION=8.21.2
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
+      - name: Varre o histórico do repositório
+        run: gitleaks detect --source . --config .gitleaks.toml --redact --verbose
+
+  dependencias:
+    name: Dependências vulneráveis (npm audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Audit da API
+        run: npm audit --audit-level=high --workspace @nexly/api
+      - name: Audit do web
+        run: npm audit --audit-level=high --workspace @nexly/web
+      - name: Audit das dependências de produção de todo o monorepo
+        run: npm audit --omit=dev --audit-level=critical
+
+  sast:
+    name: Análise estática (semgrep)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - name: Semgrep (regras OWASP Top 10 + TypeScript/Node)
+        run: |
+          semgrep scan \
+            --config p/owasp-top-ten \
+            --config p/typescript \
+            --config p/nodejs \
+            --error \
+            --exclude node_modules \
+            --exclude dist \
+            --exclude .next \
+            --exclude .turbo \
+            apps packages
+
+  zap:
+    name: OWASP ZAP (baseline)
+    runs-on: ubuntu-latest
+    # Só roda quando um alvo é informado (staging), pois exige uma URL viva.
+    if: inputs.alvo_zap != ''
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baseline scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: ${{ inputs.alvo_zap }}
+          allow_issue_writing: true
+          cmd_options: >-
+            -a -j -m 5 -T 10
+            -z "-config rules.directory=./.zap"
+      - name: Guarda o relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: report_html.html
+          retention-days: 30

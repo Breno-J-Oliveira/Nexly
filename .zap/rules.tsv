@@ -1,0 +1,42 @@
+# Regras do OWASP ZAP para o Nexly (formato TSV: rule_id <TAB> ação <TAB> descrição).
+# Ações: IGNORE (falso positivo conhecido) | WARN (registra) | FAIL (quebra o build)
+#
+# O alvo é a API (JSON) + o web. Aqui ficam só as regras que precisam de ajuste;
+# o resto segue o comportamento padrão do ZAP.
+
+# ── Deve FALHAR: classes de vulnerabilidade reais ──────────────────
+40012	FAIL	Cross Site Scripting (Reflected)
+40014	FAIL	Cross Site Scripting (Persistent)
+40016	FAIL	Cross Site Scripting (Persistent) - Prime
+40017	FAIL	Cross Site Scripting (Persistent) - Spider
+40018	FAIL	SQL Injection
+40019	FAIL	SQL Injection - MySQL
+40020	FAIL	SQL Injection - Hypersonic SQL
+40021	FAIL	SQL Injection - Oracle
+40022	FAIL	SQL Injection - PostgreSQL
+40024	FAIL	SQL Injection - SQLite
+40026	FAIL	Cross Site Scripting (DOM Based)
+6	FAIL	Path Traversal
+7	FAIL	Remote File Inclusion
+90022	FAIL	Application Error Disclosure
+10023	FAIL	Information Disclosure - Debug Error Messages
+10020	FAIL	Missing Anti-clickjacking Header
+10035	FAIL	Strict-Transport-Security Header Not Set
+10038	FAIL	Content Security Policy (CSP) Header Not Set
+0	FAIL	Directory Browsing
+
+# ── Aviso: relevante, mas não bloqueia ─────────────────────────────
+10063	WARN	Permissions Policy Header Not Set
+10098	WARN	Cross-Domain Misconfiguration
+10017	WARN	Cross-Domain JavaScript Source File Inclusion
+10021	WARN	X-Content-Type-Options Header Missing
+10011	WARN	Authentication Request Identified
+10105	WARN	Authentication Credentials Captured
+
+# ── Ignorar: falso positivo no contexto do Nexly ───────────────────
+10016	IGNORE	Web Browser XSS Protection Not Enabled (header legado, removido pelos browsers)
+10096	IGNORE	Timestamp Disclosure (APIs expõem datas por design)
+10015	IGNORE	Re-examine Cache-control Directives (validado manualmente)
+10109	IGNORE	Modern Web Application (informativo)
+10112	IGNORE	Session Management Response Identified (informativo)
+10095	IGNORE	Backup File Disclosure (SEM backup estático — backups vão para bucket privado)

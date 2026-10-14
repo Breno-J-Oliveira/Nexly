@@ -10,10 +10,13 @@
   <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind">
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <br>
-  <img src="https://img.shields.io/badge/tests-93_passing-brightgreen?style=flat-square" alt="Tests">
-  <img src="https://img.shields.io/badge/suites-14-7B61FF?style=flat-square" alt="Suites">
+  <img src="https://img.shields.io/badge/tests-125_passing-brightgreen?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/suites-18-7B61FF?style=flat-square" alt="Suites">
   <img src="https://img.shields.io/badge/fases-0-a-4_+_DS_concluídas-brightgreen?style=flat-square" alt="Fases">
   <img src="https://img.shields.io/badge/licença-educacional-blue?style=flat-square" alt="License">
+  <br>
+  <img src="https://github.com/Breno-J-Oliveira/Nexly/actions/workflows/security.yml/badge.svg" alt="Segurança (gitleaks + audit + semgrep + ZAP)">
+  <img src="https://github.com/Breno-J-Oliveira/Nexly/actions/workflows/backup.yml/badge.svg" alt="Backup e restore testado">
 </p>
 
 ---

@@ -1,0 +1,30 @@
+# Configuração do gitleaks — bloqueia segredos no CI.
+#
+# Regra geral: credencial real encontrada = ROTACIONAR, não apenas remover do
+# histórico (uma vez commitada, é considerada vazada).
+title = "Nexly"
+
+[extend]
+# Traz as regras oficiais (AWS, Stripe, chaves privadas, tokens...).
+useDefault = true
+
+[allowlist]
+description = "Exceções do Nexly: exemplos, locks e artefatos"
+# Arquivos que nunca contêm segredo real.
+paths = [
+  '''\.env\.example$''',
+  '''package-lock\.json$''',
+  '''(^|/)backups/''',
+  '''(^|/)playwright-report/''',
+  '''(^|/)test-results/''',
+  '''(^|/)\.turbo/''',
+]
+# Valores de exemplo/documentação (docker-compose, .env.example, testes).
+regexes = [
+  '''postgresql://nexly:nexly_(dev_)?(test_)?password@''',
+  '''senha-de-teste''',
+  '''sk_test_[A-Za-z0-9]{0,12}X{3,}''',
+  '''NX-[A-Z]+-[0-9A-F]{4}''',
+]
+# Palavras que indicam placeholder, não credencial.
+stopwords = ['example', 'exemplo', 'dummy', 'placeholder', 'troque', 'changeme']
