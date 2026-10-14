@@ -81,7 +81,7 @@ export default function EstoquePage() {
 
   return (
     <div>
-      <PageToolbar><div className="flex items-center justify-between"><div><h2 className="font-semibold">Estoque</h2><p className="mt-1">Controle e acompanhamento de produtos e insumos</p></div><div className="flex flex-wrap items-center gap-3"><Input aria-label="Buscar produto" placeholder="Buscar produto..." value={busca} onChange={e => setBusca(e.target.value)} /><Link href="/produtos" className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium">+ Novo Produto</Link></div></div></PageToolbar>
+      <PageToolbar><div className="page-heading with-search flex items-center justify-between"><div><h2 className="font-semibold">Estoque</h2><p className="mt-1">Controle e acompanhamento de produtos e insumos</p></div><div className="toolbar-actions flex flex-wrap items-center gap-3"><div className="toolbar-search"><Input aria-label="Buscar produto" placeholder="Buscar produto..." value={busca} onChange={e => setBusca(e.target.value)} /></div><Link href="/produtos" className="toolbar-primary rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium">+ Novo Produto</Link></div></div></PageToolbar>
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0">
       <MetricGrid items={[

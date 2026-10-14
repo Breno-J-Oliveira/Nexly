@@ -117,3 +117,20 @@ header:has(#page-toolbar .page-toolbar) .shell-global-search { display: none; }
 
 .page-toolbar p { line-height: 16px; }
 @media (max-width: 767px) { header:has(#page-toolbar .page-toolbar) > button { display: none; } #page-toolbar { flex-basis: 100%; } }
+
+@media (max-width: 767px) {
+  .page-toolbar > .with-search,
+  .page-toolbar > .agenda-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px 12px;
+  }
+  .page-heading > div:first-child { grid-column: 1; grid-row: 1; min-width: 0; }
+  .page-heading p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .page-heading .toolbar-actions { display: contents; }
+  .page-heading .toolbar-search,
+  .page-heading .toolbar-secondary { grid-column: 1 / -1; grid-row: 2; width: 100%; }
+  .page-heading .toolbar-primary { grid-column: 2; grid-row: 1; padding-left: 12px; padding-right: 12px; font-size: 12px; }
+  .page-heading .toolbar-search > div { width: 100%; }
+}

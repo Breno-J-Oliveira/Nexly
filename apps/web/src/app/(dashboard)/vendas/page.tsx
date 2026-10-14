@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ResponsiveDetailPanel } from '@/components/ui/ResponsiveDetailPanel';
 import { MetricGrid } from '@/components/ui/MetricGrid';
 import { PageToolbar } from '@/components/ui/PageToolbar';
 
@@ -27,6 +28,7 @@ interface Venda {
 }
 
 export default function VendasPage() {
+  const [detalhesAbertos, setDetalhesAbertos] = useState(false);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -120,7 +122,7 @@ export default function VendasPage() {
       ]} />
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="min-w-0">
-      <div className="space-y-3 md:hidden"><h3 className="mb-4 text-sm font-semibold">Últimas Transações</h3>{vendas.map(v => <button key={v.id} onClick={() => setExpandida(v.id)} className="flex w-full justify-between gap-3 rounded-xl border border-white/10 bg-[#111116] p-4 text-left"><span className="min-w-0"><strong className="block text-sm">{v.cliente?.nome || 'Venda avulsa'}</strong><span className="mt-1 block text-xs text-[#71717A]">{formatarDataHora(v.createdAt)}</span><span className="block text-xs text-[#A1A1AA]">{v.itens.length} itens</span><span className="block text-xs text-[#71717A]">{v.formaPagamento || 'Não informada'}</span></span><span className="shrink-0 text-sm font-semibold">{formatarMoeda(v.total)}</span></button>)}</div>
+      <div className="space-y-3 md:hidden"><h3 className="mb-4 text-sm font-semibold">Últimas Transações</h3>{vendas.map(v => <button key={v.id} onClick={() => { setExpandida(v.id); setDetalhesAbertos(true); }} className="flex w-full justify-between gap-3 rounded-xl border border-white/10 bg-[#111116] p-4 text-left"><span className="min-w-0"><strong className="block text-sm">{v.cliente?.nome || 'Venda avulsa'}</strong><span className="mt-1 block text-xs text-[#71717A]">{formatarDataHora(v.createdAt)}</span><span className="block text-xs text-[#A1A1AA]">{v.itens.length} itens</span><span className="block text-xs text-[#71717A]">{v.formaPagamento || 'Não informada'}</span></span><span className="shrink-0 text-sm font-semibold">{formatarMoeda(v.total)}</span></button>)}</div>
       <div className="hidden overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] md:block">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-[rgba(255,255,255,0.08)] bg-[#18181F]/40">
@@ -167,7 +169,7 @@ export default function VendasPage() {
                       <Button
                         variant="ghost"
                         className="text-xs"
-                        onClick={() => setExpandida(v.id)}
+                        onClick={() => { setExpandida(v.id); setDetalhesAbertos(true); }}
                       >
                         Detalhes
                       </Button>
@@ -181,7 +183,7 @@ export default function VendasPage() {
         </table>
       </div>
       </div>
-        {selecionada && <aside className="detail-panel"><div className="border-b border-white/10 pb-5 text-center"><span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#6366F1]/15 text-xl text-[#818CF8]">{(selecionada.cliente?.nome || 'V').slice(0, 1)}</span><h3 className="text-xl font-semibold">{selecionada.cliente?.nome || 'Venda avulsa'}</h3><p className="mt-2 text-xs text-[#71717A]">{formatarDataHora(selecionada.createdAt)}</p></div><p className="mb-3 mt-6 text-xs text-[#71717A]">ITENS DA VENDA</p><div className="space-y-3">{selecionada.itens.map(it => <div key={it.id} className="rounded-lg border border-white/10 bg-[#18181F] p-3"><p className="text-sm font-medium">{it.produto.nome}</p><div className="mt-2 flex justify-between text-xs text-[#A1A1AA]"><span>{it.quantidade} unidades</span><span>{formatarMoeda(Number(it.precoUnitario) * it.quantidade)}</span></div></div>)}</div><div className="mt-6 flex justify-between border-t border-white/10 pt-4 font-semibold"><span>Total</span><span className="text-[#818CF8]">{formatarMoeda(selecionada.total)}</span></div><Link href="/pdv" className="mt-6 block rounded-lg bg-[#6366F1] px-4 py-2 text-center text-sm font-medium">Nova Venda</Link></aside>}
+        {selecionada && <ResponsiveDetailPanel title="Detalhes da Venda" open={detalhesAbertos} onClose={() => setDetalhesAbertos(false)}><div className="border-b border-white/10 pb-5 text-center"><span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#6366F1]/15 text-xl text-[#818CF8]">{(selecionada.cliente?.nome || 'V').slice(0, 1)}</span><h3 className="text-xl font-semibold">{selecionada.cliente?.nome || 'Venda avulsa'}</h3><p className="mt-2 text-xs text-[#71717A]">{formatarDataHora(selecionada.createdAt)}</p></div><p className="mb-3 mt-6 text-xs text-[#71717A]">ITENS DA VENDA</p><div className="space-y-3">{selecionada.itens.map(it => <div key={it.id} className="rounded-lg border border-white/10 bg-[#18181F] p-3"><p className="text-sm font-medium">{it.produto.nome}</p><div className="mt-2 flex justify-between text-xs text-[#A1A1AA]"><span>{it.quantidade} unidades</span><span>{formatarMoeda(Number(it.precoUnitario) * it.quantidade)}</span></div></div>)}</div><div className="mt-6 flex justify-between border-t border-white/10 pt-4 font-semibold"><span>Total</span><span className="text-[#818CF8]">{formatarMoeda(selecionada.total)}</span></div><Link href="/pdv" className="mt-6 block rounded-lg bg-[#6366F1] px-4 py-2 text-center text-sm font-medium">Nova Venda</Link></ResponsiveDetailPanel>}
       </div>
     </div>
   );

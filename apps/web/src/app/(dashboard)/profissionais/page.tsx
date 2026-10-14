@@ -1,7 +1,9 @@
 'use client';
 
+import { ResponsiveDetailPanel } from '@/components/ui/ResponsiveDetailPanel';
 import { MetricGrid } from '@/components/ui/MetricGrid';
 import { PageToolbar } from '@/components/ui/PageToolbar';
+import { Modal } from '@/components/ui/Modal';
 
 import { useCallback, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
@@ -21,6 +23,7 @@ interface Profissional {
 }
 
 export default function ProfissionaisPage() {
+  const [detalhesAbertos, setDetalhesAbertos] = useState(false);
   const [busca, setBusca] = useState('');
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
@@ -55,6 +58,7 @@ export default function ProfissionaisPage() {
   };
 
   const abrirEdicao = (p: Profissional): void => {
+    setDetalhesAbertos(false);
     setEditandoId(p.id);
     setNome(p.nome);
     setEspecialidade(p.especialidade ?? '');
@@ -93,12 +97,12 @@ export default function ProfissionaisPage() {
 
   return (
     <div>
-      <PageToolbar><div className="flex items-center justify-between">
+      <PageToolbar><div className="page-heading with-search flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[#FAFAFA]">Profissionais</h2>
           <p className="mt-1 text-sm text-[#A1A1AA]">Equipe de atendimento do seu negócio</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3"><Input aria-label="Buscar profissional" placeholder="Buscar profissional..." value={busca} onChange={e => setBusca(e.target.value)} /><Button onClick={abrirNovo}>+ Novo profissional</Button></div>
+        <div className="toolbar-actions flex flex-wrap items-center gap-3"><div className="toolbar-search"><Input aria-label="Buscar profissional" placeholder="Buscar profissional..." value={busca} onChange={e => setBusca(e.target.value)} /></div><Button className="toolbar-primary" onClick={abrirNovo}>+ Novo profissional</Button></div>
       </div></PageToolbar>
 
       <MetricGrid items={[
@@ -125,7 +129,7 @@ export default function ProfissionaisPage() {
                   {p.nome.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <button onClick={() => setSelecionadoId(p.id)} className="truncate text-left font-medium text-[#FAFAFA] hover:text-[#818CF8]">{p.nome}</button>
+                  <button onClick={() => { setSelecionadoId(p.id); setDetalhesAbertos(true); }} className="truncate text-left font-medium text-[#FAFAFA] hover:text-[#818CF8]">{p.nome}</button>
                   <p className="truncate text-xs text-[#71717A]">
                     {p.especialidade ?? 'Sem especialidade'}
                   </p>
@@ -153,16 +157,12 @@ export default function ProfissionaisPage() {
             </div>
           ))}
         </div>
-          {selecionado && <aside className="detail-panel"><div className="flex flex-col items-center border-b border-white/10 pb-6 text-center"><span className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border-2 border-[#6366F1] bg-[#6366F1]/10 text-2xl text-[#818CF8]">{selecionado.nome.slice(0, 1)}</span><h3 className="text-xl font-semibold">{selecionado.nome}</h3><p className="mt-2 text-xs text-[#A1A1AA]">{selecionado.especialidade || 'Sem especialidade'}</p></div><p className="mt-6 text-xs text-[#71717A]">COMISSÃO</p><p className="mt-2 text-2xl font-semibold">{selecionado.comissaoPercentual || 0}%</p><div className="mt-8 flex flex-wrap gap-3"><Button variant="secondary" onClick={() => abrirEdicao(selecionado)}>Editar Perfil</Button><a href={`/agenda?profissionalId=${selecionado.id}`} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium">Ver Agenda</a></div></aside>}
+          {selecionado && <ResponsiveDetailPanel title="Perfil do Profissional" open={detalhesAbertos} onClose={() => setDetalhesAbertos(false)}><div className="flex flex-col items-center border-b border-white/10 pb-6 text-center"><span className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border-2 border-[#6366F1] bg-[#6366F1]/10 text-2xl text-[#818CF8]">{selecionado.nome.slice(0, 1)}</span><h3 className="text-xl font-semibold">{selecionado.nome}</h3><p className="mt-2 text-xs text-[#A1A1AA]">{selecionado.especialidade || 'Sem especialidade'}</p></div><p className="mt-6 text-xs text-[#71717A]">COMISSÃO</p><p className="mt-2 text-2xl font-semibold">{selecionado.comissaoPercentual || 0}%</p><div className="mt-8 flex flex-wrap gap-3"><Button variant="secondary" onClick={() => abrirEdicao(selecionado)}>Editar Perfil</Button><a href={`/agenda?profissionalId=${selecionado.id}`} className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium">Ver Agenda</a></div></ResponsiveDetailPanel>}
         </div>
       )}
 
       {modalAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-6">
-            <h3 className="text-lg font-semibold text-[#FAFAFA]">
-              {editandoId ? 'Editar profissional' : 'Novo profissional'}
-            </h3>
+        <Modal open title={editandoId ? 'Editar profissional' : 'Novo profissional'} onClose={() => setModalAberto(false)}>
             <div className="mt-4 space-y-3">
               <Input
                 label="Nome"
@@ -186,8 +186,7 @@ export default function ProfissionaisPage() {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

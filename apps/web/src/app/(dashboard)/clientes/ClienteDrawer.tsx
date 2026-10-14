@@ -82,6 +82,7 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }:
 
   useEffect(() => {
     if (!aberto || !id) return;
+    let active = true;
     setObservacoes(cliente?.observacoes ?? '');
     setAba('historico');
 
@@ -89,14 +90,15 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }:
     setCarregandoHistorico(true);
     api
       .get<Metricas>(`/clientes/${id}/metricas`)
-      .then((r) => setMetricas(r.data))
+      .then((r) => { if (active) setMetricas(r.data); })
       .catch(() => undefined)
-      .finally(() => setCarregandoMetricas(false));
+      .finally(() => { if (active) setCarregandoMetricas(false); });
     api
       .get<HistoricoItem[]>(`/clientes/${id}/historico`)
-      .then((r) => setHistorico(r.data))
+      .then((r) => { if (active) setHistorico(r.data); })
       .catch(() => undefined)
-      .finally(() => setCarregandoHistorico(false));
+      .finally(() => { if (active) setCarregandoHistorico(false); });
+    return () => { active = false; };
   }, [aberto, id, cliente?.observacoes]);
 
   useEffect(() => {

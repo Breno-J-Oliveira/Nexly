@@ -300,7 +300,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <Icon name={item.icon} size="lg" color="currentColor" />{item.label}
           </Link>
         ))}
-        <button type="button" onClick={() => setSidebarAberta(true)} aria-label="Abrir navegação" className="flex min-h-16 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium text-[#A1A1AA]">
+        <button type="button" onClick={() => setSidebarAberta(true)} aria-label="Abrir navegação" className={`flex min-h-16 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium ${!['/dashboard', '/agenda', '/clientes'].includes(pathname) ? 'text-[#818CF8]' : 'text-[#A1A1AA]'}`}>
           <Icon name="bars" size="lg" color="currentColor" />Menu
         </button>
       </nav>

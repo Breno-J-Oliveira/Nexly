@@ -135,7 +135,7 @@ function AgendaContent() {
 
   return (
     <div>
-      <PageToolbar><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <PageToolbar><div className="page-heading agenda-heading flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[#FAFAFA]">Agenda</h2>
           <p className="mt-1 text-sm text-[#A1A1AA]">
@@ -147,8 +147,8 @@ function AgendaContent() {
             {statusLabel ? ` · ${statusLabel}` : ''}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#0C0C10] p-1">
+        <div className="toolbar-actions flex flex-wrap items-center gap-2">
+          <div className="toolbar-secondary flex rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#0C0C10] p-1">
             <button
               type="button"
               onClick={() => setView('lista')}
@@ -164,7 +164,7 @@ function AgendaContent() {
               <Icon name="table-cells" size="xs" /> Semana
             </button>
           </div>
-          <Button onClick={() => setModalAberto(true)}>+ Novo agendamento</Button>
+          <Button className="toolbar-primary" onClick={() => setModalAberto(true)}>+ Novo agendamento</Button>
         </div>
       </div></PageToolbar>
 

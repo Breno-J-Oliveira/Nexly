@@ -1,10 +1,12 @@
 'use client';
 
+import { ResponsiveDetailPanel } from '@/components/ui/ResponsiveDetailPanel';
 import { MetricGrid } from '@/components/ui/MetricGrid';
 import { Icon } from '@/components/ui/Icon';
 import { PageToolbar } from '@/components/ui/PageToolbar';
+import { Modal } from '@/components/ui/Modal';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
@@ -28,10 +30,15 @@ interface Insumo {
 }
 
 export default function ServicosPage() {
+  const [detalhesAbertos, setDetalhesAbertos] = useState(false);
   const [busca, setBusca] = useState('');
   const [servicos, setServicos] = useState<Servico[]>([]);
-  const [selecionado, setSelecionado] = useState<Servico | null>(null);
+  const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
+  const selecionado = servicos.find(s => s.id === selecionadoId) || null;
   const [insumos, setInsumos] = useState<Insumo[]>([]);
+  const pedidoInsumos = useRef(0);
+  const [carregandoInsumos, setCarregandoInsumos] = useState(false);
+  const [erroInsumos, setErroInsumos] = useState(false);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [carregando, setCarregando] = useState(true);
 
@@ -64,13 +71,24 @@ export default function ServicosPage() {
     void carregar();
   }, [carregar]);
 
-  const selecionar = useCallback(async (s: Servico): Promise<void> => {
-    setSelecionado(s);
-    const r = await api.get<Insumo[]>(`/servicos/${s.id}/insumos`);
-    setInsumos(r.data);
+  const selecionar = useCallback(async (s: Servico, abrir = true): Promise<void> => {
+    if (abrir) setDetalhesAbertos(true);
+    setSelecionadoId(s.id);
+    const pedido = ++pedidoInsumos.current;
+    setInsumos([]);
+    setCarregandoInsumos(true);
+    setErroInsumos(false);
+    try {
+      const r = await api.get<Insumo[]>(`/servicos/${s.id}/insumos`);
+      if (pedido === pedidoInsumos.current) setInsumos(r.data);
+    } catch {
+      if (pedido === pedidoInsumos.current) setErroInsumos(true);
+    } finally {
+      if (pedido === pedidoInsumos.current) setCarregandoInsumos(false);
+    }
   }, []);
 
-  useEffect(() => { if (!selecionado && servicos[0]) void selecionar(servicos[0]); }, [servicos, selecionado, selecionar]);
+  useEffect(() => { if (!selecionado && servicos[0]) void selecionar(servicos[0], false); }, [servicos, selecionado, selecionar]);
 
   const salvarServico = async (): Promise<void> => {
     if (!formServico.nome || !formServico.duracaoMin || !formServico.preco) return;
@@ -97,8 +115,8 @@ export default function ServicosPage() {
     try {
       await api.delete(`/servicos/${s.id}`);
       toastSuccess('Serviço excluído');
-      if (selecionado?.id === s.id) setSelecionado(null);
       await carregar();
+      if (selecionado?.id === s.id) setSelecionadoId(null);
     } catch (e) {
       const err = e as { response?: { data?: { message?: string } } };
       toastError(err?.response?.data?.message || 'Erro ao excluir serviço');
@@ -129,14 +147,16 @@ export default function ServicosPage() {
     p.nome.toLowerCase().includes(buscaProduto.toLowerCase()),
   );
 
+  const servicosFiltrados = servicos.filter(s => s.nome.toLocaleLowerCase('pt-BR').includes(busca.toLocaleLowerCase('pt-BR')));
+
   return (
     <div>
-      <PageToolbar><div className="flex items-center justify-between">
+      <PageToolbar><div className="page-heading with-search flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[#FAFAFA]">Serviços</h2>
           <p className="mt-1 text-sm text-[#A1A1AA]">Cadastre serviços e configure insumos</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3"><Input aria-label="Buscar serviço" placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)} /><Button onClick={() => { setEditandoServicoId(null); setFormServico({ nome: '', duracaoMin: '', preco: '' }); setModalServicoAberto(true); }}>+ Novo serviço</Button></div>
+        <div className="toolbar-actions flex flex-wrap items-center gap-3"><div className="toolbar-search"><Input aria-label="Buscar serviço" placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)} /></div><Button className="toolbar-primary" onClick={() => { setEditandoServicoId(null); setFormServico({ nome: '', duracaoMin: '', preco: '' }); setModalServicoAberto(true); }}>+ Novo serviço</Button></div>
       </div></PageToolbar>
 
       <div className="hidden md:block"><MetricGrid items={[
@@ -157,11 +177,11 @@ export default function ServicosPage() {
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
           <div className="min-w-0">
-          <div className="space-y-3 md:hidden">{servicos.filter(s => s.nome.toLowerCase().includes(busca.toLowerCase())).map(s => <button key={s.id} onClick={() => void selecionar(s)} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#111116] p-4 text-left"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#18181F]"><Icon name="scissors" color="#818CF8" /></span><span className="min-w-0 flex-1"><strong className="block text-sm">{s.nome}</strong><span className="mt-1 block text-xs text-[#71717A]">{s.duracaoMin} min</span></span><span className="shrink-0 text-sm font-semibold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(s.preco))}</span></button>)}</div>
+          <div className="space-y-3 md:hidden">{servicosFiltrados.map(s => <button key={s.id} onClick={() => void selecionar(s)} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#111116] p-4 text-left"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#18181F]"><Icon name="scissors" color="#818CF8" /></span><span className="min-w-0 flex-1"><strong className="block text-sm">{s.nome}</strong><span className="mt-1 block text-xs text-[#71717A]">{s.duracaoMin} min</span></span><span className="shrink-0 text-sm font-semibold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(s.preco))}</span></button>)}</div>
           <div className="hidden min-w-0 overflow-x-auto rounded-xl border border-white/10 bg-[#111116] md:block">
             <table className="w-full text-left">
               <thead><tr>{['Serviço', 'Duração', 'Preço', 'Ações'].map(h => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
-              <tbody>{servicos.filter(s => s.nome.toLocaleLowerCase('pt-BR').includes(busca.toLocaleLowerCase('pt-BR'))).map(s => <tr key={s.id} className={selecionado?.id === s.id ? 'bg-[#6366F1]/10' : ''}>
+              <tbody>{servicosFiltrados.map(s => <tr key={s.id} className={selecionado?.id === s.id ? 'bg-[#6366F1]/10' : ''}>
                 <td className="px-4 py-4"><button className="text-left font-medium text-[#FAFAFA] hover:text-[#818CF8]" onClick={() => void selecionar(s)}>{s.nome}</button></td>
                 <td className="whitespace-nowrap px-4 py-4 text-[#A1A1AA]">{s.duracaoMin} min</td>
                 <td className="whitespace-nowrap px-4 py-4">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(s.preco))}</td>
@@ -169,19 +189,22 @@ export default function ServicosPage() {
               </tr>)}</tbody>
             </table>
           </div>
+          {servicosFiltrados.length === 0 && <EmptyState icon="scissors" title="Nenhum serviço encontrado" description="Tente outro nome na busca" />}
           </div>
 
-        <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5">
+        <ResponsiveDetailPanel title="Detalhes do Serviço" open={detalhesAbertos} onClose={() => setDetalhesAbertos(false)}>
           {selecionado ? (
             <>
-              <p className="mb-5 text-sm font-medium text-[#A1A1AA]">Detalhes do Serviço</p>
+              <p className="mb-5 hidden text-sm font-medium md:block text-[#A1A1AA]">Detalhes do Serviço</p>
               <div className="mb-5 flex flex-col items-center gap-3 border-b border-white/10 pb-5 text-center"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#6366F1]/10"><Icon name="scissors" color="#818CF8" /></span><h3 className="font-semibold">{selecionado.nome}</h3><p className="text-xs text-[#71717A]">{selecionado.duracaoMin} minutos</p></div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-semibold text-[#FAFAFA]">Insumos — {selecionado.nome}</h3>
-                <Button onClick={() => setModalInsumoAberto(true)}>+ Insumo</Button>
+                <Button onClick={() => { setDetalhesAbertos(false); setModalInsumoAberto(true); }}>+ Insumo</Button>
               </div>
               <div className="mt-3 space-y-2">
-                {insumos.length === 0 && (
+                {carregandoInsumos && <p role="status" className="text-sm text-[#A1A1AA]">Carregando insumos…</p>}
+                {erroInsumos && <p role="alert" className="text-sm text-red-400">Não foi possível carregar os insumos. <button className="underline" onClick={() => void selecionar(selecionado)}>Tentar novamente</button></p>}
+                {!carregandoInsumos && !erroInsumos && insumos.length === 0 && (
                   <p className="text-sm text-[#A1A1AA]">Nenhum insumo configurado.</p>
                 )}
                 {insumos.map((i) => (
@@ -203,14 +226,12 @@ export default function ServicosPage() {
           ) : (
             <p className="text-sm text-[#A1A1AA]">Selecione um serviço para configurar insumos.</p>
           )}
-        </div>
+        </ResponsiveDetailPanel>
       </div>
       )}
 
       {modalInsumoAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-6">
-            <h3 className="font-semibold text-[#FAFAFA]">Adicionar insumo</h3>
+        <Modal open title="Adicionar insumo" onClose={() => setModalInsumoAberto(false)}>
             <div className="mt-4 space-y-3">
               <Input
                 label="Buscar produto"
@@ -248,16 +269,11 @@ export default function ServicosPage() {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {modalServicoAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-6">
-            <h3 className="font-semibold text-[#FAFAFA]">
-              {editandoServicoId ? 'Editar serviço' : 'Novo serviço'}
-            </h3>
+        <Modal open title={editandoServicoId ? 'Editar serviço' : 'Novo serviço'} onClose={() => setModalServicoAberto(false)}>
             <div className="mt-4 space-y-3">
               <Input
                 label="Nome"
@@ -292,8 +308,7 @@ export default function ServicosPage() {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

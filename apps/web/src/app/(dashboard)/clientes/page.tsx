@@ -2,6 +2,7 @@
 
 import { MetricGrid } from '@/components/ui/MetricGrid';
 import { PageToolbar } from '@/components/ui/PageToolbar';
+import { Modal } from '@/components/ui/Modal';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
@@ -130,7 +131,7 @@ export default function ClientesPage() {
 
   return (
     <div className="clients-page">
-      <PageToolbar><div className="flex items-center justify-between">
+      <PageToolbar><div className="page-heading with-search flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[#FAFAFA]">Clientes</h2>
           <p className="mt-1 text-sm text-[#A1A1AA]">
@@ -138,14 +139,14 @@ export default function ClientesPage() {
             {totalClientes === 1 ? 'registrado' : 'registrados'}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">      <div className="w-full sm:w-56">
+        <div className="toolbar-actions flex flex-wrap items-center gap-3">      <div className="toolbar-search w-full sm:w-56">
         <Input
           ref={buscaRef}
           aria-label="Buscar cliente" placeholder="Buscar cliente..."
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
-      </div><Button onClick={abrirNovo}>+ Novo cliente</Button></div>
+      </div><Button className="toolbar-primary" onClick={abrirNovo}>+ Novo cliente</Button></div>
       </div></PageToolbar>
 
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -234,11 +235,7 @@ export default function ClientesPage() {
       </div>
 
       {modalAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-6">
-            <h3 className="text-lg font-semibold text-[#FAFAFA]">
-              {editandoId ? 'Editar cliente' : 'Novo cliente'}
-            </h3>
+        <Modal open title={editandoId ? 'Editar cliente' : 'Novo cliente'} onClose={() => setModalAberto(false)}>
             <div className="mt-4 space-y-3">
               <Input
                 label="Nome"
@@ -269,8 +266,7 @@ export default function ClientesPage() {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
