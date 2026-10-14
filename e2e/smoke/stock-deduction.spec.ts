@@ -45,6 +45,7 @@ test('concluir agendamento baixa o estoque automaticamente', async ({ page }) =>
 
   // 2. Cria um agendamento (Escova Progressiva consome 1x o produto)
   await page.getByRole('link', { name: 'Agenda' }).click();
+  await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await page.getByRole('button', { name: '+ Novo agendamento' }).first().click();
 
   // Step 1: cliente
@@ -65,7 +66,8 @@ test('concluir agendamento baixa o estoque automaticamente', async ({ page }) =>
   await page.getByRole('button', { name: 'Salvar' }).click();
 
   // 3. Confirma e conclui o novo agendamento
-  const novo = page.locator('div.group').filter({ hasText: SERVICO }).filter({ hasText: CLIENTE });
+  const hora = dataHora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const novo = page.locator('div.group').filter({ hasText: SERVICO }).filter({ hasText: CLIENTE }).filter({ hasText: hora });
   await expect(novo.first()).toBeVisible();
   await novo.getByRole('button', { name: 'Confirmar' }).click();
   await novo.getByRole('button', { name: 'Concluir' }).click();
