@@ -2,12 +2,13 @@
 
 import { FontAwesomeIcon, FontAwesomeIconProps } from '@fortawesome/react-fontawesome';
 import { findIconDefinition, IconPrefix, IconName } from '@fortawesome/fontawesome-svg-core';
-import { library } from '@fortawesome/fontawesome-svg-core';
-import { fas } from '@fortawesome/free-solid-svg-icons';
-import { far } from '@fortawesome/free-regular-svg-icons';
-import { fab } from '@fortawesome/free-brands-svg-icons';
+import { library, config } from '@fortawesome/fontawesome-svg-core';
+import { faArrowRightArrowLeft, faArrowRightFromBracket, faArrowTrendDown, faArrowTrendUp, faBarcode, faBars, faBell as faBellSolid, faBlog, faBox, faBoxOpen, faBoxesStacked, faCalendarDays as faCalendarDaysSolid, faCalendarXmark as faCalendarXmarkSolid, faCamera as faCameraSolid, faCashRegister, faChartColumn, faChartLine, faCheck, faChevronDown, faChevronLeft, faChevronRight, faCircleCheck as faCircleCheckSolid, faCircleExclamation, faDumbbell, faEye as faEyeSolid, faEyeSlash as faEyeSlashSolid, faGaugeHigh, faGear, faGhost, faHandHoldingDollar, faList, faLock, faMobileScreenButton, faMoneyBillWave, faPaw, faReceipt, faRocket, faScissors, faSpa, faStar as faStarSolid, faTableCells, faTriangleExclamation, faTruck as faTruckSolid, faUnderline, faUser as faUserSolid, faUserGroup, faUserPlus, faUserTie, faUsers, faUsersSlash, faWandMagicSparkles, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faBell as faBellRegular, faCalendarDays as faCalendarDaysRegular, faCalendarXmark as faCalendarXmarkRegular, faCamera as faCameraRegular, faCircleCheck as faCircleCheckRegular, faEye as faEyeRegular, faEyeSlash as faEyeSlashRegular, faStar as faStarRegular, faTruck as faTruckRegular, faUser as faUserRegular } from '@fortawesome/free-regular-svg-icons';
+import { faApple, faEdge, faGoogle, faInstagram, faLine, faReact, faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 
-library.add(fas, far, fab);
+config.autoAddCss = false;
+library.add(faArrowRightArrowLeft, faArrowRightFromBracket, faArrowTrendDown, faArrowTrendUp, faBarcode, faBars, faBellSolid, faBlog, faBox, faBoxOpen, faBoxesStacked, faCalendarDaysSolid, faCalendarXmarkSolid, faCameraSolid, faCashRegister, faChartColumn, faChartLine, faCheck, faChevronDown, faChevronLeft, faChevronRight, faCircleCheckSolid, faCircleExclamation, faDumbbell, faEyeSolid, faEyeSlashSolid, faGaugeHigh, faGear, faGhost, faHandHoldingDollar, faList, faLock, faMobileScreenButton, faMoneyBillWave, faPaw, faReceipt, faRocket, faScissors, faSpa, faStarSolid, faTableCells, faTriangleExclamation, faTruckSolid, faUnderline, faUserSolid, faUserGroup, faUserPlus, faUserTie, faUsers, faUsersSlash, faWandMagicSparkles, faXmark, faBellRegular, faCalendarDaysRegular, faCalendarXmarkRegular, faCameraRegular, faCircleCheckRegular, faEyeRegular, faEyeSlashRegular, faStarRegular, faTruckRegular, faUserRegular, faApple, faEdge, faGoogle, faInstagram, faLine, faReact, faWhatsapp);
 
 interface IconProps {
   name: string;

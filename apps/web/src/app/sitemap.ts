@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { getAllPosts } from '@/lib/blog';
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://nexly.vercel.app';
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://nexly-web.vercel.app';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = ['/', '/funcionalidades', '/precos', '/privacidade', '/termos'].map(

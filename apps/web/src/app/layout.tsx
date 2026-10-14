@@ -2,8 +2,10 @@ import type { Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth';
 import { Toaster } from '@/components/ui/Toaster';
 import './globals.css';
+import '@fontsource-variable/inter';
+import '@fortawesome/fontawesome-svg-core/styles.css';
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://nexly.vercel.app';
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://nexly-web.vercel.app';
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),

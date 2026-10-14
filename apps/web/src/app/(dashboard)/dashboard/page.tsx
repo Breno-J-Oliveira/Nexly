@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -15,6 +15,7 @@ import {
 import { Skeleton } from '@/components/ui/Skeleton';
 import { api } from '@/lib/api';
 import { formatarMoeda } from '@/lib/format';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 interface DashboardData {
   agendamentosHoje: { total: number; AGENDADO: number; CONFIRMADO: number; CONCLUIDO: number; CANCELADO: number };
@@ -71,14 +72,18 @@ function statusColor(status: string) {
 export default function DashboardPage() {
   const [dados, setDados] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reload, setReload] = useState(0);
   const [produtosVencendo, setProdutosVencendo] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
+    setError(false);
     api.get<DashboardData>('/dashboard')
       .then((r) => setDados(r.data))
-      .catch(() => undefined)
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [reload]);
 
   useEffect(() => {
     api
@@ -87,23 +92,18 @@ export default function DashboardPage() {
       .catch(() => undefined);
   }, []);
 
-  const hoje = useMemo(() => {
-    const d = new Date();
-    const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-    return `${dias[d.getDay()]}, ${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
-  }, []);
 
+  if (error) return <ErrorState onRetry={() => setReload(value => value + 1)} />;
   if (loading || !dados) {
     return (
       <div>
         <div className="h-7 w-40 rounded skeleton-shimmer" />
         <div className="mt-2 h-4 w-64 rounded skeleton-shimmer" />
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Skeleton variant="kpi" count={4} />
         </div>
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="col-span-2 rounded-2xl p-5" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="lg:col-span-2 rounded-2xl p-5" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div className="h-5 w-2/5 rounded skeleton-shimmer" />
             <div className="mt-4 h-64 rounded skeleton-shimmer" />
           </div>
@@ -123,7 +123,7 @@ export default function DashboardPage() {
     {
       label: 'FATURAMENTO HOJE',
       valor: formatarMoeda(dados.faturamentoHoje),
-      trend: `${variacaoPositiva ? '+' : ''}${variacao.toFixed(1)}% vs ontem`,
+      trend: `${variacaoPositiva ? '+' : ''}${variacao.toFixed(1)}% no mês vs anterior`,
       trendUp: variacaoPositiva,
       icon: (
         <Icon name="arrow-right-arrow-left" className="text-[#22C55E]" size="sm" />
@@ -133,7 +133,7 @@ export default function DashboardPage() {
     {
       label: 'ATENDIMENTOS HOJE',
       valor: String(dados.agendamentosHoje.total),
-      trend: `+${dados.agendamentosHoje.CONFIRMADO} agendados`,
+      trend: `${dados.agendamentosHoje.CONFIRMADO} confirmados`,
       trendUp: true,
       icon: (
         <Icon name="users" className="text-[#818CF8]" size="sm" />
@@ -143,8 +143,8 @@ export default function DashboardPage() {
     {
       label: 'TICKET MÉDIO',
       valor: formatarMoeda(dados.ticketMedio),
-      trend: '-2.1% vs média',
-      trendUp: false,
+      trend: 'Média das vendas do mês',
+      trendUp: true,
       icon: (
         <Icon name="money-bill-wave" className="text-[#F87171]" size="sm" />
       ),
@@ -153,7 +153,7 @@ export default function DashboardPage() {
     {
       label: 'TAXA DE OCUPAÇÃO',
       valor: `${dados.taxaOcupacao}%`,
-      trend: 'Ideal para quarta',
+      trend: 'Estimativa de horários ocupados',
       trendUp: true,
       icon: (
         <Icon name="chart-line" className="text-[#EAB308]" size="sm" />
@@ -164,19 +164,14 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="flex flex-col gap-1">
-        <h1 className="text-[22px] font-semibold" style={{ color: '#FAFAFA' }}>Painel Geral</h1>
-        <p className="text-[13px]" style={{ color: '#71717A' }}>{hoje}</p>
-      </div>
-
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi) => (
-          <div key={kpi.label} className="rounded-2xl border p-5" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div key={kpi.label} className="rounded-2xl border p-6" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
             <div className="flex items-start justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#71717A' }}>{kpi.label}</span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: kpi.iconBg }}>{kpi.icon}</div>
             </div>
-            <div className="mt-4 text-[28px] font-semibold" style={{ color: '#FAFAFA' }}>{kpi.valor}</div>
+            <div className="mt-4 text-[32px] font-bold tracking-tight" style={{ color: '#FAFAFA' }}>{kpi.valor}</div>
             <div className="mt-1 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium" style={{ color: kpi.trendUp ? '#22C55E' : '#F87171', backgroundColor: kpi.trendUp ? 'rgba(34,197,94,0.10)' : 'rgba(248,113,113,0.10)' }}>
               {kpi.trendUp ? (
                 <Icon name="arrow-trend-up" size="xs" />
@@ -192,7 +187,7 @@ export default function DashboardPage() {
       {produtosVencendo > 0 && (
         <Link
           href="/produtos"
-          className="mt-4 flex items-center justify-between rounded-2xl border p-5 transition-colors hover:bg-white/[0.02]"
+          className="mt-4 flex items-center justify-between rounded-2xl border p-6 transition-colors hover:bg-white/[0.02]"
           style={{ borderColor: 'rgba(234,179,8,0.30)', backgroundColor: 'rgba(234,179,8,0.06)' }}
         >
           <div className="flex items-center gap-3">
@@ -215,7 +210,7 @@ export default function DashboardPage() {
         </Link>
       )}
 
-      <div className="mt-6 rounded-2xl border p-5" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div className="mt-6 rounded-2xl border p-6" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>Evolução de Vendas Semanal</h3>
@@ -246,7 +241,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-2xl border p-5 lg:col-span-2" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="rounded-2xl border p-6 lg:col-span-2" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>Próximos Compromissos</h3>
@@ -284,7 +279,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border p-5" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="rounded-2xl border p-6" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>Alertas Operacionais</h3>

@@ -2,10 +2,12 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { forwardRef, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { AuthInput, useAuthReady } from '@/components/ui/AuthField';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { api } from '@/lib/api';
@@ -20,41 +22,8 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-/**
- * O `ref` precisa chegar ao `<input>` nativo: o `register` do react-hook-form
- * depende dele para ler o valor direto do DOM. Sem isso, valores preenchidos
- * pelo autofill do navegador (que não dispara `onChange`) ficam fora do form
- * state e a validação acusa campo vazio mesmo com o input preenchido.
- */
-const AuthInput = forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement> & {
-    label: string;
-    error?: string;
-    right?: React.ReactNode;
-  }
->(function AuthInput({ label, error, right, ...props }, ref) {
-  return (
-    <div className="flex flex-col gap-2">
-      <label className="text-[13px] font-medium" style={{ color: '#A1A1AA' }}>
-        {label}
-      </label>
-      <div className="relative">
-        <input
-          ref={ref}
-          {...props}
-          className={`w-full rounded-xl border bg-[#111116] px-4 py-3 text-[14px] text-[#FAFAFA] placeholder:text-[#71717A] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30 ${
-            error ? 'border-red-500/50' : 'border-[rgba(255,255,255,0.08)]'
-          } ${right ? 'pr-11' : ''}`}
-        />
-        {right && <div className="absolute right-3 top-1/2 -translate-y-1/2">{right}</div>}
-      </div>
-      {error && <span className="text-xs text-red-400">{error}</span>}
-    </div>
-  );
-});
-
 export default function LoginPage() {
+  const ready = useAuthReady();
   const { login, completeLogin } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +31,7 @@ export default function LoginPage() {
   const [twoFactor, setTwoFactor] = useState<{ tempToken: string } | null>(null);
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [backupMode, setBackupMode] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const twoFactorInputRef = useRef<HTMLInputElement>(null);
 
   // Foca o campo do código quando a etapa de 2FA aparece. Equivale ao
@@ -102,8 +72,9 @@ export default function LoginPage() {
   };
 
   const verificar2fa = async (): Promise<void> => {
-    if (!twoFactor) return;
+    if (!twoFactor || verifying) return;
     setError(null);
+    setVerifying(true);
     try {
       const res = await api.post<{ accessToken: string; usuario: UsuarioPublico }>(
         '/auth/2fa/verify',
@@ -113,21 +84,23 @@ export default function LoginPage() {
       router.push('/dashboard');
     } catch {
       setError('Código inválido ou expirado');
+    } finally {
+      setVerifying(false);
     }
   };
 
   return (
     <div
-      className="rounded-3xl border p-8 shadow-2xl"
+      className="rounded-2xl border px-6 py-8 shadow-2xl sm:p-10"
       style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}
     >
       <div className="flex justify-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ backgroundColor: '#6366F1' }}>
-          <img src="/logo.svg" alt="Nexly" className="h-6 w-6 object-contain" />
+        <div className="flex h-12 w-12 items-center justify-center">
+          <Image src="/logo.svg" alt="Nexly" width={40} height={40} className="h-10 w-10 object-contain" />
         </div>
       </div>
 
-      <h1 className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>
+      <h1 className="mt-8 text-center text-[28px] font-bold tracking-tight sm:text-[30px]" style={{ color: '#FAFAFA' }}>
         Boas-vindas ao Nexly
       </h1>
       <p className="mt-2 text-center text-[14px]" style={{ color: '#A1A1AA' }}>
@@ -157,7 +130,7 @@ export default function LoginPage() {
               setTwoFactorCode(backupMode ? e.target.value : e.target.value.replace(/\D/g, ''))
             }
             placeholder={backupMode ? 'código de backup' : '000000'}
-            inputMode="numeric"
+            inputMode={backupMode ? 'text' : 'numeric'} autoComplete="one-time-code"
             maxLength={backupMode ? 16 : 6}
             className="w-full rounded-xl border bg-[#111116] px-4 py-3 text-center font-mono text-[40px] tracking-widest text-[#FAFAFA] placeholder:text-[#3F3F46] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30"
             style={{ borderColor: 'rgba(255,255,255,0.08)' }}
@@ -179,7 +152,7 @@ export default function LoginPage() {
           {error && <p className="text-center text-sm text-red-400">{error}</p>}
           <Button
             onClick={() => void verificar2fa()}
-            loading={isSubmitting}
+            loading={verifying || !ready}
             disabled={twoFactorCode.length < 6}
             className="w-full rounded-xl py-3 text-[14px] font-semibold shadow-lg shadow-[#6366F1]/20"
           >
@@ -187,7 +160,7 @@ export default function LoginPage() {
           </Button>
         </div>
       ) : (
-        <form onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="mt-6 space-y-4">
+        <form method="post" onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="mt-6 space-y-4">
         <AuthInput
           label="E-mail"
           type="email"
@@ -223,7 +196,7 @@ export default function LoginPage() {
 
         {error && <p className="text-center text-sm text-red-400">{error}</p>}
 
-        <Button type="submit" loading={isSubmitting} className="w-full rounded-xl py-3 text-[14px] font-semibold shadow-lg shadow-[#6366F1]/20">
+        <Button type="submit" loading={isSubmitting || !ready} className="w-full rounded-xl py-3 text-[14px] font-semibold shadow-lg shadow-[#6366F1]/20">
           Entrar no painel
         </Button>
       </form>
@@ -232,22 +205,23 @@ export default function LoginPage() {
       <div className="relative mt-6 flex items-center">
         <div className="flex-1 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
         <span className="px-3 text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#71717A' }}>
-          ou continue com
+          outras formas de acesso
         </span>
         <div className="flex-1 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3">
-        <button type="button" className="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-medium transition-colors hover:bg-white/5" style={{ borderColor: 'rgba(255,255,255,0.08)', color: '#FAFAFA' }}>
+        <button type="button" disabled title="Login social ainda não disponível" className="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-medium opacity-50 disabled:cursor-not-allowed" style={{ borderColor: 'rgba(255,255,255,0.08)', color: '#FAFAFA' }}>
           <Icon name="google" variant="brand" className="text-[18px]" style={{ color: '#4285F4' }} />
           Google
         </button>
-        <button type="button" className="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-medium transition-colors hover:bg-white/5" style={{ borderColor: 'rgba(255,255,255,0.08)', color: '#FAFAFA' }}>
+        <button type="button" disabled title="Login social ainda não disponível" className="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-medium opacity-50 disabled:cursor-not-allowed" style={{ borderColor: 'rgba(255,255,255,0.08)', color: '#FAFAFA' }}>
           <Icon name="apple" variant="brand" className="text-[18px]" style={{ color: '#FAFAFA' }} />
           Apple
         </button>
       </div>
 
+      <p className="mt-2 text-center text-[11px] text-[#A1A1AA]">Google e Apple estarão disponíveis em breve.</p>
       <p className="mt-6 text-center text-[12px] leading-relaxed" style={{ color: '#71717A' }}>
         Ao continuar, você concorda com os{' '}
         <Link href="/termos" className="underline hover:text-[#A1A1AA]" style={{ color: '#A1A1AA' }}>

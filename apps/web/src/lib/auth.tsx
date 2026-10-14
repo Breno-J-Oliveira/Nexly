@@ -2,7 +2,7 @@
 
 import { UsuarioPublico } from '@nexly/shared';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { api, setAccessToken } from './api';
+import { api, refreshSession, setAccessToken } from './api';
 
 /**
  * Helper para buscar os dados do usuário autenticado a partir do JWT
@@ -41,19 +41,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .post<{ accessToken: string | null; usuario: UsuarioPublico | null }>('/auth/refresh', {})
-      .then((res) => {
-        if (res.data.accessToken && res.data.usuario) {
-          setAccessToken(res.data.accessToken);
-          setUser(res.data.usuario);
+    let active = true;
+    refreshSession()
+      .then((session) => {
+        if (!active) return;
+        if (session?.accessToken && session.usuario) {
+          setAccessToken(session.accessToken);
+          setUser(session.usuario);
         }
       })
       .catch(() => {
+        if (!active) return;
         setAccessToken(null);
         setUser(null);
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
   const login = async (email: string, senha: string): Promise<LoginResponse> => {

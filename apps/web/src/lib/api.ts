@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { env } from './env';
+import type { UsuarioPublico } from '@nexly/shared';
 
 // Access token em memória (não em localStorage, para evitar XSS).
 let accessToken: string | null = null;
@@ -24,18 +25,27 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-let refreshing: Promise<string | null> | null = null;
+interface RefreshResult { accessToken: string | null; usuario: UsuarioPublico | null }
+let refreshing: Promise<RefreshResult | null> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+/** O bootstrap e os retries compartilham uma única rotação, inclusive em StrictMode. */
+export function refreshSession(): Promise<RefreshResult | null> {
+  if (!refreshing) {
+    refreshing = requestRefresh().finally(() => { refreshing = null; });
+  }
+  return refreshing;
+}
+
+async function requestRefresh(): Promise<RefreshResult | null> {
   try {
-    const { data } = await axios.post<{ accessToken: string | null }>(
+    const { data } = await axios.post<RefreshResult>(
       `${env.NEXT_PUBLIC_API_URL}/api/auth/refresh`,
       {},
       { withCredentials: true },
     );
     if (data.accessToken) {
       setAccessToken(data.accessToken);
-      return data.accessToken;
+      return data;
     }
     return null;
   } catch {
@@ -58,11 +68,8 @@ api.interceptors.response.use(
     ) {
       original._retry = true;
 
-      if (!refreshing) {
-        refreshing = refreshAccessToken();
-      }
-      const newToken = await refreshing;
-      refreshing = null;
+      const session = await refreshSession();
+      const newToken = session?.accessToken;
 
       if (newToken) {
         original.headers.Authorization = `Bearer ${newToken}`;

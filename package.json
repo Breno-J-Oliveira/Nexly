@@ -23,6 +23,8 @@
     "db:seed": "npm run seed --workspace @nexly/api"
   },
   "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "@playwright/test": "^1.63.0",
     "@types/node-cron": "^3.0.11",
     "husky": "^9.1.6",
@@ -45,6 +47,8 @@
   "packageManager": "npm@11.16.0",
   "allowScripts": {},
   "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "framer-motion": "^13.1.1",
     "sonner": "^2.0.8"
   }

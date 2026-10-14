@@ -24,9 +24,7 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@nexly/shared'],
   poweredByHeader: false,
-  experimental: {
-    serverComponentsExternalPackages: ['@zxing/browser'],
-  },
+  serverExternalPackages: ['@zxing/browser'],
   eslint: {
     ignoreDuringBuilds: true,
   },
