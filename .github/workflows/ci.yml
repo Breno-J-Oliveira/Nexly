@@ -172,7 +172,6 @@ jobs:
           fi
           echo "✅ Cleanup OK."
 
-
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
@@ -206,6 +205,8 @@ jobs:
       DIRECT_URL: postgresql://nexly:nexly_test_password@localhost:5432/nexly_test?schema=public
       REDIS_URL: redis://localhost:6379
       BASE_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:3001
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -215,15 +216,23 @@ jobs:
       - run: npm ci
       - run: npx prisma generate --schema apps/api/prisma/schema.prisma
       - run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+      - run: npm run build --workspace @nexly/shared
       - run: npm run seed --workspace @nexly/api
       - run: npm run build --workspace @nexly/api
       - run: npm run build --workspace @nexly/web
       - run: npx playwright install --with-deps chromium
       - name: Inicia API e web em background
         run: |
-          node apps/api/dist/src/main.js > /tmp/api.log 2>&1 &
+          NODE_ENV=development node apps/api/dist/src/main.js > /tmp/api.log 2>&1 &
           npm run start --workspace @nexly/web > /tmp/web.log 2>&1 &
-          sleep 5
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:3001/api/health >/dev/null && curl -fsS http://localhost:3000/login >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          tail -n 30 /tmp/api.log /tmp/web.log
+          exit 1
       - run: npx playwright test
       - uses: actions/upload-artifact@v4
         if: always()
@@ -231,4 +240,3 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
-

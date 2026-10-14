@@ -24,8 +24,8 @@ async function lerEstoque(page: Page, produto: string): Promise<number> {
   return Number(texto.replace(/\D/g, ''));
 }
 
-async function selecionarOpcao(page: Page, nth: number, texto: string): Promise<void> {
-  const select = page.locator('select').nth(nth);
+async function selecionarOpcao(page: Page, label: string, texto: string): Promise<void> {
+  const select = page.getByLabel(label, { exact: true });
   const option = select.locator('option').filter({ hasText: texto }).first();
   const value = await option.getAttribute('value');
   if (!value) throw new Error(`Opção "${texto}" não encontrada`);
@@ -45,15 +45,15 @@ test('concluir agendamento baixa o estoque automaticamente', async ({ page }) =>
 
   // 2. Cria um agendamento (Escova Progressiva consome 1x o produto)
   await page.getByRole('link', { name: 'Agenda' }).click();
-  await page.getByRole('button', { name: '+ Novo agendamento' }).click();
+  await page.getByRole('button', { name: '+ Novo agendamento' }).first().click();
 
   // Step 1: cliente
   await page.getByRole('button', { name: CLIENTE }).click();
   await page.getByRole('button', { name: 'Próximo' }).click();
 
   // Step 2: profissional + serviço
-  await selecionarOpcao(page, 0, PROFISSIONAL);
-  await selecionarOpcao(page, 1, SERVICO);
+  await selecionarOpcao(page, 'Profissional', PROFISSIONAL);
+  await selecionarOpcao(page, 'Serviço', SERVICO);
   await page.getByRole('button', { name: 'Próximo' }).click();
 
   // Step 3: horário futuro (hoje, +1h) + salvar

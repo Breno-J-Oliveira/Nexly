@@ -1,7 +1,7 @@
 # Nexly — Gestão para pequenos negócios
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js">
+  <img src="https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js">
   <img src="https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" alt="NestJS">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma">
@@ -10,8 +10,8 @@
   <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind">
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <br>
-  <img src="https://img.shields.io/badge/tests-125_passing-brightgreen?style=flat-square" alt="Tests">
-  <img src="https://img.shields.io/badge/suites-18-7B61FF?style=flat-square" alt="Suites">
+  <img src="https://img.shields.io/badge/tests-183_passing-brightgreen?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/suites-27-7B61FF?style=flat-square" alt="Suites">
   <img src="https://img.shields.io/badge/fases-0-a-4_+_DS_concluídas-brightgreen?style=flat-square" alt="Fases">
   <img src="https://img.shields.io/badge/licença-educacional-blue?style=flat-square" alt="License">
   <br>
@@ -70,9 +70,9 @@ Projeto desenvolvido como **Trabalho de Conclusão de Curso (TCC)** do técnico 
 
 ```
 ┌─────────────────────────────────────────────────┐
-│               Frontend (Next.js 14)              │
+│               Frontend (Next.js 15)              │
 │            http://localhost:3000                 │
-│      React 18 + Tailwind CSS + Recharts          │
+│      React 19 + Tailwind CSS + Recharts          │
 └──────────────────┬──────────────────────────────┘
                    │ REST API (JWT Bearer)
 ┌──────────────────▼──────────────────────────────┐
@@ -228,7 +228,7 @@ e 20 vendas no PDV — dados suficientes para explorar o dashboard e o históric
 # Typecheck (API + Web)
 npm run typecheck
 
-# Testes unitários da API (Jest — 15 suites / 93 testes passando)
+# Testes unitários da API (Jest — 27 suites / 183 testes passando)
 cd apps/api && npm test
 ```
 
@@ -311,9 +311,9 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | Categoria | Status |
 |---|---|
 | Backend (NestJS + Prisma + PostgreSQL + Redis) | ✅ Implementado e validado |
-| Frontend (Next.js 14 + Tailwind dark + Recharts) | ✅ Implementado e validado |
+| Frontend (Next.js 15 + Tailwind dark + Recharts) | ✅ Implementado e validado |
 | Multi-tenant com Prisma Extension + RLS | ✅ Implementado |
-| Testes (Jest) | ✅ 15 suites / 93 testes passando |
+| Testes (Jest) | ✅ 27 suites / 183 testes passando |
 | Typecheck (TypeScript strict) | ✅ 0 erros |
 | Seed de dados demo | ✅ 30+ agendamentos, 6 produtos, 3 profissionais, 20 vendas |
 | Telas CRUD (Clientes, Profissionais, Produtos, Serviços) | ✅ Implementadas |

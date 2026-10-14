@@ -11,7 +11,7 @@ export default defineConfig({
   reporter: [['html', { open: 'never' }], ['line']],
   globalSetup: './e2e/auth.setup.ts',
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || 'http://localhost:3002',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
