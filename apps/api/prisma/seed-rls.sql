@@ -11,7 +11,7 @@
 -- Isso evita o erro "text = uuid" e cobre o caso do setting não estar definido.
 CREATE OR REPLACE FUNCTION app_current_tenant() RETURNS text AS $$
   SELECT NULLIF(current_setting('app.current_tenant', true), '');
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE SET search_path = pg_catalog;
 
 -- Tabelas com empresa_id direto ---------------------------------
 
