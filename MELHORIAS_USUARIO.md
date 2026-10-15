@@ -9,7 +9,7 @@ As recomendações reais, presets e seleção persistida de recursos têm implem
 | 3 | Rascunho seguro do cadastro sem armazenar senhas | Retomar etapas sem perder dados | Alta |
 | 4 | Terminologia configurável: cliente, paciente, tutor | Adaptar a linguagem da interface | Alta |
 | 5 | Cadastro de animais vinculado ao tutor | Atender a rotina real de clínicas e petshops | Alta |
-| 6 | Agenda com sessões recorrentes | Reduzir trabalho em consultas semanais | Alta |
+| 6 | Recorrência com regras avançadas de calendário | Acrescentar regras mensais, exceções e fusos às séries por intervalo já disponíveis | Alta |
 | 7 | Reagendamento por arrastar com confirmação | Ajustar horários com segurança | Média |
 | 8 | Lista de espera com preenchimento de vagas | Aproveitar cancelamentos | Média |
 | 9 | Assistente de importação CSV com prévia | Migrar contatos sem duplicações silenciosas | Alta |
@@ -25,7 +25,7 @@ As recomendações reais, presets e seleção persistida de recursos têm implem
 | 19 | Visualização antecipada de mudanças nos módulos | Mostrar dependências antes de confirmar a configuração | Média |
 | 20 | Modo de demonstração com dados fictícios isolados | Explorar funções sem alterar o negócio real | Alta |
 
-Os presets organizam os módulos de gestão disponíveis. Funcionalidades clínicas, prontuário, prescrição ou tratamento de dados de saúde exigem projeto e controles específicos; o preset de psicologia ou veterinária não cria essas funcionalidades.
+Os seis módulos antes marcados em desenvolvimento têm uma primeira versão funcional descrita em `MODULOS_OPERACIONAIS.md`. Os presets organizam os módulos de gestão disponíveis. Funcionalidades clínicas, prontuário, prescrição ou tratamento de dados de saúde exigem projeto e controles específicos; o preset de psicologia ou veterinária não cria essas funcionalidades.
 
 ## Recomendações reais
 
