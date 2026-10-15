@@ -15,6 +15,8 @@ describe('TokenService', () => {
         create: jest.Mock;
       };
       usuario: { findUnique: jest.Mock };
+      authSession: { updateMany: jest.Mock };
+      $transaction: jest.Mock;
     };
   };
 
@@ -38,6 +40,8 @@ describe('TokenService', () => {
           create: jest.fn(),
         },
         usuario: { findUnique: jest.fn() },
+        authSession: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        $transaction: jest.fn((queries: unknown[]) => Promise.all(queries)),
       },
     };
 
@@ -55,6 +59,8 @@ describe('TokenService', () => {
   it('refresh com token válido revoga o antigo e emite um novo', async () => {
     prisma.client.refreshToken.findUnique.mockResolvedValue({
       id: 'rt1',
+      sessionId: 's1',
+      sessao: { revogado: false, expiresAt: new Date(Date.now() + 60000) },
       usuarioId: 'u1',
       tokenHash: 'hash',
       expiresAt: new Date(Date.now() + 60_000),
@@ -62,7 +68,7 @@ describe('TokenService', () => {
     });
     prisma.client.usuario.findUnique.mockResolvedValue(usuarioMock);
     prisma.client.refreshToken.updateMany.mockResolvedValue({ count: 1 });
-    prisma.client.refreshToken.create.mockResolvedValue({});
+    prisma.client.refreshToken.create.mockResolvedValue({ sessionId: 's1' });
 
     const result = await service.rotateRefreshToken('token-valido');
 
@@ -74,11 +80,19 @@ describe('TokenService', () => {
     );
     expect(result.newToken).toBeDefined();
     expect(result.usuario.id).toBe('u1');
+    expect(result.sessionId).toBe('s1');
+    expect(prisma.client.refreshToken.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ sessao: { connect: { id: 's1' } } }),
+      }),
+    );
   });
 
   it('refresh com token já revogado invalida todas as sessões e retorna 401', async () => {
     prisma.client.refreshToken.findUnique.mockResolvedValue({
       id: 'rt1',
+      sessionId: 's1',
+      sessao: { revogado: false, expiresAt: new Date(Date.now() + 60000) },
       usuarioId: 'u1',
       tokenHash: 'hash',
       expiresAt: new Date(Date.now() + 60_000),
@@ -100,6 +114,8 @@ describe('TokenService', () => {
   it('não emite token novo se outra requisição venceu a rotação', async () => {
     prisma.client.refreshToken.findUnique.mockResolvedValue({
       id: 'rt1',
+      sessionId: 's1',
+      sessao: { revogado: false, expiresAt: new Date(Date.now() + 60000) },
       usuarioId: 'u1',
       expiresAt: new Date(Date.now() + 60000),
       revogado: false,
@@ -108,5 +124,43 @@ describe('TokenService', () => {
     prisma.client.refreshToken.updateMany.mockResolvedValue({ count: 0 });
     await expect(service.rotateRefreshToken('same-token')).rejects.toThrow(UnauthorizedException);
     expect(prisma.client.refreshToken.create).not.toHaveBeenCalled();
+  });
+  it.each(['revogado', 'expirado'])('não renova uma sessão %s', async (state) => {
+    prisma.client.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt1',
+      usuarioId: 'u1',
+      sessionId: 's1',
+      revogado: false,
+      expiresAt: new Date(Date.now() + 60000),
+      sessao: {
+        revogado: state === 'revogado',
+        expiresAt: new Date(Date.now() + (state === 'expirado' ? -1000 : 60000)),
+      },
+    });
+    await expect(service.rotateRefreshToken('token')).rejects.toThrow(UnauthorizedException);
+    expect(prisma.client.refreshToken.create).not.toHaveBeenCalled();
+  });
+
+  it('logout revoga a sessão estável mesmo com cookie de uma rotação anterior', async () => {
+    prisma.client.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt1',
+      usuarioId: 'u1',
+      sessionId: 's1',
+      revogado: true,
+    });
+    await service.revokeRefreshToken('old-cookie');
+    expect(prisma.client.authSession.updateMany).toHaveBeenCalledWith({
+      where: { id: 's1', usuarioId: 'u1' },
+      data: { revogado: true },
+    });
+  });
+  it('refresh após logout não revoga outras sessões legítimas', async () => {
+    prisma.client.refreshToken.findUnique.mockResolvedValue({
+      revogado: true,
+      expiresAt: new Date(Date.now() + 60000),
+      sessao: { revogado: true, expiresAt: new Date(Date.now() + 60000) },
+    });
+    await expect(service.rotateRefreshToken('logged-out')).rejects.toThrow(UnauthorizedException);
+    expect(prisma.client.authSession.updateMany).not.toHaveBeenCalled();
   });
 });

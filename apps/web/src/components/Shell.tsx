@@ -16,6 +16,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/dashboard': 'Painel Geral',
   '/marketing':'Marketing', '/tarefas':'Tarefas', '/recorrencias':'Recorrências', '/automacao':'Automação', '/filiais':'Filiais', '/documentos':'Documentos',
   '/meu-nexly': 'Meu Nexly',
+  '/minha-conta': 'Minha conta',
   '/agenda': 'Agenda',
   '/clientes': 'Clientes',
   '/profissionais': 'Profissionais',
@@ -55,6 +56,7 @@ const NAV_GROUPS: NavGroup[] = [
     { label: 'Comissões', href: '/comissao', icon: 'money-bill-wave' },
     { label: 'Fidelidade', href: '/fidelidade', icon: 'star' },
     { label: 'Usuários', href: '/usuarios', icon: 'user-group' },
+    { label: 'Minha conta', href: '/minha-conta', icon: 'user' },
     { label: 'Meu Nexly', href: '/meu-nexly', icon: 'wand-magic-sparkles' },
     { label: 'Configurações', href: '/configuracoes', icon: 'gear' },
   ]},
@@ -261,12 +263,12 @@ export function Shell({ children }: { children: ReactNode }) {
                   style={{ backgroundColor: '#18181F', borderColor: 'rgba(255,255,255,0.10)', borderRadius: 8, boxShadow: '0 10px 30px rgba(0,0,0,0.4)', zIndex: 50 }}
                 >
                   <Link
-                    href="/configuracoes"
+                    href="/minha-conta"
                     onClick={() => setMenuAberto(false)}
                     className="flex items-center gap-2 px-4 py-2.5 text-[13px] transition-colors hover:bg-white/5"
                     style={{ color: '#E4E4E7' }}
                   >
-                    <Icon name="gear" size="xs" color="#A1A1AA" /> Configurações
+                    <Icon name="user" size="xs" color="#A1A1AA" /> Minha conta
                   </Link>
                   <div className="my-1 h-px" style={{ backgroundColor: 'rgba(255,255,255,0.10)' }} />
                   <button

@@ -50,7 +50,9 @@ describe('AuthService', () => {
     prisma = { client: { usuario: { findUnique: jest.fn() } } };
     tokenService = {
       generateAccessToken: jest.fn().mockResolvedValue('access-token'),
-      issueRefreshToken: jest.fn().mockResolvedValue('refresh-token'),
+      issueRefreshToken: jest
+        .fn()
+        .mockResolvedValue({ token: 'refresh-token', sessionId: 'session-1' }),
     };
     throttle = {
       isBlocked: jest.fn().mockResolvedValue(false),
@@ -83,6 +85,7 @@ describe('AuthService', () => {
       throw new Error('Não deveria exigir 2FA');
     }
     expect(result.accessToken).toBe('access-token');
+    expect(tokenService.generateAccessToken).toHaveBeenCalledWith(usuarioMock, 'session-1');
     expect(result.usuario.email).toBe('admin@test.com');
   });
 

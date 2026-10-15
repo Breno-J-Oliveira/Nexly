@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common'
 import { Role } from '@nexly/shared';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
-import { getTenantContext } from '../database/tenant-context';
+import { getTenantIdOrFail } from '../database/tenant-context';
 import { AtualizarUsuarioDto } from './dto/atualizar-usuario.dto';
 import { ConvidarUsuarioDto } from './dto/convidar-usuario.dto';
 import { CriarUsuarioDto } from './dto/criar-usuario.dto';
@@ -16,28 +16,25 @@ export class UsuariosController {
   @Get()
   @Roles(Role.ADMIN)
   listar() {
-    const ctx = getTenantContext();
-    return this.service.listar(ctx?.tenantId ?? '');
+    return this.service.listar(getTenantIdOrFail());
   }
 
   @Post()
   @Roles(Role.ADMIN)
   criar(@Body() dto: CriarUsuarioDto) {
-    const ctx = getTenantContext();
-    return this.service.criar(ctx?.tenantId ?? '', dto);
+    return this.service.criar(getTenantIdOrFail(), dto);
   }
 
   @Post('convidar')
   @Roles(Role.ADMIN)
   convidar(@Body() dto: ConvidarUsuarioDto) {
-    const ctx = getTenantContext();
-    return this.service.convidar(ctx?.tenantId ?? '', dto);
+    return this.service.convidar(getTenantIdOrFail(), dto);
   }
 
   @Put(':id')
   @Roles(Role.ADMIN)
   atualizar(@Param('id') id: string, @Body() dto: AtualizarUsuarioDto) {
-    return this.service.atualizar(id, dto);
+    return this.service.atualizar(getTenantIdOrFail(), id, dto);
   }
 
   @Post('trocar-senha')
@@ -48,6 +45,6 @@ export class UsuariosController {
   @Delete(':id')
   @Roles(Role.ADMIN)
   excluir(@Param('id') id: string) {
-    return this.service.excluir(id);
+    return this.service.excluir(getTenantIdOrFail(), id);
   }
 }

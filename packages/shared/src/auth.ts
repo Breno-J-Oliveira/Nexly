@@ -2,6 +2,8 @@ import { Role } from './enums';
 
 export interface JwtPayload {
   sub: string;
+  /** Identificador da sessão persistida; não contém o refresh token. */
+  sid: string;
   empresaId: string;
   role: Role;
   email: string;
@@ -11,6 +13,7 @@ export interface JwtPayload {
 }
 
 export interface AuthUser {
+  sessionId?: string;
   id: string;
   empresaId: string;
   role: Role;

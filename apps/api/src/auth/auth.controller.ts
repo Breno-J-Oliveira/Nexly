@@ -2,6 +2,9 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
+  Param,
+  ParseUUIDPipe,
   Get,
   HttpCode,
   Post,
@@ -14,6 +17,8 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { env } from '../config/env';
 import { AuthService } from './auth.service';
+import { Roles } from '../common/decorators/roles.decorator';
+import { Role } from '@nexly/shared';
 import { AceitarConviteDto } from './dto/aceitar-convite.dto';
 import { Disable2faDto } from './dto/disable-2fa.dto';
 import { Enable2faDto } from './dto/enable-2fa.dto';
@@ -122,6 +127,18 @@ export class AuthController {
   @Get('me')
   async me(@CurrentUser() user: { id: string }) {
     return this.authService.me(user.id);
+  }
+
+  @Get('sessions')
+  @Roles(...Object.values(Role))
+  listarSessoes(@CurrentUser() user: { id: string; sessionId: string }) {
+    return this.authService.listarSessoes(user.id, user.sessionId);
+  }
+
+  @Delete('sessions/:id')
+  @Roles(...Object.values(Role))
+  revogarSessao(@CurrentUser() user: { id: string }, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.authService.revogarSessao(user.id, id);
   }
 
   @Get('2fa/setup')

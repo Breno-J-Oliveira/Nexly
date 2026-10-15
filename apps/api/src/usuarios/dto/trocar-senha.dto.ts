@@ -2,6 +2,7 @@ import { IsString, Length } from 'class-validator';
 
 export class TrocarSenhaDto {
   @IsString()
+  @Length(1, 128)
   senhaAtual!: string;
 
   @IsString()

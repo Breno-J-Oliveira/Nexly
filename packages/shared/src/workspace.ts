@@ -219,7 +219,7 @@ export function routeModule(path: string): ModuleId | undefined {
 }
 
 export function canAccessWorkspaceRoute(path: string, role: string): boolean {
-  if (path === '/meu-nexly') return true;
+  if (path === '/meu-nexly' || path === '/minha-conta') return true;
   if (role === 'ADMIN') return true;
   if (role === 'GESTOR') return path !== '/usuarios';
   const allowed: Record<string, string[]> = {

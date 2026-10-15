@@ -13,9 +13,10 @@ export class TokenService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async generateAccessToken(usuario: Usuario): Promise<string> {
+  async generateAccessToken(usuario: Usuario, sessionId: string): Promise<string> {
     return this.jwtService.signAsync({
       sub: usuario.id,
+      sid: sessionId,
       empresaId: usuario.empresaId,
       role: usuario.role,
       email: usuario.email,
@@ -23,14 +24,23 @@ export class TokenService {
     });
   }
 
-  async issueRefreshToken(usuarioId: string): Promise<string> {
+  async issueRefreshToken(
+    usuarioId: string,
+    sessionId?: string,
+  ): Promise<{ token: string; sessionId: string }> {
     const token = randomBytes(48).toString('hex');
     const tokenHash = this.hashToken(token);
     const expiresAt = new Date(Date.now() + REFRESH_TTL_MS);
-    await this.prisma.client.refreshToken.create({
-      data: { usuarioId, tokenHash, expiresAt },
+    // A sessão tem validade absoluta. Renovar não prolonga uma credencial roubada indefinidamente.
+    const stored = await this.prisma.client.refreshToken.create({
+      data: {
+        usuario: { connect: { id: usuarioId } },
+        tokenHash,
+        expiresAt,
+        sessao: sessionId ? { connect: { id: sessionId } } : { create: { usuarioId, expiresAt } },
+      },
     });
-    return token;
+    return { token, sessionId: stored.sessionId };
   }
 
   /**
@@ -38,24 +48,39 @@ export class TokenService {
    * - token válido → revoga o antigo e emite um novo.
    * - token já revogado → possível roubo: invalida TODAS as sessões do usuário.
    */
-  async rotateRefreshToken(refreshToken: string): Promise<{ usuario: Usuario; newToken: string }> {
+  async rotateRefreshToken(
+    refreshToken: string,
+  ): Promise<{ usuario: Usuario; newToken: string; sessionId: string }> {
     const tokenHash = this.hashToken(refreshToken);
-    const stored = await this.prisma.client.refreshToken.findUnique({ where: { tokenHash } });
+    const stored = await this.prisma.client.refreshToken.findUnique({
+      where: { tokenHash },
+      include: { sessao: true },
+    });
 
     if (!stored) {
       throw new UnauthorizedException('Refresh token inválido');
     }
 
-    if (stored.revogado) {
-      await this.prisma.client.refreshToken.updateMany({
-        where: { usuarioId: stored.usuarioId, revogado: false },
-        data: { revogado: true },
-      });
-      throw new UnauthorizedException('Sessão invalidada por reutilização de token');
+    if (
+      stored.expiresAt <= new Date() ||
+      stored.sessao.revogado ||
+      stored.sessao.expiresAt <= new Date()
+    ) {
+      throw new UnauthorizedException('Refresh token expirado');
     }
 
-    if (stored.expiresAt < new Date()) {
-      throw new UnauthorizedException('Refresh token expirado');
+    if (stored.revogado) {
+      await this.prisma.client.$transaction([
+        this.prisma.client.authSession.updateMany({
+          where: { usuarioId: stored.usuarioId, revogado: false },
+          data: { revogado: true },
+        }),
+        this.prisma.client.refreshToken.updateMany({
+          where: { usuarioId: stored.usuarioId, revogado: false },
+          data: { revogado: true },
+        }),
+      ]);
+      throw new UnauthorizedException('Sessão invalidada por reutilização de token');
     }
 
     const usuario = await this.prisma.client.usuario.findUnique({
@@ -73,16 +98,24 @@ export class TokenService {
       throw new UnauthorizedException('Refresh token já utilizado');
     }
 
-    const newToken = await this.issueRefreshToken(usuario.id);
-    return { usuario, newToken };
+    const issued = await this.issueRefreshToken(usuario.id, stored.sessionId);
+    return { usuario, newToken: issued.token, sessionId: issued.sessionId };
   }
 
   async revokeRefreshToken(refreshToken: string): Promise<void> {
     const tokenHash = this.hashToken(refreshToken);
-    await this.prisma.client.refreshToken.updateMany({
-      where: { tokenHash },
-      data: { revogado: true },
-    });
+    const stored = await this.prisma.client.refreshToken.findUnique({ where: { tokenHash } });
+    if (!stored) return;
+    await this.prisma.client.$transaction([
+      this.prisma.client.authSession.updateMany({
+        where: { id: stored.sessionId, usuarioId: stored.usuarioId },
+        data: { revogado: true },
+      }),
+      this.prisma.client.refreshToken.updateMany({
+        where: { sessionId: stored.sessionId, usuarioId: stored.usuarioId, revogado: false },
+        data: { revogado: true },
+      }),
+    ]);
   }
 
   /** Token temporário de 5 min usado no fluxo de 2FA (scope restrito). */

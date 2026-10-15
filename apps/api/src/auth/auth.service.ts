@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -133,8 +134,9 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string): Promise<AuthResult> {
-    const { usuario, newToken } = await this.tokenService.rotateRefreshToken(refreshToken);
-    const accessToken = await this.tokenService.generateAccessToken(usuario);
+    const { usuario, newToken, sessionId } =
+      await this.tokenService.rotateRefreshToken(refreshToken);
+    const accessToken = await this.tokenService.generateAccessToken(usuario, sessionId);
     return { accessToken, refreshToken: newToken, usuario: this.toPublic(usuario) };
   }
 
@@ -173,6 +175,31 @@ export class AuthService {
       });
     }
     return this.toPublic(usuario);
+  }
+
+  async listarSessoes(userId: string, currentSessionId: string) {
+    const sessoes = await this.prisma.client.authSession.findMany({
+      where: { usuarioId: userId, revogado: false, expiresAt: { gt: new Date() } },
+      select: { id: true, createdAt: true, expiresAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return sessoes.map((sessao) => ({ ...sessao, atual: sessao.id === currentSessionId }));
+  }
+
+  async revogarSessao(userId: string, sessionId: string) {
+    const [updated] = await this.prisma.client.$transaction([
+      this.prisma.client.authSession.updateMany({
+        where: { id: sessionId, usuarioId: userId, revogado: false },
+        data: { revogado: true },
+      }),
+      this.prisma.client.refreshToken.updateMany({
+        where: { sessionId, usuarioId: userId, revogado: false },
+        data: { revogado: true },
+      }),
+    ]);
+    if (!updated.count) throw new NotFoundException('Sessão não encontrada');
+    return { success: true };
   }
 
   /** Retorna os dados de um convite pendente (para a página /aceitar-convite). */
@@ -324,8 +351,9 @@ export class AuthService {
   }
 
   private async buildAuthResult(usuario: Usuario): Promise<AuthResult> {
-    const accessToken = await this.tokenService.generateAccessToken(usuario);
-    const refreshToken = await this.tokenService.issueRefreshToken(usuario.id);
+    const issued = await this.tokenService.issueRefreshToken(usuario.id);
+    const refreshToken = issued.token;
+    const accessToken = await this.tokenService.generateAccessToken(usuario, issued.sessionId);
     return { accessToken, refreshToken, usuario: this.toPublic(usuario) };
   }
 

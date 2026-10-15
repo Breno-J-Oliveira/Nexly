@@ -2,7 +2,9 @@
 
 import { PageToolbar } from '@/components/ui/PageToolbar';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { isCancel } from 'axios';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -10,7 +12,14 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { api } from '@/lib/api';
 import { toastSuccess, toastError } from '@/components/ui/Toaster';
 
-interface Usuario { id: string; nome: string; email: string; role: string; ativo: boolean; createdAt: string; }
+interface Usuario {
+  id: string;
+  nome: string;
+  email: string;
+  role: string;
+  ativo: boolean;
+  createdAt: string;
+}
 
 // Valores alinhados ao enum Role do banco: ADMIN | GESTOR | PROFISSIONAL | RECEPCIONISTA | CAIXA.
 const roleLabel: Record<string, string> = {
@@ -37,6 +46,9 @@ const roleDescricao: Record<string, string> = {
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erroCarga, setErroCarga] = useState(false);
+  const [alterandoId, setAlterandoId] = useState<string | null>(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [form, setForm] = useState({ nome: '', email: '', senha: '', role: 'CAIXA' });
@@ -46,12 +58,24 @@ export default function UsuariosPage() {
   const [convidando, setConvidando] = useState(false);
   const [conviteLink, setConviteLink] = useState<string | null>(null);
 
-  const carregar = async (): Promise<void> => {
-    const res = await api.get<Usuario[]>('/usuarios');
-    setUsuarios(Array.isArray(res.data) ? res.data : []);
-  };
+  const carregar = useCallback(async (signal?: AbortSignal): Promise<void> => {
+    setCarregando(true);
+    setErroCarga(false);
+    try {
+      const res = await api.get<Usuario[]>('/usuarios', { signal });
+      if (!signal?.aborted) setUsuarios(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      if (!isCancel(error)) setErroCarga(true);
+    } finally {
+      if (!signal?.aborted) setCarregando(false);
+    }
+  }, []);
 
-  useEffect(() => { void carregar(); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    void carregar(controller.signal);
+    return () => controller.abort();
+  }, [carregar]);
 
   const salvar = async (): Promise<void> => {
     setSalvando(true);
@@ -68,15 +92,28 @@ export default function UsuariosPage() {
     } catch (e) {
       const err = e as { response?: { data?: { message?: string } } };
       toastError(err?.response?.data?.message || 'Erro ao salvar');
-    } finally { setSalvando(false); }
+    } finally {
+      setSalvando(false);
+    }
   };
 
   // Alterna entre ativo/inativo usando PUT (o DELETE apenas desativa o usuário,
   // então não serve para reativar).
   const toggleAtivo = async (u: Usuario): Promise<void> => {
-    await api.put('/usuarios/' + u.id, { ativo: !u.ativo });
-    toastSuccess(u.ativo ? 'Usuário desativado' : 'Usuário reativado');
-    await carregar();
+    if (alterandoId) return;
+    setAlterandoId(u.id);
+    try {
+      await api.put('/usuarios/' + u.id, { ativo: !u.ativo });
+      toastSuccess(u.ativo ? 'Usuário desativado' : 'Usuário reativado');
+      await carregar();
+    } catch (error) {
+      const err = error as { response?: { data?: { message?: string } } };
+      toastError(
+        err.response?.data?.message ?? 'Não foi possível alterar o acesso. Tente novamente.',
+      );
+    } finally {
+      setAlterandoId(null);
+    }
   };
 
   const convidar = async (): Promise<void> => {
@@ -98,58 +135,130 @@ export default function UsuariosPage() {
 
   return (
     <div>
-      <PageToolbar><div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>Usuários</h2>
-          <p className="mt-1 text-sm" style={{ color: '#71717A' }}>Gerencie quem acessa o sistema</p>
+      <PageToolbar>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>
+              Usuários
+            </h2>
+            <p className="mt-1 text-sm" style={{ color: '#A1A1AA' }}>
+              Gerencie quem acessa o sistema
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setConviteLink(null);
+                setConviteForm({ email: '', role: 'CAIXA' });
+                setConviteModal(true);
+              }}
+            >
+              + Convidar usuário
+            </Button>
+            <Button
+              onClick={() => {
+                setEditandoId(null);
+                setForm({ nome: '', email: '', senha: '', role: 'CAIXA' });
+                setModalAberto(true);
+              }}
+            >
+              + Novo usuário
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setConviteLink(null);
-              setConviteForm({ email: '', role: 'CAIXA' });
-              setConviteModal(true);
-            }}
-          >
-            + Convidar usuário
-          </Button>
-          <Button
-            onClick={() => {
-              setEditandoId(null);
-              setForm({ nome: '', email: '', senha: '', role: 'CAIXA' });
-              setModalAberto(true);
-            }}
-          >
-            + Novo usuário
-          </Button>
-        </div>
-      </div></PageToolbar>
+      </PageToolbar>
 
-      <div className="mt-6 overflow-x-auto rounded-xl" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
-        {usuarios.length === 0 ? (
-          <EmptyState icon="user-group" title="Nenhum usuário" description="Adicione usuários para acessar o sistema" />
+      <div
+        className="mt-6 overflow-x-auto rounded-xl"
+        style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        {carregando ? (
+          <p role="status" className="p-6 text-sm text-[#A1A1AA]">
+            Carregando usuários…
+          </p>
+        ) : erroCarga ? (
+          <ErrorState
+            message="Não foi possível carregar os usuários"
+            onRetry={() => void carregar()}
+          />
+        ) : usuarios.length === 0 ? (
+          <EmptyState
+            icon="user-group"
+            title="Nenhum usuário"
+            description="Adicione usuários para acessar o sistema"
+          />
         ) : (
           <table className="w-full text-left text-[13px]">
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>Nome</th>
-                <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>E-mail</th>
-                <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>Função</th>
-                <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>Status</th>
+                <th className="px-4 py-3 font-medium" style={{ color: '#A1A1AA' }}>
+                  Nome
+                </th>
+                <th className="px-4 py-3 font-medium" style={{ color: '#A1A1AA' }}>
+                  E-mail
+                </th>
+                <th className="px-4 py-3 font-medium" style={{ color: '#A1A1AA' }}>
+                  Função
+                </th>
+                <th className="px-4 py-3 font-medium" style={{ color: '#A1A1AA' }}>
+                  Status
+                </th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {usuarios.map((u) => (
                 <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <td className="px-4 py-3" style={{ color: '#FAFAFA' }}>{u.nome}</td>
-                  <td className="px-4 py-3" style={{ color: '#A1A1AA' }}>{u.email}</td>
-                  <td className="px-4 py-3"><span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ color: roleColor[u.role], backgroundColor: roleColor[u.role] + '20' }}>{roleLabel[u.role] || u.role}</span></td>
-                  <td className="px-4 py-3"><span className="text-[11px] font-semibold" style={{ color: u.ativo ? '#22C55E' : '#EF4444' }}>{u.ativo ? 'Ativo' : 'Inativo'}</span></td>
+                  <td className="px-4 py-3" style={{ color: '#FAFAFA' }}>
+                    {u.nome}
+                  </td>
+                  <td className="px-4 py-3" style={{ color: '#A1A1AA' }}>
+                    {u.email}
+                  </td>
                   <td className="px-4 py-3">
-                    <Button variant="ghost" className="text-xs" onClick={() => { setEditandoId(u.id); setForm({ nome: u.nome, email: u.email, senha: '', role: u.role }); setModalAberto(true); }}>Editar</Button>
-                    <Button variant="ghost" className="text-xs" style={{ color: u.ativo ? '#EF4444' : '#22C55E' }} onClick={() => { void toggleAtivo(u); }}>{u.ativo ? 'Desativar' : 'Ativar'}</Button>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                      style={{
+                        color: roleColor[u.role],
+                        backgroundColor: roleColor[u.role] + '20',
+                      }}
+                    >
+                      {roleLabel[u.role] || u.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className="text-[11px] font-semibold"
+                      style={{ color: u.ativo ? '#22C55E' : '#EF4444' }}
+                    >
+                      {u.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Button
+                      variant="ghost"
+                      className="text-xs"
+                      onClick={() => {
+                        setEditandoId(u.id);
+                        setForm({ nome: u.nome, email: u.email, senha: '', role: u.role });
+                        setModalAberto(true);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      loading={alterandoId === u.id}
+                      disabled={alterandoId !== null}
+                      className="text-xs"
+                      style={{ color: u.ativo ? '#EF4444' : '#22C55E' }}
+                      onClick={() => {
+                        void toggleAtivo(u);
+                      }}
+                    >
+                      {u.ativo ? 'Desativar' : 'Ativar'}
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -158,14 +267,70 @@ export default function UsuariosPage() {
         )}
       </div>
 
-      <Modal open={modalAberto} onClose={() => setModalAberto(false)} title={editandoId ? 'Editar usuário' : 'Novo usuário'}>
-        <div className="space-y-3">
-          <Input label="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Nome completo" />
-          {!editandoId && <Input label="E-mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@empresa.com" />}
-          {!editandoId && <Input label="Senha" type="password" value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} placeholder="••••••••" />}
+      <Modal
+        open={modalAberto}
+        onClose={() => setModalAberto(false)}
+        title={editandoId ? 'Editar usuário' : 'Novo usuário'}
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void salvar();
+          }}
+          className="space-y-3"
+        >
+          <Input
+            label="Nome"
+            required
+            minLength={2}
+            maxLength={120}
+            value={form.nome}
+            onChange={(e) => setForm({ ...form, nome: e.target.value })}
+            placeholder="Nome completo"
+          />
+          {!editandoId && (
+            <Input
+              label="E-mail"
+              type="email"
+              required
+              maxLength={254}
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="email@empresa.com"
+            />
+          )}
+          {!editandoId && (
+            <Input
+              label="Senha"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              maxLength={72}
+              value={form.senha}
+              onChange={(e) => setForm({ ...form, senha: e.target.value })}
+              placeholder="••••••••"
+            />
+          )}
           <div>
-            <label htmlFor="usuario-role" className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>Função</label>
-            <select id="usuario-role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" style={{ backgroundColor: '#0C0C10', borderColor: 'rgba(255,255,255,0.10)', color: '#FAFAFA' }}>
+            <label
+              htmlFor="usuario-role"
+              className="mb-1 block text-sm font-medium"
+              style={{ color: '#A1A1AA' }}
+            >
+              Função
+            </label>
+            <select
+              id="usuario-role"
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+              style={{
+                backgroundColor: '#0C0C10',
+                borderColor: 'rgba(255,255,255,0.10)',
+                color: '#FAFAFA',
+              }}
+            >
               <option value="ADMIN">Administrador</option>
               <option value="GESTOR">Gestor</option>
               <option value="PROFISSIONAL">Profissional</option>
@@ -173,8 +338,10 @@ export default function UsuariosPage() {
               <option value="CAIXA">Operador de Caixa</option>
             </select>
           </div>
-          <Button onClick={() => { void salvar(); }} loading={salvando} className="w-full mt-4">Salvar</Button>
-        </div>
+          <Button type="submit" loading={salvando} className="w-full mt-4">
+            Salvar
+          </Button>
+        </form>
       </Modal>
 
       <Modal open={conviteModal} onClose={() => setConviteModal(false)} title="Convidar usuário">
@@ -187,7 +354,11 @@ export default function UsuariosPage() {
             placeholder="email@empresa.com"
           />
           <div>
-            <label htmlFor="convite-role" className="mb-1 block text-sm font-medium" style={{ color: '#A1A1AA' }}>
+            <label
+              htmlFor="convite-role"
+              className="mb-1 block text-sm font-medium"
+              style={{ color: '#A1A1AA' }}
+            >
               Função
             </label>
             <select
@@ -195,7 +366,11 @@ export default function UsuariosPage() {
               value={conviteForm.role}
               onChange={(e) => setConviteForm({ ...conviteForm, role: e.target.value })}
               className="w-full rounded-lg border px-3 py-2 text-sm"
-              style={{ backgroundColor: '#0C0C10', borderColor: 'rgba(255,255,255,0.10)', color: '#FAFAFA' }}
+              style={{
+                backgroundColor: '#0C0C10',
+                borderColor: 'rgba(255,255,255,0.10)',
+                color: '#FAFAFA',
+              }}
             >
               <option value="ADMIN">Administrador</option>
               <option value="GESTOR">Gestor</option>
@@ -203,14 +378,12 @@ export default function UsuariosPage() {
               <option value="RECEPCIONISTA">Recepcionista</option>
               <option value="CAIXA">Operador de Caixa</option>
             </select>
-            <p className="mt-1 text-xs" style={{ color: '#71717A' }}>
+            <p className="mt-1 text-xs" style={{ color: '#A1A1AA' }}>
               {roleDescricao[conviteForm.role]}
             </p>
           </div>
           {conviteLink && (
-            <div
-              className="rounded-lg border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] p-3"
-            >
+            <div className="rounded-lg border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.06)] p-3">
               <p className="text-xs" style={{ color: '#22C55E' }}>
                 Link de convite gerado:
               </p>

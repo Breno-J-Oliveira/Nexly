@@ -31,6 +31,7 @@ const PARENT_SCOPES: Record<string, string> = {
   ItemVenda: 'venda',
   ItemPedidoCompra: 'pedido',
   RefreshToken: 'usuario',
+  AuthSession: 'usuario',
   TermoAceite: 'usuario',
 };
 

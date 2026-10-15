@@ -134,6 +134,7 @@ model Usuario {
 
   empresa       Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
+  sessoes AuthSession[]
   auditLogs     AuditLog[]
   termosAceite  TermoAceite[]
   depoimento    Depoimento?
@@ -160,17 +161,33 @@ model Depoimento {
   @@map("depoimentos")
 }
 
+// Sessão estável entre rotações; revogação independente do token de renovação.
+model AuthSession {
+  id String @id @default(uuid())
+  usuarioId String @map("usuario_id")
+  revogado Boolean @default(false)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+  @@index([usuarioId, revogado])
+  @@map("sessoes")
+}
+
 model RefreshToken {
   id        String    @id @default(uuid())
+  sessionId String    @map("session_id")
   usuarioId String    @map("usuario_id")
   tokenHash String    @map("token_hash") @unique
   expiresAt DateTime  @map("expires_at")
   revogado  Boolean   @default(false)
   createdAt DateTime  @default(now()) @map("created_at")
 
+  sessao AuthSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId])
+  @@index([sessionId, revogado])
   @@map("refresh_tokens")
 }
 

@@ -36,19 +36,38 @@ export class AuthGuard implements CanActivate {
       if (
         payload.scope ||
         !payload.sub ||
+        typeof payload.sid !== 'string' ||
+        !/^[a-f0-9-]{36}$/.test(payload.sid) ||
         !payload.empresaId ||
         !Object.values(Role).includes(payload.role)
       ) {
         throw new UnauthorizedException('Token inválido');
       }
-      const usuario = await this.prisma.client.usuario.findUnique({
-        where: { id: payload.sub },
-        select: { id: true, empresaId: true, ativo: true, role: true, email: true, nome: true },
+      const sessao = await this.prisma.client.authSession.findUnique({
+        where: { id: payload.sid },
+        select: {
+          usuarioId: true,
+          revogado: true,
+          expiresAt: true,
+          usuario: {
+            select: { id: true, empresaId: true, ativo: true, role: true, email: true, nome: true },
+          },
+        },
       });
-      if (!usuario?.ativo || usuario.empresaId !== payload.empresaId) {
+      if (
+        !sessao ||
+        sessao.usuarioId !== payload.sub ||
+        sessao.revogado ||
+        sessao.expiresAt <= new Date()
+      ) {
+        throw new UnauthorizedException('Sessão encerrada');
+      }
+      const usuario = sessao.usuario;
+      if (!usuario.ativo || usuario.empresaId !== payload.empresaId) {
         throw new UnauthorizedException('Sessão inválida');
       }
       request.user = {
+        sessionId: payload.sid,
         id: usuario.id,
         empresaId: usuario.empresaId,
         role: usuario.role,

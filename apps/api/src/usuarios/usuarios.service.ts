@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { Role } from '@nexly/shared';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
@@ -27,20 +33,52 @@ export class UsuariosService {
     });
   }
 
-  async atualizar(id: string, dto: { nome?: string; role?: Role; ativo?: boolean }) {
-    const u = await this.prisma.client.usuario.findFirst({ where: { id } });
-    if (!u) throw new NotFoundException('Usuario nao encontrado');
-    await this.prisma.client.usuario.updateMany({
-      where: { id },
-      data: { ...dto },
-    });
-    return this.prisma.client.usuario.findFirst({
-      where: { id },
-      select: { id: true, nome: true, email: true, role: true, ativo: true },
+  async atualizar(
+    empresaId: string,
+    id: string,
+    dto: { nome?: string; role?: Role; ativo?: boolean },
+  ) {
+    return this.prisma.client.$transaction(async (tx) => {
+      // Serializa mudanças de administradores da mesma empresa, inclusive entre réplicas.
+      await tx.$queryRaw`SELECT id FROM empresas WHERE id=${empresaId} FOR UPDATE`;
+      const usuario = await tx.usuario.findFirst({ where: { id, empresaId } });
+      if (!usuario) throw new NotFoundException('Usuário não encontrado');
+      const removeAdmin =
+        usuario.ativo &&
+        usuario.role === 'ADMIN' &&
+        (dto.ativo === false || (dto.role !== undefined && dto.role !== Role.ADMIN));
+      if (
+        removeAdmin &&
+        (await tx.usuario.count({ where: { empresaId, ativo: true, role: 'ADMIN' } })) <= 1
+      ) {
+        throw new ConflictException({
+          code: 'LAST_ADMIN_REQUIRED',
+          message:
+            'Mantenha pelo menos um administrador ativo. Promova outro usuário antes de continuar.',
+        });
+      }
+      await tx.usuario.updateMany({ where: { id, empresaId }, data: dto });
+      // Desativar e reativar não pode restaurar credenciais antigas.
+      if (dto.ativo === false || (dto.role !== undefined && dto.role !== usuario.role)) {
+        await tx.authSession.updateMany({
+          where: { usuarioId: id, revogado: false },
+          data: { revogado: true },
+        });
+        await tx.refreshToken.updateMany({
+          where: { usuarioId: id, revogado: false },
+          data: { revogado: true },
+        });
+      }
+      return tx.usuario.findFirst({
+        where: { id, empresaId },
+        select: { id: true, nome: true, email: true, role: true, ativo: true },
+      });
     });
   }
 
   async trocarSenha(id: string, senhaAtual: string, novaSenha: string) {
+    if (senhaAtual === novaSenha)
+      throw new BadRequestException('Escolha uma senha diferente da atual');
     const u = await this.prisma.client.usuario.findFirst({
       where: { id },
       select: { senhaHash: true },
@@ -49,18 +87,30 @@ export class UsuariosService {
     const ok = await argon2.verify(u.senhaHash, senhaAtual);
     if (!ok) throw new BadRequestException('Senha atual incorreta');
     const senhaHash = await argon2.hash(novaSenha, { type: argon2.argon2id });
-    const [updated] = await this.prisma.client.$transaction([
-      this.prisma.client.usuario.updateMany({ where: { id }, data: { senhaHash } }),
-      this.prisma.client.refreshToken.updateMany({
+    const updated = await this.prisma.client.$transaction(async (tx) => {
+      const changed = await tx.usuario.updateMany({
+        where: { id, senhaHash: u.senhaHash },
+        data: { senhaHash },
+      });
+      if (changed.count !== 1)
+        throw new ConflictException(
+          'Sua senha foi alterada por outra solicitação. Entre novamente.',
+        );
+      await tx.authSession.updateMany({
         where: { usuarioId: id, revogado: false },
         data: { revogado: true },
-      }),
-    ]);
+      });
+      await tx.refreshToken.updateMany({
+        where: { usuarioId: id, revogado: false },
+        data: { revogado: true },
+      });
+      return changed;
+    });
     return updated;
   }
 
-  async excluir(id: string) {
-    return this.prisma.client.usuario.updateMany({ where: { id }, data: { ativo: false } });
+  async excluir(empresaId: string, id: string) {
+    return this.atualizar(empresaId, id, { ativo: false });
   }
 
   async convidar(empresaId: string, dto: { email: string; role: Role }) {
