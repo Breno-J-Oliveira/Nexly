@@ -9,7 +9,6 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : 2,
   reporter: [['html', { open: 'never' }], ['line']],
-  globalSetup: './e2e/auth.setup.ts',
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3002',
     trace: 'retain-on-failure',
@@ -20,7 +19,6 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: 'e2e/.auth/user.json',
       },
     },
   ],

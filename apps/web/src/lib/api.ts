@@ -25,13 +25,34 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-interface RefreshResult { accessToken: string | null; usuario: UsuarioPublico | null }
+interface RefreshResult {
+  accessToken: string | null;
+  usuario: UsuarioPublico | null;
+}
 let refreshing: Promise<RefreshResult | null> | null = null;
+
+export class SessionRefreshError extends Error {
+  constructor(public readonly retryAfterSeconds = 0) {
+    super(
+      retryAfterSeconds > 0
+        ? 'Muitas solicitações. Aguarde um momento para recuperar seu acesso.'
+        : 'Não foi possível conectar ao Nexly. Sua sessão será recuperada ao tentar novamente.',
+    );
+    this.name = 'SessionRefreshError';
+  }
+}
+
+/** Aguarda somente uma recuperação já iniciada, antes de substituir a sessão no login. */
+export async function waitForSessionRefresh(): Promise<void> {
+  await refreshing?.catch(() => undefined);
+}
 
 /** O bootstrap e os retries compartilham uma única rotação, inclusive em StrictMode. */
 export function refreshSession(): Promise<RefreshResult | null> {
   if (!refreshing) {
-    refreshing = requestRefresh().finally(() => { refreshing = null; });
+    refreshing = requestRefresh().finally(() => {
+      refreshing = null;
+    });
   }
   return refreshing;
 }
@@ -41,15 +62,24 @@ async function requestRefresh(): Promise<RefreshResult | null> {
     const { data } = await axios.post<RefreshResult>(
       `${env.NEXT_PUBLIC_API_URL}/api/auth/refresh`,
       {},
-      { withCredentials: true },
+      { withCredentials: true, timeout: 10_000 },
     );
     if (data.accessToken) {
       setAccessToken(data.accessToken);
       return data;
     }
-    return null;
-  } catch {
-    return null;
+    throw new SessionRefreshError();
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401) return null;
+      if (error.response?.status === 429) {
+        const seconds = Number(error.response.headers['retry-after']);
+        throw new SessionRefreshError(
+          Number.isFinite(seconds) && seconds > 0 ? Math.min(Math.ceil(seconds), 900) : 60,
+        );
+      }
+    }
+    throw error instanceof SessionRefreshError ? error : new SessionRefreshError();
   }
 }
 
@@ -77,6 +107,7 @@ api.interceptors.response.use(
       }
 
       if (typeof window !== 'undefined') {
+        setAccessToken(null);
         window.location.href = '/login';
       }
     }

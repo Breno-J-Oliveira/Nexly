@@ -46,7 +46,7 @@ test.beforeEach(async ({ page }) => {
 
 for (const width of [1440, 390]) {
   test(`all pages fit the viewport at ${width}px`, async ({ page }) => {
-    test.setTimeout(240_000);
+    test.setTimeout(360_000);
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
@@ -54,14 +54,22 @@ for (const width of [1440, 390]) {
       const response = await page.goto(`/${route}`);
       expect(response?.status(), route).toBeLessThan(400);
       if (protectedRoutes.includes(route)) {
-        await expect(
-          page.getByRole('navigation', { name: 'Menu principal', exact: true }),
-        ).toBeAttached();
+        // A bateria percorre dezenas de rotas: respeita o limite real do servidor.
+        const menu = page.getByRole('navigation', { name: 'Menu principal', exact: true });
+        const recovery = page.getByRole('region', { name: 'Recuperar acesso', exact: true });
+        await expect(menu.or(recovery)).toBeAttached();
+        if (await recovery.isVisible()) {
+          const retry = recovery.getByRole('button', { name: 'Tentar novamente', exact: true });
+          await expect(retry).toBeEnabled({ timeout: 70_000 });
+          await retry.click();
+        }
+        await expect(menu).toBeAttached();
       }
       await expect(page.locator('body')).not.toBeEmpty();
       await page.evaluate(() => document.fonts.ready);
       // Wait for hydration/route-owned controls, then check document-level overflow.
-      await page.waitForTimeout(500);
+      // Navegação humana: também evita saturar o limite global com dezenas de recargas.
+      await page.waitForTimeout(2500);
       if (protectedRoutes.includes(route)) await expect(page).toHaveURL(new RegExp(`/${route}$`));
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),

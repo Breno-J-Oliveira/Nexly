@@ -1,8 +1,23 @@
 'use client';
 
 import { UsuarioPublico } from '@nexly/shared';
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { api, refreshSession, setAccessToken } from './api';
+import axios from 'axios';
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import {
+  api,
+  refreshSession,
+  SessionRefreshError,
+  setAccessToken,
+  waitForSessionRefresh,
+} from './api';
 
 /**
  * Helper para buscar os dados do usuário autenticado a partir do JWT
@@ -13,8 +28,9 @@ export async function fetchMe(): Promise<UsuarioPublico | null> {
   try {
     const { data } = await api.get<UsuarioPublico>('/auth/me');
     return data;
-  } catch {
-    return null;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 401) return null;
+    throw error;
   }
 }
 
@@ -28,6 +44,9 @@ export interface LoginResponse {
 interface AuthContextValue {
   user: UsuarioPublico | null;
   loading: boolean;
+  sessionError: string | null;
+  retryAt: number;
+  retrySession: () => Promise<void>;
   login: (email: string, senha: string) => Promise<LoginResponse>;
   completeLogin: (accessToken: string, usuario: UsuarioPublico) => void;
   logout: () => Promise<void>;
@@ -39,38 +58,59 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UsuarioPublico | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [retryAt, setRetryAt] = useState(0);
+  const attempt = useRef(0);
 
-  useEffect(() => {
-    let active = true;
-    refreshSession()
-      .then((session) => {
-        if (!active) return;
-        if (session?.accessToken && session.usuario) {
-          setAccessToken(session.accessToken);
-          setUser(session.usuario);
-        }
-      })
-      .catch(() => {
-        if (!active) return;
+  const retrySession = useCallback(async (): Promise<void> => {
+    const current = ++attempt.current;
+    setLoading(true);
+    setSessionError(null);
+    try {
+      const session = await refreshSession();
+      if (current !== attempt.current) return;
+      if (session?.accessToken && session.usuario) {
+        setUser(session.usuario);
+      } else if (session === null) {
         setAccessToken(null);
         setUser(null);
-      })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+      } else {
+        throw new SessionRefreshError();
+      }
+      setRetryAt(0);
+    } catch (error) {
+      if (current !== attempt.current) return;
+      const failure = error instanceof SessionRefreshError ? error : new SessionRefreshError();
+      setSessionError(failure.message);
+      setRetryAt(Date.now() + failure.retryAfterSeconds * 1000);
+    } finally {
+      if (current === attempt.current) setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    void retrySession();
+    return () => {
+      attempt.current += 1;
+    };
+  }, [retrySession]);
+
   const login = async (email: string, senha: string): Promise<LoginResponse> => {
+    await waitForSessionRefresh();
     const res = await api.post<LoginResponse>('/auth/login', { email, senha });
     if (res.data.accessToken && res.data.usuario) {
-      setAccessToken(res.data.accessToken);
-      setUser(res.data.usuario);
+      completeLogin(res.data.accessToken, res.data.usuario);
     }
     return res.data;
   };
 
   const completeLogin = (accessToken: string, usuario: UsuarioPublico): void => {
+    attempt.current += 1;
     setAccessToken(accessToken);
     setUser(usuario);
+    setSessionError(null);
+    setRetryAt(0);
+    setLoading(false);
   };
 
   const logout = async (): Promise<void> => {
@@ -94,7 +134,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, completeLogin, logout, refreshUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        sessionError,
+        retryAt,
+        retrySession,
+        login,
+        completeLogin,
+        logout,
+        refreshUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

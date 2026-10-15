@@ -1,80 +1,110 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { PrismaClient } from '@prisma/client';
+import { config } from 'dotenv';
+import argon2 from 'argon2';
+config({ path: 'apps/api/.env', quiet: true });
+test.use({ timezoneId: 'America/Sao_Paulo' });
 
-// Fluxo crítico: baixa automática de estoque ao concluir um agendamento.
-// Base: apps/api/prisma/seed.ts
-//   - Serviço "Escova Progressiva" consome "Shampoo Profissional 1L" (1x) e
-//     "Óleo Reparador 100ml" (1x) — feature central do Nexly.
-//   - "Shampoo Profissional 1L" começa com estoque 30.
-
-const PRODUTO = 'Shampoo Profissional 1L';
-const CLIENTE = 'Maria Oliveira';
-const PROFISSIONAL = 'Ana Silva';
-const SERVICO = 'Escova Progressiva';
-
-function formatarDatetimeLocal(d: Date): string {
-  const pad = (n: number): string => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
-}
-
-async function lerEstoque(page: Page, produto: string): Promise<number> {
-  const row = page.locator('tbody tr').filter({ hasText: produto }).first();
-  const texto = (await row.locator('td').nth(3).textContent()) ?? '0';
-  return Number(texto.replace(/\D/g, ''));
-}
-
-async function selecionarOpcao(page: Page, label: string, texto: string): Promise<void> {
-  const select = page.getByLabel(label, { exact: true });
-  const option = select.locator('option').filter({ hasText: texto }).first();
-  const value = await option.getAttribute('value');
-  if (!value) throw new Error(`Opção "${texto}" não encontrada`);
-  await select.selectOption(value);
-}
-
-test('concluir agendamento baixa o estoque automaticamente', async ({ page }) => {
-  // Estabelece a sessão (o storageState tem o cookie de refresh) e carrega a Shell.
-  await page.goto('/dashboard');
-  await expect(page.getByRole('link', { name: 'Estoque' })).toBeVisible();
-
-  // 1. Lê o estoque atual do produto
-  await page.getByRole('link', { name: 'Estoque' }).click();
-  await expect(page.locator('tbody tr').filter({ hasText: PRODUTO }).first()).toBeVisible();
-  const antes = await lerEstoque(page, PRODUTO);
-  expect(antes).toBeGreaterThan(0);
-
-  // 2. Cria um agendamento (Escova Progressiva consome 1x o produto)
-  await page.getByRole('link', { name: 'Agenda' }).click();
-  await page.getByRole('button', { name: 'Lista', exact: true }).click();
-  await page.getByRole('button', { name: '+ Novo agendamento' }).first().click();
-
-  // Step 1: cliente
-  await page.getByRole('button', { name: CLIENTE }).click();
-  await page.getByRole('button', { name: 'Próximo' }).click();
-
-  // Step 2: profissional + serviço
-  await selecionarOpcao(page, 'Profissional', PROFISSIONAL);
-  await selecionarOpcao(page, 'Serviço', SERVICO);
-  await page.getByRole('button', { name: 'Próximo' }).click();
-
-  // Step 3: horário futuro (hoje, +1h) + salvar
-  // Obs.: rodando após ~22:40 o dia "estoura" para amanhã e a agenda (visão de hoje)
-  // não exibe. Num smoke test em dev/CI (horário comercial) isso não ocorre.
-  const dataHora = new Date(Date.now() + 60 * 60 * 1000);
-  dataHora.setSeconds(0, 0);
-  await page.locator('input[type="datetime-local"]').fill(formatarDatetimeLocal(dataHora));
-  await page.getByRole('button', { name: 'Salvar' }).click();
-
-  // 3. Confirma e conclui o novo agendamento
-  const hora = dataHora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  const novo = page.locator('div.group').filter({ hasText: SERVICO }).filter({ hasText: CLIENTE }).filter({ hasText: hora });
-  await expect(novo.first()).toBeVisible();
-  await novo.getByRole('button', { name: 'Confirmar' }).click();
-  await novo.getByRole('button', { name: 'Concluir' }).click();
-  await expect(page.getByText('Serviço concluído!')).toBeVisible();
-
-  // 4. Verifica a baixa no estoque
-  await page.getByRole('link', { name: 'Estoque' }).click();
-  await expect(page.locator('tbody tr').filter({ hasText: PRODUTO }).first()).toBeVisible();
-  await expect.poll(async () => lerEstoque(page, PRODUTO)).toBe(antes - 1);
+test('concluir agendamento baixa o estoque uma única vez', async ({ page }) => {
+  test.setTimeout(120000);
+  test.skip(
+    !['localhost', '127.0.0.1'].includes(
+      new URL(process.env.DATABASE_URL || 'http://unavailable').hostname,
+    ),
+    'Fixtures somente locais',
+  );
+  const p = new PrismaClient();
+  const suffix = Date.now(),
+    email = `deduction-${suffix}@example.test`;
+  const empresa = await p.empresa.create({
+    data: {
+      nome: 'TESTE baixa de estoque',
+      cnpj: `deduction-${suffix}`,
+      usuarios: {
+        create: {
+          nome: 'TESTE gestor',
+          email,
+          senhaHash: await argon2.hash('EstoqueTeste123!'),
+          role: 'ADMIN',
+        },
+      },
+    },
+  });
+  try {
+    const produto = await p.produto.create({
+      data: {
+        empresaId: empresa.id,
+        nome: 'Insumo de teste',
+        sku: 'INSUMO',
+        preco: 10,
+        estoqueAtual: 30,
+      },
+    });
+    const cliente = await p.cliente.create({
+      data: { empresaId: empresa.id, nome: 'Cliente de teste' },
+    });
+    const profissional = await p.profissional.create({
+      data: { empresaId: empresa.id, nome: 'Profissional de teste' },
+    });
+    const servico = await p.servico.create({
+      data: {
+        empresaId: empresa.id,
+        nome: 'Serviço com insumo',
+        preco: 90,
+        duracaoMin: 30,
+        insumos: { create: { produtoId: produto.id, quantidade: 1 } },
+      },
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/login');
+    await page.getByLabel('E-mail', { exact: true }).fill(email);
+    await page.getByLabel('Senha', { exact: true }).fill('EstoqueTeste123!');
+    await page.getByRole('button', { name: 'Entrar no painel', exact: true }).click();
+    await page.waitForURL('**/dashboard');
+    await page.goto('/agenda');
+    await page.getByRole('button', { name: '+ Novo agendamento', exact: true }).first().click();
+    const modal = page.getByRole('dialog', { name: 'Novo agendamento', exact: true });
+    await modal.getByRole('button', { name: cliente.nome, exact: true }).click();
+    await modal.getByRole('button', { name: 'Próximo', exact: true }).click();
+    await modal.getByLabel('Profissional', { exact: true }).selectOption(profissional.id);
+    await modal.getByLabel('Serviço', { exact: true }).selectOption(servico.id);
+    await modal.getByRole('button', { name: 'Próximo', exact: true }).click();
+    const local = await page.evaluate(() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T10:00`;
+    });
+    await modal.getByLabel('Data e hora', { exact: true }).fill(local);
+    await modal.getByRole('button', { name: 'Salvar', exact: true }).click();
+    await expect(modal).toBeHidden();
+    await page.getByRole('button', { name: 'Lista', exact: true }).click();
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+    await page.getByRole('button', { name: 'Concluir', exact: true }).click();
+    await expect
+      .poll(
+        async () => (await p.produto.findUniqueOrThrow({ where: { id: produto.id } })).estoqueAtual,
+      )
+      .toBe(29);
+    const agendamento = await p.agendamento.findFirstOrThrow({ where: { empresaId: empresa.id } });
+    expect(agendamento.status).toBe('CONCLUIDO');
+    expect(
+      await p.movimentacaoEstoque.count({
+        where: { produtoId: produto.id, agendamentoId: agendamento.id, tipo: 'SAIDA' },
+      }),
+    ).toBe(1);
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Concluir', exact: true })).toHaveCount(0);
+    expect((await p.produto.findUniqueOrThrow({ where: { id: produto.id } })).estoqueAtual).toBe(
+      29,
+    );
+  } finally {
+    await p.movimentacaoEstoque.deleteMany({ where: { empresaId: empresa.id } });
+    await p.agendamento.deleteMany({ where: { empresaId: empresa.id } });
+    await p.servico.deleteMany({ where: { empresaId: empresa.id } });
+    await p.produto.deleteMany({ where: { empresaId: empresa.id } });
+    await p.profissional.deleteMany({ where: { empresaId: empresa.id } });
+    await p.cliente.deleteMany({ where: { empresaId: empresa.id } });
+    await p.empresa.delete({ where: { id: empresa.id } });
+    await p.$disconnect();
+  }
 });

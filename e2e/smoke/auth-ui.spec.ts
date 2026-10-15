@@ -56,3 +56,11 @@ test('cadastro chega à revisão sem pedir cartão e exige aceite', async ({ pag
     page.getByText('Aceite os Termos de Uso e a Política de Privacidade para continuar.'),
   ).toBeVisible();
 });
+
+test('recuperação não confirma envio de e-mail indisponível', async ({ page }) => {
+  await page.goto('/recuperar-senha');
+  await expect(page.getByRole('status')).toContainText('Recuperação por e-mail indisponível');
+  await expect(page.getByRole('button', { name: 'Enviar instruções' })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Voltar ao login', exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+});
