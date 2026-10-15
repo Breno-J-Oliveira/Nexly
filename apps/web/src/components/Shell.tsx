@@ -14,6 +14,7 @@ import { Icon } from '@/components/ui/Icon';
 /* --- Breadcrumb labels --- */
 const PAGE_LABELS: Record<string, string> = {
   '/dashboard': 'Painel Geral',
+  '/marketing':'Marketing', '/tarefas':'Tarefas', '/recorrencias':'Recorrências', '/automacao':'Automação', '/filiais':'Filiais', '/documentos':'Documentos',
   '/meu-nexly': 'Meu Nexly',
   '/agenda': 'Agenda',
   '/clientes': 'Clientes',
@@ -50,6 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
     { label: 'Relatórios', href: '/relatorios', icon: 'chart-column' },
   ]},
   { label: 'GESTÃO', items: [
+    ...[{label:'Marketing',href:'/marketing',icon:'bullhorn'},{label:'Tarefas',href:'/tarefas',icon:'list-check'},{label:'Recorrências',href:'/recorrencias',icon:'repeat'},{label:'Automação',href:'/automacao',icon:'bolt'},{label:'Filiais',href:'/filiais',icon:'building'},{label:'Documentos',href:'/documentos',icon:'file-lines'}],
     { label: 'Comissões', href: '/comissao', icon: 'money-bill-wave' },
     { label: 'Fidelidade', href: '/fidelidade', icon: 'star' },
     { label: 'Usuários', href: '/usuarios', icon: 'user-group' },

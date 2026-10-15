@@ -51,19 +51,7 @@ export function ModulePicker({
             <span className="sr-only"> — {m.descricao}</span>
           </button>
         ))}
-        {['Marketing', 'Tarefas', 'Recorrências', 'Automação', 'Filiais', 'Documentos'].map(
-          (nome) => (
-            <button
-              key={nome}
-              type="button"
-              disabled
-              className="min-h-14 rounded-lg border border-white/5 bg-[#18181F] p-3 text-left text-sm text-[#71717A]"
-            >
-              {nome}
-              <span className="mt-1 block text-[10px]">Em desenvolvimento</span>
-            </button>
-          ),
-        )}
+
       </div>
       <p className="text-xs leading-relaxed text-[#71717A]">
         Agenda inclui clientes, equipe e serviços. PDV inclui produtos, vendas e clientes. Ao
