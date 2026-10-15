@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import {
   ArgumentsHost,
   BadRequestException,
@@ -111,5 +112,35 @@ describe('HttpExceptionFilter', () => {
     });
     expect(body).not.toHaveProperty('code');
     expect(errorSpy).toHaveBeenCalled();
+  });
+  it.each([
+    ['P2002', 409],
+    ['P2003', 409],
+    ['P2025', 404],
+    ['P2034', 409],
+  ])('classifica %s sem expor SQL e dados privados', (code, status) => {
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const error = new Prisma.PrismaClientKnownRequestError(
+      'SQL com email privado e token secreto',
+      { code: String(code), clientVersion: 'test', meta: { target: 'secret-column' } },
+    );
+    filter.catch(error, makeHost({}, res));
+    expect(res.status).toHaveBeenCalledWith(status);
+    expect(JSON.stringify(res.json.mock.calls)).not.toMatch(/SQL|secreto|secret-column|privado/);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('nao registra dados da excecao inesperada em producao', () => {
+    const previous = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+      filter.catch(new Error('token-secreto-na-mensagem'), makeHost({ id: 'request-safe' }, res));
+      expect(JSON.stringify(res.json.mock.calls)).not.toContain('token-secreto');
+      expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('token-secreto');
+      expect(JSON.stringify(errorSpy.mock.calls)).toContain('request-safe');
+    } finally {
+      process.env.NODE_ENV = previous;
+    }
   });
 });

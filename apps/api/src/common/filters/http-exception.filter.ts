@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { databaseError } from './database-error';
 
 /**
  * Extrai o `code` semântico (ex: `SCHEDULE_CONFLICT`, `PRODUCT_OUT_OF_STOCK`)
@@ -51,7 +52,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let errors: string[] | undefined;
     let code: string | undefined;
 
-    if (exception instanceof HttpException) {
+    const database = databaseError(exception);
+    if (database) {
+      ({ status, message, code } = database);
+    } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res = exception.getResponse();
       code = extractCode(res);
@@ -70,7 +74,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
     } else {
       // Erro inesperado: loga no servidor e retorna mensagem genérica.
       this.logger.error(
-        `[${requestId ?? 'sem-id'}] ${exception instanceof Error ? exception.stack : String(exception)}`,
+        process.env.NODE_ENV === 'production'
+          ? `[${requestId ?? 'sem-id'}] Erro interno inesperado`
+          : `[${requestId ?? 'sem-id'}] ${exception instanceof Error ? exception.stack : String(exception)}`,
       );
     }
 

@@ -155,7 +155,7 @@ O principal conceito visual trabalhado foi o de um **Nexly modular**, permitindo
 
 ### 1. Pré-requisitos
 
-- Node.js ≥ 20
+- Node.js ≥ 24.15 (versão fixada em `.nvmrc`)
 - Docker + Docker Compose
 - OpenSSL (para gerar as chaves JWT)
 

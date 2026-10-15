@@ -2,7 +2,10 @@
   "extends": "@nexly/tsconfig/nestjs.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "baseUrl": "./"
+    "baseUrl": "./",
+    "ignoreDeprecations": "6.0",
+    "rootDir": ".",
+    "types": ["node", "jest"]
   },
   "include": ["src", "test", "prisma"]
 }

@@ -11,8 +11,12 @@ foreach ($port in @(3001, 3002)) {
     throw "A porta $port já está ocupada. O processo existente foi preservado."
   }
 }
+& $nodePath --require ./scripts/local-api-env.cjs node_modules/prisma/build/index.js migrate deploy --schema apps/api/prisma/schema.prisma
+if ($LASTEXITCODE -ne 0) { throw 'Falha nas migrations locais.' }
 if (-not $SkipBuild) {
-  & $nodePath node_modules/typescript/bin/tsc -p packages/shared/tsconfig.json
+  & $nodePath node_modules/prisma/build/index.js generate --schema apps/api/prisma/schema.prisma
+  if ($LASTEXITCODE -ne 0) { throw 'Falha ao gerar o cliente Prisma.' }
+  & npm.cmd run build --workspace @nexly/shared
   if ($LASTEXITCODE -ne 0) { throw 'Falha no build compartilhado.' }
   Push-Location apps/api
   try {

@@ -28,6 +28,7 @@ async function bootstrap(): Promise<void> {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['X-Request-Id', 'Retry-After'],
   });
 
   // Headers de segurança HTTP.
@@ -95,14 +96,27 @@ async function bootstrap(): Promise<void> {
     rateLimit({
       windowMs: 15 * 60 * 1000,
       max: 10,
-      skip: (req) =>
-        req.method !== 'POST' || !['/login', '/register', '/2fa/verify'].includes(req.path),
+      skip: (req) => req.method !== 'POST' || !['/login', '/2fa/verify'].includes(req.path),
+      skipSuccessfulRequests: true,
       standardHeaders: true,
       legacyHeaders: false,
       message: {
         statusCode: 429,
         message: 'Muitas tentativas de autenticação. Tente novamente mais tarde.',
       },
+    }),
+  );
+
+  // Cadastro continua contando sucessos para limitar criacao automatizada de contas.
+  app.use(
+    '/api/auth/register',
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 10,
+      standardHeaders: true,
+      legacyHeaders: false,
+      skip: (req) => req.method !== 'POST',
+      message: { statusCode: 429, message: 'Muitos cadastros. Tente novamente mais tarde.' },
     }),
   );
 

@@ -26,7 +26,7 @@ jobs:
       (github.event_name == 'schedule' && github.event.schedule == '0 6 * * *')
       || (github.event_name == 'workflow_dispatch' && inputs.tarefa == 'backup')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Instala cliente do Postgres e gpg
         run: |
@@ -57,7 +57,7 @@ jobs:
       (github.event_name == 'schedule' && github.event.schedule == '0 7 * * 0')
       || (github.event_name == 'workflow_dispatch' && inputs.tarefa == 'restore-test')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Instala cliente do Postgres e gpg
         run: |
@@ -121,7 +121,7 @@ jobs:
     # dispatch manual com a tarefa "verificar".
     if: github.event_name == 'schedule' || inputs.tarefa == 'verificar'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Instala AWS CLI
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends awscli
       - name: Verifica a idade do último backup

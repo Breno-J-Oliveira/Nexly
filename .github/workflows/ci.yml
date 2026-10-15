@@ -3,10 +3,36 @@ name: CI
 on:
   push:
     branches: [main, dev]
+  workflow_dispatch:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
+  containers:
+    name: Container (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [api, web]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build da imagem de produção
+        run: docker build --target production --build-arg NEXT_PUBLIC_API_URL=http://localhost:3001 -f apps/${{ matrix.app }}/Dockerfile -t nexly-${{ matrix.app }}:test .
+      - name: Confere usuário e módulos do backend
+        if: matrix.app == 'api'
+        run: |
+          test "$(docker image inspect nexly-api:test --format '{{.Config.User}}')" = node
+          docker run --rm --workdir /app/apps/api --entrypoint node nexly-api:test -e "require('@nestjs/core'); require('@nexly/shared'); require('@prisma/client'); console.log('Módulos do backend disponíveis')"
+          docker run --rm --entrypoint npm nexly-api:test exec --offline --workspace @nexly/api -- prisma --version
+      - name: Confere usuário e arquivos do frontend
+        if: matrix.app == 'web'
+        run: |
+          test "$(docker image inspect nexly-web:test --format '{{.Config.User}}')" = node
+          docker run --rm --workdir /app/apps/web --entrypoint node nexly-web:test -e "const fs=require('fs'); require('next'); if(!fs.existsSync('next.config.mjs')||!fs.existsSync('content/blog'))process.exit(1); console.log('Frontend disponível')"
   typecheck-api:
     name: Typecheck API
     runs-on: ubuntu-latest
@@ -29,12 +55,13 @@ jobs:
       DIRECT_URL: postgresql://nexly:nexly_test_password@localhost:5432/nexly_test?schema=public
       REDIS_URL: redis://localhost:6379
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24.18.0'
           cache: 'npm'
       - run: npm ci
+      - run: npm run build --workspace @nexly/shared
       - run: npx prisma generate --schema apps/api/prisma/schema.prisma
       - run: cd apps/api && npx tsc --noEmit
 
@@ -42,25 +69,29 @@ jobs:
     name: Typecheck Web
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24.18.0'
           cache: 'npm'
       - run: npm ci
-      - run: cd apps/web && npx tsc --noEmit
+      - run: npm run build --workspace @nexly/shared
+      - run: npm run typecheck --workspace @nexly/web
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24.18.0'
           cache: 'npm'
       - run: npm ci
+      - run: npm run build --workspace @nexly/shared
+      - run: npx prisma generate --schema apps/api/prisma/schema.prisma
       - run: npm run lint --if-present
+      - run: node scripts/verify-sql-lint.cjs
 
   test-api:
     name: Tests API
@@ -95,12 +126,13 @@ jobs:
       JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
       JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24.18.0'
           cache: 'npm'
       - run: npm ci
+      - run: npm run build --workspace @nexly/shared
       - run: npx prisma generate --schema apps/api/prisma/schema.prisma
       - run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
       - run: cd apps/api && npx jest --passWithNoTests
@@ -129,14 +161,15 @@ jobs:
       JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
       JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24.18.0'
           cache: 'npm'
       - name: Instala cliente do Postgres
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
       - run: npm ci
+      - run: npm run build --workspace @nexly/shared
       - run: npx prisma generate --schema apps/api/prisma/schema.prisma
       - run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
       - run: npm run seed --workspace @nexly/api
@@ -208,15 +241,15 @@ jobs:
       CORS_ORIGIN: http://localhost:3000
       NEXT_PUBLIC_API_URL: http://localhost:3001
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24.18.0'
           cache: 'npm'
       - run: npm ci
+      - run: npm run build --workspace @nexly/shared
       - run: npx prisma generate --schema apps/api/prisma/schema.prisma
       - run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
-      - run: npm run build --workspace @nexly/shared
       - run: npm run seed --workspace @nexly/api
       - run: npm run build --workspace @nexly/api
       - run: npm run build --workspace @nexly/web
@@ -234,7 +267,7 @@ jobs:
           tail -n 30 /tmp/api.log /tmp/web.log
           exit 1
       - run: npx playwright test
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: playwright-report

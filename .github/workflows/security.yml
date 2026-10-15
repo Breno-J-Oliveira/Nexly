@@ -25,7 +25,7 @@ jobs:
     name: Segredos (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # O gitleaks precisa do histórico para varrer commits antigos.
           fetch-depth: 0
@@ -43,10 +43,10 @@ jobs:
     name: Dependências vulneráveis (npm audit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24.18.0'
           cache: 'npm'
       - run: npm ci
       - name: Audit da API
@@ -62,7 +62,7 @@ jobs:
     container:
       image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Semgrep (regras OWASP Top 10 + TypeScript/Node)
         run: |
           semgrep scan \
@@ -82,7 +82,7 @@ jobs:
     # Só roda quando um alvo é informado (staging), pois exige uma URL viva.
     if: inputs.alvo_zap != ''
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Baseline scan
         uses: zaproxy/action-baseline@v0.14.0
         with:
@@ -93,7 +93,7 @@ jobs:
             -z "-config rules.directory=./.zap"
       - name: Guarda o relatório
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: zap-report
           path: report_html.html

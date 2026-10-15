@@ -29,12 +29,14 @@ module.exports = {
     'no-restricted-syntax': [
       'error',
       {
-        selector: "MemberExpression[property.name='$queryRawUnsafe']",
+        selector:
+          "MemberExpression[property.name='$queryRawUnsafe'], MemberExpression[computed=true][property.value='$queryRawUnsafe']",
         message:
           'Use $queryRaw com Prisma.sql`...` (parametrizado). $queryRawUnsafe aceita SQL concatenado e permite SQL Injection.',
       },
       {
-        selector: "MemberExpression[property.name='$executeRawUnsafe']",
+        selector:
+          "MemberExpression[property.name='$executeRawUnsafe'], MemberExpression[computed=true][property.value='$executeRawUnsafe']",
         message:
           'Use $executeRaw com Prisma.sql`...` (parametrizado). $executeRawUnsafe aceita SQL concatenado e permite SQL Injection.',
       },

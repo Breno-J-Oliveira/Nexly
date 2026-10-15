@@ -6,6 +6,9 @@ import { Public } from '../common/decorators/public.decorator';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { version } from '../../package.json';
+import { Prisma } from '@prisma/client';
+import { existsSync, readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 @Controller('health')
 export class HealthController {
@@ -88,13 +91,24 @@ export class HealthController {
       const failed = rows
         .filter((r) => r.finished_at === null && r.rolled_back_at === null)
         .map((r) => r.migration_name);
+      const directory = [
+        resolve(__dirname, '../../../prisma/migrations'),
+        resolve(process.cwd(), 'prisma/migrations'),
+        resolve(process.cwd(), 'apps/api/prisma/migrations'),
+      ].find(existsSync);
+      if (!directory) return { ok: false, error: 'Arquivos de migrations indisponíveis.' };
+      const expected = readdirSync(directory, { withFileTypes: true })
+        .filter((item) => item.isDirectory() && /^\d{14}_/.test(item.name))
+        .map((item) => item.name);
+      const pending = expected.filter(
+        (name) => !applied.some((item) => item.migration_name === name),
+      );
 
       return {
-        ok: failed.length === 0,
+        ok: failed.length === 0 && pending.length === 0,
         applied: applied.length,
         failed,
-        pending: [], // o backend só conhece migrations já enviadas ao banco;
-        // para detectar pending, rode `prisma migrate status` na CLI.
+        pending,
         lastAppliedAt: applied.at(-1)?.finished_at ?? null,
       };
     } catch {
@@ -108,8 +122,20 @@ export class HealthController {
   private async checkDb(): Promise<{ ok: boolean; latencyMs?: number; error?: string }> {
     const start = Date.now();
     try {
-      await this.prisma.client.$queryRaw`SELECT 1`;
-      return { ok: true, latencyMs: Date.now() - start };
+      const columns = await this.prisma.client.$queryRaw<
+        { table_name: string; column_name: string }[]
+      >`SELECT c.relname AS table_name, a.attname AS column_name FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname='public' AND a.attnum>0 AND NOT a.attisdropped`;
+      const existing = new Set(
+        columns.map((column) => `${column.table_name}.${column.column_name}`),
+      );
+      const ready = Prisma.dmmf.datamodel.models.every((model) =>
+        model.fields
+          .filter((field) => field.kind !== 'object')
+          .every((field) =>
+            existing.has(`${model.dbName ?? model.name}.${field.dbName ?? field.name}`),
+          ),
+      );
+      return { ok: ready, latencyMs: Date.now() - start };
     } catch {
       return { ok: false };
     }

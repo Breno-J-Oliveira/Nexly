@@ -1,7 +1,15 @@
-import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  HttpException,
+  Injectable,
+  Logger,
+  NestInterceptor,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Observable, tap } from 'rxjs';
 import { randomUUID } from 'crypto';
+import { databaseError } from '../filters/database-error';
 
 /**
  * Logging estruturado de requests.
@@ -58,9 +66,12 @@ export class LoggingInterceptor implements NestInterceptor {
             this.logger.log(`${method} ${originalUrl} ${res.statusCode} ${ms}ms [${requestId}]`);
           }
         },
-        error: (error) => {
+        error: (error: unknown) => {
           const ms = Date.now() - start;
-          const status = res.statusCode || 500;
+          const status =
+            error instanceof HttpException
+              ? error.getStatus()
+              : (databaseError(error)?.status ?? 500);
           if (isProd) {
             this.logger.error(
               JSON.stringify({
@@ -71,13 +82,10 @@ export class LoggingInterceptor implements NestInterceptor {
                 path: originalUrl,
                 status,
                 durationMs: ms,
-                message: error?.message ?? 'unknown',
               }),
             );
           } else {
-            this.logger.error(
-              `${method} ${originalUrl} ${status} ${ms}ms [${requestId}] ${error?.message ?? ''}`,
-            );
+            this.logger.error(`${method} ${originalUrl} ${status} ${ms}ms [${requestId}]`);
           }
         },
       }),

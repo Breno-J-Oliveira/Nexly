@@ -4,8 +4,19 @@ module.exports = {
   modulePathIgnorePatterns: ['<rootDir>/dist/'],
   testRegex: '.*\\.spec\\.ts$',
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
+    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.m?js$': [
+      'babel-jest',
+      {
+        plugins: [
+          '@babel/plugin-transform-dynamic-import',
+          '@babel/plugin-transform-modules-commonjs',
+          'babel-plugin-transform-import-meta',
+        ],
+      },
+    ],
   },
+  transformIgnorePatterns: ['/node_modules/(?!@nestjs/)'],
   collectCoverageFrom: ['src/**/*.(t|j)s'],
   coverageDirectory: './coverage',
   testEnvironment: 'node',

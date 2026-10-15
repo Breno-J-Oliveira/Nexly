@@ -22,12 +22,10 @@ const csp = [
 
 const nextConfig = {
   reactStrictMode: true,
+  experimental: { cpus: 2 },
   transpilePackages: ['@nexly/shared'],
   poweredByHeader: false,
   serverExternalPackages: ['@zxing/browser'],
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   async headers() {
     return [
       {

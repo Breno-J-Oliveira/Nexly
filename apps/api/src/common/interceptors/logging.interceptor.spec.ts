@@ -1,4 +1,4 @@
-import { CallHandler, ExecutionContext, Logger } from '@nestjs/common';
+import { CallHandler, ConflictException, ExecutionContext, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { of, throwError } from 'rxjs';
 import { LoggingInterceptor } from './logging.interceptor';
@@ -108,7 +108,8 @@ describe('LoggingInterceptor', () => {
       error: () => {
         expect(errorSpy).toHaveBeenCalled();
         const mensagem = errorSpy.mock.calls[0][0] as string;
-        expect(mensagem).toContain('boom');
+        expect(mensagem).not.toContain('boom');
+        expect(mensagem).toContain('500');
         done();
       },
     });
@@ -142,7 +143,7 @@ describe('LoggingInterceptor', () => {
     }
   });
 
-  it('em produção, emite erro no formato JSON com a mensagem', (done) => {
+  it('em produção, emite erro no formato JSON sem dados sensíveis', (done) => {
     const originalEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
     try {
@@ -160,13 +161,30 @@ describe('LoggingInterceptor', () => {
             method: 'GET',
             path: '/x',
             status: 500,
-            message: 'boom',
           });
+          expect(parsed).not.toHaveProperty('message');
           done();
         },
       });
     } finally {
       process.env.NODE_ENV = originalEnv;
     }
+  });
+  it('registra 409 mesmo antes do filtro atualizar o status HTTP', (done) => {
+    const req: MockRequest = {
+      headers: {},
+      method: 'POST',
+      originalUrl: '/api/clientes?email=privado',
+    };
+    const res = { setHeader: jest.fn(), statusCode: 200 };
+    const next: CallHandler = { handle: () => throwError(() => new ConflictException('segredo')) };
+    interceptor.intercept(makeContext(req, res), next).subscribe({
+      error: () => {
+        const log = JSON.stringify(errorSpy.mock.calls);
+        expect(log).toContain('409');
+        expect(log).not.toMatch(/privado|segredo/);
+        done();
+      },
+    });
   });
 });
