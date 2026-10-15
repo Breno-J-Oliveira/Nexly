@@ -142,6 +142,24 @@ describe('AgendamentosService', () => {
   });
 
   describe('listar', () => {
+    it('inclui atendimento noturno do dia local mesmo após meia-noite UTC', async () => {
+      prisma.client.agendamento.findMany.mockResolvedValue([]);
+      prisma.client.agendamento.count.mockResolvedValue(0);
+      await service.listar(1, 50, {
+        inicio: '2026-10-15T03:00:00.000Z',
+        fim: '2026-10-16T02:59:59.999Z',
+      });
+      expect(prisma.client.agendamento.findMany.mock.calls[0][0].where.dataHora).toEqual({
+        gte: new Date('2026-10-15T03:00Z'),
+        lte: new Date('2026-10-16T02:59:59.999Z'),
+      });
+    });
+    it('recusa status desconhecido antes de consultar o banco', async () => {
+      await expect(
+        service.listar(1, 50, { status: 'INVALIDO' as StatusAgendamento }),
+      ).rejects.toThrow();
+      expect(prisma.client.agendamento.findMany).not.toHaveBeenCalled();
+    });
     it('monta where vazio sem filtros', async () => {
       prisma.client.agendamento.findMany.mockResolvedValue([]);
       prisma.client.agendamento.count.mockResolvedValue(0);
@@ -181,7 +199,7 @@ describe('AgendamentosService', () => {
       const args = prisma.client.agendamento.findMany.mock.calls[0][0];
       expect(args.skip).toBe(25);
       expect(args.take).toBe(25);
-      expect(args.orderBy).toEqual({ dataHora: 'asc' });
+      expect(args.orderBy).toEqual([{ dataHora: 'asc' }, { id: 'asc' }]);
     });
 
     it('retorna metadados de paginação', async () => {

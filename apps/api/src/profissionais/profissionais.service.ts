@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { calendarRange } from '../common/validation/calendar-range';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { AtualizarProfissionalDto } from './dto/atualizar-profissional.dto';
@@ -64,15 +65,20 @@ export class ProfissionaisService {
    * (agendamentos AGENDADO/CONFIRMADO), para o frontend desabilitar
    * horários indisponíveis no modal de agendamento.
    */
-  async disponibilidade(id: string, data: string) {
-    const inicio = new Date(`${data}T00:00:00.000Z`);
-    const fim = new Date(`${data}T23:59:59.999Z`);
+  async disponibilidade(id: string, data?: string, inicio?: string, fim?: string) {
+    const periodo = calendarRange({ data, inicio, fim });
+    if (!periodo) throw new BadRequestException('Informe a data ou o período');
+    const profissional = await this.prisma.client.profissional.findFirst({
+      where: { id, ativo: true },
+      select: { id: true },
+    });
+    if (!profissional) throw new NotFoundException('Profissional não encontrado');
 
     const agendamentos = await this.prisma.client.agendamento.findMany({
       where: {
         profissionalId: id,
         status: { in: ['AGENDADO', 'CONFIRMADO'] },
-        dataHora: { gte: inicio, lte: fim },
+        dataHora: { gte: periodo.inicio, lte: periodo.fim },
       },
       select: { dataHora: true, dataHoraFim: true },
       orderBy: { dataHora: 'asc' },

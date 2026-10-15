@@ -25,6 +25,8 @@ export class AgendamentosController {
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
     @Query('data') data?: string,
     @Query('dataFim') dataFim?: string,
+    @Query('inicio') inicio?: string,
+    @Query('fim') fim?: string,
     @Query('profissionalId') profissionalId?: string,
     @Query('clienteId') clienteId?: string,
     @Query('status') status?: StatusAgendamento,
@@ -32,6 +34,8 @@ export class AgendamentosController {
     return this.agendamentosService.listar(page, limit, {
       data,
       dataFim,
+      inicio,
+      fim,
       profissionalId,
       clienteId,
       status,

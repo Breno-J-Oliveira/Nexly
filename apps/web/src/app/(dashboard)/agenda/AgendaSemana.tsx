@@ -3,6 +3,7 @@
 import { StatusAgendamento } from '@nexly/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isCancel } from 'axios';
+import { limitesCalendario, inicioDaSemana, organizarHorarios } from '@/lib/calendar';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
@@ -22,6 +23,7 @@ interface Agendamento {
 interface Props {
   dataInicio: Date;
   profissionalId?: string;
+  status?: StatusAgendamento;
   onConcluir?: (id: string) => void;
 }
 
@@ -29,13 +31,6 @@ const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
 const HORA_INICIO = 7;
 const HORA_FIM = 20;
 const SLOT_MINUTOS = 30;
-
-function dataISO(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
 function addDias(d: Date, dias: number): Date {
   const novo = new Date(d);
@@ -68,7 +63,7 @@ function statusColor(status: StatusAgendamento): { bg: string; border: string; t
   }
 }
 
-export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) {
+export function AgendaSemana({ dataInicio, profissionalId, status, onConcluir }: Props) {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
@@ -78,13 +73,11 @@ export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) 
   const podeConcluir = ['ADMIN', 'GESTOR', 'RECEPCIONISTA'].includes(user?.role || '');
 
   const diasSemana = useMemo(() => {
-    const inicioSemana = new Date(dataInicio);
-    inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+    const inicioSemana = inicioDaSemana(dataInicio);
     return Array.from({ length: 7 }).map((_, i) => addDias(inicioSemana, i));
   }, [dataInicio]);
 
-  const primeiroDia = diasSemana[0] ? dataISO(diasSemana[0]) : '';
-  const ultimoDia = diasSemana[6] ? dataISO(diasSemana[6]) : '';
+  const { inicio: primeiroDia, fim: ultimoDia } = limitesCalendario(diasSemana[0]!, diasSemana[6]);
   const carregar = useCallback(async () => {
     request.current?.abort();
     const controller = new AbortController();
@@ -100,8 +93,9 @@ export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) 
         const res = await api.get<{ data: Agendamento[]; total: number }>('/agendamentos', {
           signal: controller.signal,
           params: {
-            data: primeiroDia,
-            dataFim: ultimoDia,
+            inicio: primeiroDia,
+            fim: ultimoDia,
+            status,
             limit: 500,
             page: pagina,
             profissionalId: profissionalId || undefined,
@@ -119,7 +113,7 @@ export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) 
     } finally {
       if (!controller.signal.aborted) setCarregando(false);
     }
-  }, [primeiroDia, ultimoDia, profissionalId]);
+  }, [primeiroDia, ultimoDia, profissionalId, status]);
   const cancelarCarga = useCallback(() => request.current?.abort(), []);
   useEffect(() => {
     void carregar();
@@ -141,22 +135,35 @@ export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) 
     }
   };
 
+  const primeiraHora = Math.min(
+    HORA_INICIO,
+    ...agendamentos.map((item) => Math.floor(horaDecimal(item.dataHora))),
+  );
+  const ultimaHora = Math.min(
+    24,
+    Math.max(
+      HORA_FIM,
+      ...agendamentos.map((item) =>
+        Math.ceil(horaDecimal(item.dataHora) + duracaoMin(item.dataHora, item.dataHoraFim) / 60),
+      ),
+    ),
+  );
   const slots = useMemo(() => {
     const lista: number[] = [];
-    for (let h = HORA_INICIO; h <= HORA_FIM; h += SLOT_MINUTOS / 60) {
-      lista.push(h);
-    }
+    for (let h = primeiraHora; h < ultimaHora; h += SLOT_MINUTOS / 60) lista.push(h);
     return lista;
-  }, []);
+  }, [primeiraHora, ultimaHora]);
 
   const agendamentosPorDia = useMemo(() => {
     const map: Record<number, Agendamento[]> = {};
     for (let i = 0; i < 7; i++) map[i] = [];
     for (const a of agendamentos) {
-      const dia = new Date(a.dataHora).getDay();
+      const dia = (new Date(a.dataHora).getDay() + 6) % 7;
       map[dia]!.push(a);
     }
-    return map;
+    return Object.fromEntries(
+      Object.entries(map).map(([dia, itens]) => [dia, organizarHorarios(itens)]),
+    );
   }, [agendamentos]);
 
   return (
@@ -218,20 +225,25 @@ export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) 
               className="relative border-r border-[rgba(255,255,255,0.05)]"
               style={{ gridColumn: diaIdx + 2, gridRow: `1 / span ${slots.length}` }}
             >
-              {agendamentosPorDia[diaIdx]!.map((a) => {
+              {agendamentosPorDia[diaIdx]!.map(({ item: a, coluna, colunas }) => {
                 const inicio = horaDecimal(a.dataHora);
                 const duracao = duracaoMin(a.dataHora, a.dataHoraFim);
-                const top = (inicio - HORA_INICIO) * (60 / SLOT_MINUTOS) * 64;
+                const top = (inicio - primeiraHora) * (60 / SLOT_MINUTOS) * 64;
                 const height = (duracao / SLOT_MINUTOS) * 64;
                 const colors = statusColor(a.status);
 
                 return (
                   <div
                     key={a.id}
-                    className="group absolute left-1 right-1 rounded-lg border p-2 text-[11px] transition-opacity hover:opacity-90"
+                    data-appointment-id={a.id}
+                    title={`${a.cliente.nome} · ${a.servico.nome} · ${a.profissional.nome} · ${new Date(a.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+                    className="group absolute rounded-lg border p-2 text-[11px] transition-opacity hover:opacity-90"
                     style={{
                       top: `${top}px`,
-                      height: `${Math.max(height, 28)}px`,
+                      left: `calc(${(coluna * 100) / colunas}% + 4px)`,
+                      width: `calc(${100 / colunas}% - 8px)`,
+                      minWidth: '0',
+                      height: `${Math.max(Math.min(height, (ultimaHora - inicio) * 128), 28)}px`,
                       backgroundColor: colors.bg,
                       borderColor: colors.border,
                       color: colors.text,

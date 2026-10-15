@@ -18,8 +18,13 @@ export class ProfissionaisController {
   }
 
   @Get(':id/disponibilidade')
-  disponibilidade(@Param('id') id: string, @Query('data') data: string) {
-    return this.profissionaisService.disponibilidade(id, data);
+  disponibilidade(
+    @Param('id') id: string,
+    @Query('data') data?: string,
+    @Query('inicio') inicio?: string,
+    @Query('fim') fim?: string,
+  ) {
+    return this.profissionaisService.disponibilidade(id, data, inicio, fim);
   }
 
   @Post()

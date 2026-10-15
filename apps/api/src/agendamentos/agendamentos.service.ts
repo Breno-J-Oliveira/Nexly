@@ -1,3 +1,4 @@
+import { calendarRange } from '../common/validation/calendar-range';
 import { bloquearAgenda } from '../database/agenda-lock';
 import {
   BadRequestException,
@@ -29,6 +30,8 @@ const includeCompleto = {
 export interface FiltrosAgendamento {
   data?: string;
   dataFim?: string;
+  inicio?: string;
+  fim?: string;
   profissionalId?: string;
   clienteId?: string;
   status?: StatusAgendamento;
@@ -53,13 +56,10 @@ export class AgendamentosService {
       throw new BadRequestException('Página ou limite inválido (1 a 500 registros por página)');
     const where: Prisma.AgendamentoWhereInput = {};
 
-    if (filtros.data) {
-      const inicio = new Date(`${filtros.data}T00:00:00.000Z`);
-      const fim = filtros.dataFim
-        ? new Date(`${filtros.dataFim}T23:59:59.999Z`)
-        : new Date(`${filtros.data}T23:59:59.999Z`);
-      where.dataHora = { gte: inicio, lte: fim };
-    }
+    const periodo = calendarRange(filtros);
+    if (periodo) where.dataHora = { gte: periodo.inicio, lte: periodo.fim };
+    if (filtros.status && !Object.values(StatusAgendamento).includes(filtros.status))
+      throw new BadRequestException('Status inválido');
     if (filtros.profissionalId) where.profissionalId = filtros.profissionalId;
     if (filtros.clienteId) where.clienteId = filtros.clienteId;
     if (filtros.status) where.status = filtros.status;
@@ -70,7 +70,7 @@ export class AgendamentosService {
         include: includeCompleto,
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { dataHora: 'asc' },
+        orderBy: [{ dataHora: 'asc' }, { id: 'asc' }],
       }),
       this.prisma.client.agendamento.count({ where }),
     ]);

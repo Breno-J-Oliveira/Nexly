@@ -101,7 +101,19 @@ describe('ProfissionaisService', () => {
   });
 
   describe('disponibilidade', () => {
+    it('não sugere disponibilidade de profissional inexistente', async () => {
+      profissional.findFirst.mockResolvedValue(null);
+      await expect(service.disponibilidade('externo', '2026-10-15')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(agendamento.findMany).not.toHaveBeenCalled();
+    });
+    it('recusa datas inexistentes', async () => {
+      await expect(service.disponibilidade('p1', '2026-02-30')).rejects.toThrow();
+      expect(agendamento.findMany).not.toHaveBeenCalled();
+    });
     it('mapeia dataHora/dataHoraFim para {inicio, fim}', async () => {
+      profissional.findFirst.mockResolvedValue({ id: 'p1' });
       const inicio = new Date('2026-01-15T10:00:00Z');
       const fim = new Date('2026-01-15T10:30:00Z');
       agendamento.findMany.mockResolvedValue([{ dataHora: inicio, dataHoraFim: fim }]);
