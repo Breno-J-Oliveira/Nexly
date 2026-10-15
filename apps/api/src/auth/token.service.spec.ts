@@ -17,6 +17,7 @@ describe('TokenService', () => {
       usuario: { findUnique: jest.Mock };
       authSession: { updateMany: jest.Mock };
       $transaction: jest.Mock;
+      $queryRaw: jest.Mock;
     };
   };
 
@@ -39,9 +40,14 @@ describe('TokenService', () => {
           updateMany: jest.fn(),
           create: jest.fn(),
         },
-        usuario: { findUnique: jest.fn() },
+        usuario: { findUnique: jest.fn().mockResolvedValue(usuarioMock) },
         authSession: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
-        $transaction: jest.fn((queries: unknown[]) => Promise.all(queries)),
+        $transaction: jest.fn((input: unknown) =>
+          Array.isArray(input)
+            ? Promise.all(input)
+            : (input as (tx: unknown) => unknown)(prisma.client),
+        ),
+        $queryRaw: jest.fn().mockImplementation(() => Promise.resolve([{ now: new Date() }])),
       },
     };
 
@@ -162,5 +168,47 @@ describe('TokenService', () => {
     });
     await expect(service.rotateRefreshToken('logged-out')).rejects.toThrow(UnauthorizedException);
     expect(prisma.client.authSession.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('recupera só a rotação mais recente dentro da janela sem prolongá-la', async () => {
+    prisma.client.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt1',
+      usuarioId: 'u1',
+      sessionId: 's1',
+      revogado: true,
+      expiresAt: new Date(Date.now() + 60000),
+      sessao: {
+        revogado: false,
+        expiresAt: new Date(Date.now() + 60000),
+        lastRotationTokenId: 'rt1',
+        lastRotationAt: new Date(Date.now() - 100),
+      },
+    });
+    prisma.client.refreshToken.create.mockResolvedValue({ sessionId: 's1' });
+    await expect(service.rotateRefreshToken('recent')).resolves.toMatchObject({ sessionId: 's1' });
+    expect(prisma.client.authSession.updateMany).not.toHaveBeenCalled();
+    expect(prisma.client.refreshToken.updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each(['expired-window', 'older-ancestor'])('detecta replay %s', async (state) => {
+    prisma.client.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt1',
+      usuarioId: 'u1',
+      sessionId: 's1',
+      revogado: true,
+      expiresAt: new Date(Date.now() + 60000),
+      sessao: {
+        revogado: false,
+        expiresAt: new Date(Date.now() + 60000),
+        lastRotationTokenId: state === 'older-ancestor' ? 'rt2' : 'rt1',
+        lastRotationAt: new Date(Date.now() - (state === 'expired-window' ? 5000 : 100)),
+      },
+    });
+    await expect(service.rotateRefreshToken('replay')).rejects.toThrow(UnauthorizedException);
+    expect(prisma.client.authSession.updateMany).toHaveBeenCalledWith({
+      where: { usuarioId: 'u1', revogado: false },
+      data: { revogado: true },
+    });
+    expect(prisma.client.refreshToken.create).not.toHaveBeenCalled();
   });
 });

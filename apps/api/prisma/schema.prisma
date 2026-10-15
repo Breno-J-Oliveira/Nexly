@@ -166,6 +166,8 @@ model AuthSession {
   id String @id @default(uuid())
   usuarioId String @map("usuario_id")
   revogado Boolean @default(false)
+  lastRotationTokenId String? @map("last_rotation_token_id")
+  lastRotationAt DateTime? @map("last_rotation_at")
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
