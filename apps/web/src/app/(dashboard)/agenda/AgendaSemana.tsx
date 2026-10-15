@@ -1,6 +1,6 @@
 'use client';
 
-import { StatusAgendamento } from '@nexly/shared';
+import { StatusAgendamento, type PendenciaEstoque } from '@nexly/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isCancel } from 'axios';
 import { limitesCalendario, inicioDaSemana, organizarHorarios } from '@/lib/calendar';
@@ -8,13 +8,14 @@ import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
 import { Icon } from '@/components/ui/Icon';
-import { toastSuccess } from '@/components/ui/Toaster';
+import { toast, toastSuccess } from '@/components/ui/Toaster';
 
 interface Agendamento {
   id: string;
   dataHora: string;
   dataHoraFim: string | null;
   status: StatusAgendamento;
+  pendenciasEstoque?: PendenciaEstoque[];
   cliente: { nome: string };
   profissional: { nome: string };
   servico: { nome: string; duracaoMin: number; preco: number };
@@ -124,8 +125,12 @@ export function AgendaSemana({ dataInicio, profissionalId, status, onConcluir }:
     setConcluindo(id);
     setErro('');
     try {
-      await api.patch(`/agendamentos/${id}/status`, { status: 'CONCLUIDO' });
-      toastSuccess('Serviço concluído!');
+      const { data: atualizado } = await api.patch<Agendamento>(`/agendamentos/${id}/status`, {
+        status: 'CONCLUIDO',
+      });
+      if (atualizado.pendenciasEstoque?.length)
+        toast.warning('Atendimento concluído. Há baixas de estoque pendentes para regularizar.');
+      else toastSuccess('Serviço concluído!');
       await carregar();
       onConcluir?.(id);
     } catch {
@@ -250,6 +255,16 @@ export function AgendaSemana({ dataInicio, profissionalId, status, onConcluir }:
                     }}
                   >
                     <div className="truncate font-medium text-[#FAFAFA]">{a.cliente.nome}</div>
+                    {!!a.pendenciasEstoque?.length && (
+                      <span
+                        role="img"
+                        aria-label="Baixa de estoque pendente"
+                        title="Baixa de estoque pendente"
+                        className="absolute right-1 top-1 text-amber-300"
+                      >
+                        <Icon name="circle-exclamation" size="xs" />
+                      </span>
+                    )}
                     <div className="truncate text-[10px] opacity-80">{a.servico.nome}</div>
                     <div className="truncate text-[10px] opacity-70">{a.profissional.nome}</div>
                     {a.status === 'CONFIRMADO' && podeConcluir && (

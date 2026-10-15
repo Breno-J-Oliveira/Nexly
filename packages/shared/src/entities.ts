@@ -106,3 +106,9 @@ export interface ItemVenda {
   quantidade: number;
   precoUnitario: number;
 }
+
+export interface PendenciaEstoque {
+  produtoId: string;
+  nomeProduto: string;
+  quantidade: number;
+}

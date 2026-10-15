@@ -17,6 +17,7 @@ import { Modal } from '@/components/ui/Modal';
 import { toastSuccess } from '@/components/ui/Toaster';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PendingStockConsumptions } from '@/components/ui/PendingStockConsumptions';
 import { VencimentoAlert } from '@/components/ui/VencimentoAlert';
 import { api } from '@/lib/api';
 
@@ -274,6 +275,7 @@ export default function EstoquePage() {
               onRetry={() => void alerts.refetch()}
             />
           )}
+          <PendingStockConsumptions canManage={podeCriar} onStockChange={carregar} />
           <VencimentoAlert />
 
           {/* Banner de produtos em alerta */}

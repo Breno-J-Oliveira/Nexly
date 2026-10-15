@@ -5,6 +5,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StatusAgendamento } from '@nexly/shared';
 import { PrismaService } from '../database/prisma.service';
 import { AgendamentosService } from './agendamentos.service';
+import { EstoqueIntegracaoService } from '../estoque/estoque-integracao.service';
 
 describe('AgendamentosService', () => {
   let service: AgendamentosService;
@@ -62,6 +63,10 @@ describe('AgendamentosService', () => {
         AgendamentosService,
         { provide: PrismaService, useValue: prisma },
         { provide: EventEmitter2, useValue: emitter },
+        {
+          provide: EstoqueIntegracaoService,
+          useValue: { concluirTx: jest.fn().mockResolvedValue([]) },
+        },
       ],
     }).compile();
 

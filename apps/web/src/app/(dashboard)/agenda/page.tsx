@@ -2,7 +2,7 @@
 
 import { PageToolbar } from '@/components/ui/PageToolbar';
 
-import { StatusAgendamento } from '@nexly/shared';
+import { StatusAgendamento, type PendenciaEstoque } from '@nexly/shared';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
@@ -12,7 +12,7 @@ import { isCancel } from 'axios';
 import { useAuth } from '@/lib/auth';
 import { limitesCalendario, inicioDaSemana } from '@/lib/calendar';
 import { Modal } from '@/components/ui/Modal';
-import { toastSuccess } from '@/components/ui/Toaster';
+import { toast, toastSuccess } from '@/components/ui/Toaster';
 import { AgendamentoModal } from './AgendamentoModal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/Icon';
@@ -22,6 +22,7 @@ interface Agendamento {
   id: string;
   dataHora: string;
   status: StatusAgendamento;
+  pendenciasEstoque?: PendenciaEstoque[];
   cliente: { nome: string };
   profissional: { nome: string };
   servico: { nome: string; preco: number };
@@ -156,14 +157,19 @@ function AgendaContent() {
     setAlterando(id);
     setErro('');
     try {
-      await api.patch(`/agendamentos/${id}/status`, { status });
-      toastSuccess(
-        status === 'CONCLUIDO'
-          ? 'Serviço concluído!'
-          : status === 'CANCELADO'
-            ? 'Agendamento cancelado'
-            : 'Status atualizado!',
-      );
+      const { data: atualizado } = await api.patch<Agendamento>(`/agendamentos/${id}/status`, {
+        status,
+      });
+      if (status === 'CONCLUIDO' && atualizado.pendenciasEstoque?.length)
+        toast.warning('Atendimento concluído. Há baixas de estoque pendentes para regularizar.');
+      else
+        toastSuccess(
+          status === 'CONCLUIDO'
+            ? 'Serviço concluído!'
+            : status === 'CANCELADO'
+              ? 'Agendamento cancelado'
+              : 'Status atualizado!',
+        );
       setCancelando(null);
       await carregar();
     } catch (error) {
@@ -389,6 +395,11 @@ function AgendaContent() {
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     <Badge color={a.status}>{a.status}</Badge>
+                    {!!a.pendenciasEstoque?.length && (
+                      <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-200">
+                        Baixa de estoque pendente
+                      </span>
+                    )}
                     {podeEditar && a.status === 'CONFIRMADO' && (
                       <Button
                         disabled={alterando !== null}

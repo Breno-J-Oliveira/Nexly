@@ -280,6 +280,7 @@ model Agendamento {
   dataHora       DateTime          @map("data_hora")
   dataHoraFim    DateTime          @map("data_hora_fim")
   status         StatusAgendamento @default(AGENDADO)
+  pendenciasEstoque Json @default("[]") @map("pendencias_estoque")
   createdAt      DateTime          @default(now()) @map("created_at")
 
   cliente      Cliente      @relation(fields: [clienteId], references: [id], onDelete: Restrict)

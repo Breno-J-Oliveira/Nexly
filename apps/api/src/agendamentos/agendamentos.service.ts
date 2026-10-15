@@ -14,6 +14,7 @@ import { Prisma } from '@prisma/client';
 import { StatusAgendamento } from '@nexly/shared';
 import { PrismaService } from '../database/prisma.service';
 import { CriarAgendamentoDto } from './dto/criar-agendamento.dto';
+import { EstoqueIntegracaoService } from '../estoque/estoque-integracao.service';
 
 const TRANSICOES: Record<StatusAgendamento, StatusAgendamento[]> = {
   AGENDADO: ['CONFIRMADO', 'CONCLUIDO', 'CANCELADO'],
@@ -43,6 +44,7 @@ export class AgendamentosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly estoqueIntegracao: EstoqueIntegracaoService,
   ) {}
 
   async listar(page: number, limit: number, filtros: FiltrosAgendamento) {
@@ -156,6 +158,7 @@ export class AgendamentosService {
   }
 
   async atualizarStatus(id: string, novoStatus: StatusAgendamento) {
+    const empresaId = getTenantIdOrFail();
     const agendamento = await this.obter(id);
 
     const permitidas = TRANSICOES[agendamento.status] ?? [];
@@ -167,7 +170,7 @@ export class AgendamentosService {
 
     const atualizado = await this.prisma.client.$transaction(async (tx) => {
       const changed = await tx.agendamento.updateMany({
-        where: { id, status: agendamento.status },
+        where: { id, empresaId, status: agendamento.status },
         data: { status: novoStatus },
       });
       if (changed.count !== 1) {
@@ -177,23 +180,29 @@ export class AgendamentosService {
       }
 
       const atualizado = await tx.agendamento.findFirst({
-        where: { id },
+        where: { id, empresaId },
         include: includeCompleto,
       });
       if (!atualizado) {
         throw new NotFoundException('Agendamento não encontrado');
       }
-      if (novoStatus === StatusAgendamento.CONCLUIDO)
+      if (novoStatus === StatusAgendamento.CONCLUIDO) {
         await registrarVisitaClienteTx(
           tx as unknown as Prisma.TransactionClient,
           getTenantIdOrFail(),
           atualizado.clienteId,
           atualizado.dataHora,
         );
+        const pendenciasEstoque = await this.estoqueIntegracao.concluirTx(
+          tx as unknown as Prisma.TransactionClient,
+          atualizado,
+        );
+        return { ...atualizado, pendenciasEstoque };
+      }
       return atualizado;
     });
 
-    // Hook de conclusão — ponto de extensão para a integração com estoque (Fase 4).
+    // Extensões recebem o evento após o commit; o estoque já foi tratado atomicamente.
     if (novoStatus === StatusAgendamento.CONCLUIDO) {
       this.eventEmitter.emit('agendamento.concluido', {
         agendamentoId: id,
