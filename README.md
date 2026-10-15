@@ -410,4 +410,3 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 </p>
 ---
 
-Consulte o guia de [módulos operacionais](MODULOS_OPERACIONAIS.md) para Marketing, Tarefas, Recorrências, Automação, Filiais e Documentos.

@@ -73,3 +73,7 @@ img/
 backups/
 *.dump
 *.dump.gpg
+# Relatorios e planejamento internos (somente local)
+/MODULOS_OPERACIONAIS.md
+/MELHORIAS_USUARIO.md
+/[0-9][0-9]_[0-9][0-9].md
