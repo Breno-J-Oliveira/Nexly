@@ -1,5 +1,6 @@
 import { OperacoesModule } from './operacoes/operacoes.controller';
 import { Module } from '@nestjs/common';
+import { HeavyOperationGuard } from './common/guards/heavy-operation.guard';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -91,6 +92,7 @@ import { ExperienciaModule } from './experiencia/experiencia.controller';
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
+    { provide: APP_GUARD, useClass: HeavyOperationGuard },
     // Ordem: o NestJS executa interceptors na ordem inversa de registro.
     // Tenant deve rodar antes do Logging para que os logs incluam contexto de tenant.
     { provide: APP_INTERCEPTOR, useClass: TenantInterceptor },

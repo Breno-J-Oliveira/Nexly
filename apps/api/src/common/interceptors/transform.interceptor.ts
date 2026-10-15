@@ -6,7 +6,14 @@ import { map, Observable } from 'rxjs';
 // service retorne o objeto Prisma completo por engano. É uma defesa em
 // profundidade: o hash da senha, o secret do TOTP e os códigos de backup
 // (que ficam armazenados apenas como hash) nunca saem da API.
-const SENSITIVE_KEYS = new Set(['senhaHash', 'twoFactorSecret', 'twoFactorBackupCodes']);
+const SENSITIVE_KEYS = new Set([
+  'senhaHash',
+  'twoFactorSecret',
+  'twoFactorBackupCodes',
+  'twoFactorChallengeHash',
+  'twoFactorChallengeExpiresAt',
+  'twoFactorLastUsedStep',
+]);
 
 function toPlain(value: unknown): unknown {
   if (value === null || value === undefined) return value;

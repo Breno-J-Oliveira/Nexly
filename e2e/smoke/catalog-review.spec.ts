@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from '../fixtures';
 import { PrismaClient } from '@prisma/client';
 import { config } from 'dotenv';
 import argon2 from 'argon2';
@@ -100,7 +100,9 @@ test('customer contacts are optional and catalogue actions follow role permissio
     await expect(page.getByRole('button', { name: 'Editar', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: '+ Novo produto', exact: true })).toHaveCount(0);
     await page.goto('/estoque');
-    await expect(page.getByRole('heading', { name: 'Estoque', exact: true, level: 2 })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Estoque', exact: true, level: 2 }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Registrar Entrada', exact: true })).toHaveCount(
       0,
     );

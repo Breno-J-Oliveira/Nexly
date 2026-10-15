@@ -69,6 +69,34 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  /** Janela fixa atômica entre réplicas; não estende o bloqueio em tentativas recusadas. */
+  async consumeLimit(
+    key: string,
+    limit: number,
+    windowSeconds: number,
+  ): Promise<{ allowed: boolean; remaining: number; retryAfter: number } | null> {
+    if (!this.client) return null;
+    try {
+      const result = (await this.client.eval(
+        `
+        local count = tonumber(redis.call('GET', KEYS[1]) or '0')
+        local ttl = redis.call('TTL', KEYS[1])
+        if count >= tonumber(ARGV[1]) then return {0, 0, math.max(ttl, 1)} end
+        count = redis.call('INCR', KEYS[1])
+        if count == 1 or ttl < 0 then redis.call('EXPIRE', KEYS[1], ARGV[2]); ttl = tonumber(ARGV[2]) end
+        return {1, tonumber(ARGV[1]) - count, math.max(ttl, 1)}
+      `,
+        1,
+        key,
+        limit,
+        windowSeconds,
+      )) as [number, number, number];
+      return { allowed: result[0] === 1, remaining: result[1], retryAfter: result[2] };
+    } catch {
+      return null;
+    }
+  }
+
   async ping(): Promise<boolean> {
     if (!this.client) return false;
     try {

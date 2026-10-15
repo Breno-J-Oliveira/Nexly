@@ -17,6 +17,9 @@ const CAMPOS_SENSIVEIS = new Set([
   'cvv',
   'twoFactorSecret',
   'twoFactorBackupCodes',
+  'twoFactorChallengeHash',
+  'twoFactorChallengeExpiresAt',
+  'twoFactorLastUsedStep',
   'secret',
 ]);
 

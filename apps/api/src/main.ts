@@ -96,7 +96,9 @@ async function bootstrap(): Promise<void> {
     rateLimit({
       windowMs: 15 * 60 * 1000,
       max: 10,
-      skip: (req) => req.method !== 'POST' || !['/login', '/2fa/verify'].includes(req.path),
+      skip: (req) =>
+        req.method !== 'POST' ||
+        !['/login', '/2fa/verify', '/2fa/enable', '/2fa/disable'].includes(req.path),
       skipSuccessfulRequests: true,
       standardHeaders: true,
       legacyHeaders: false,
@@ -135,21 +137,7 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // Rate limit para operações pesadas (exportação de dados / LGPD): 3 req / hora por IP.
-  app.use(
-    ['/api/export', '/api/lgpd'],
-    rateLimit({
-      windowMs: 60 * 60 * 1000,
-      max: 3,
-      skip: (req) => req.baseUrl === '/api/export' && req.path === '/produtos/vencendo',
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: {
-        statusCode: 429,
-        message: 'Limite de exportações atingido. Tente novamente em 1 hora.',
-      },
-    }),
-  );
+  // Operações pesadas são limitadas pelo HeavyOperationGuard após validar a identidade.
 
   app.setGlobalPrefix('api');
 

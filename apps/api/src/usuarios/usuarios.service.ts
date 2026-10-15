@@ -90,7 +90,7 @@ export class UsuariosService {
     const updated = await this.prisma.client.$transaction(async (tx) => {
       const changed = await tx.usuario.updateMany({
         where: { id, senhaHash: u.senhaHash },
-        data: { senhaHash },
+        data: { senhaHash, twoFactorChallengeHash: null, twoFactorChallengeExpiresAt: null },
       });
       if (changed.count !== 1)
         throw new ConflictException(

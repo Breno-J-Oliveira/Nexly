@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { TwoFactorSecurity } from '@/components/TwoFactorSecurity';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PageToolbar } from '@/components/ui/PageToolbar';
@@ -108,6 +109,7 @@ export default function MinhaContaPage() {
       <p className="break-words text-sm text-[#A1A1AA]">
         {user?.nome} · {user?.email}
       </p>
+      <TwoFactorSecurity />
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <section
           className="rounded-2xl border border-white/10 bg-[#111116] p-5 sm:p-6"

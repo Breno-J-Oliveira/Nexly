@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../fixtures';
 import { PrismaClient } from '@prisma/client';
 import { config } from 'dotenv';
 config({ path: 'apps/api/.env' });

@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, Usuario } from '@prisma/client';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 
 // Apenas o último token rotacionado pode repetir por 3s; logout/expiração nunca têm tolerância.
@@ -145,17 +145,37 @@ export class TokenService {
 
   /** Token temporário de 5 min usado no fluxo de 2FA (scope restrito). */
   async generateTempToken(usuarioId: string): Promise<string> {
-    return this.jwtService.signAsync({ sub: usuarioId, scope: '2fa' }, { expiresIn: '5m' });
+    const token = await this.jwtService.signAsync(
+      { sub: usuarioId, scope: '2fa', jti: randomUUID() },
+      { expiresIn: '5m' },
+    );
+    const saved = await this.prisma.client.usuario.updateMany({
+      where: { id: usuarioId, ativo: true, twoFactorEnabled: true },
+      data: {
+        twoFactorChallengeHash: this.hashToken(token),
+        twoFactorChallengeExpiresAt: new Date(Date.now() + 5 * 60_000),
+      },
+    });
+    if (saved.count !== 1) throw new UnauthorizedException('Usuário inválido');
+    return token;
   }
 
-  async verifyTempToken(token: string): Promise<{ sub: string }> {
-    const payload = await this.jwtService.verifyAsync<{ sub: string; scope?: string }>(token, {
-      algorithms: ['RS256'],
-    });
-    if (payload.scope !== '2fa' || !payload.sub) {
-      throw new UnauthorizedException('Token inválido');
+  async verifyTempToken(token: string): Promise<{ sub: string; challengeHash: string }> {
+    try {
+      const payload = await this.jwtService.verifyAsync<{
+        sub: string;
+        scope?: string;
+        jti?: string;
+      }>(token, {
+        algorithms: ['RS256'],
+      });
+      if (payload.scope !== '2fa' || !payload.sub || !payload.jti) {
+        throw new UnauthorizedException('Token inválido');
+      }
+      return { sub: payload.sub, challengeHash: this.hashToken(token) };
+    } catch {
+      throw new UnauthorizedException('Verificação expirada. Entre novamente.');
     }
-    return { sub: payload.sub };
   }
 
   private hashToken(token: string): string {

@@ -6,6 +6,7 @@ import { TokenService } from './token.service';
 
 describe('TokenService', () => {
   let service: TokenService;
+  let jwt: { signAsync: jest.Mock; verifyAsync: jest.Mock };
   let prisma: {
     client: {
       refreshToken: {
@@ -14,7 +15,7 @@ describe('TokenService', () => {
         updateMany: jest.Mock;
         create: jest.Mock;
       };
-      usuario: { findUnique: jest.Mock };
+      usuario: { findUnique: jest.Mock; updateMany: jest.Mock };
       authSession: { updateMany: jest.Mock };
       $transaction: jest.Mock;
       $queryRaw: jest.Mock;
@@ -40,7 +41,10 @@ describe('TokenService', () => {
           updateMany: jest.fn(),
           create: jest.fn(),
         },
-        usuario: { findUnique: jest.fn().mockResolvedValue(usuarioMock) },
+        usuario: {
+          findUnique: jest.fn().mockResolvedValue(usuarioMock),
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
         authSession: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
         $transaction: jest.fn((input: unknown) =>
           Array.isArray(input)
@@ -51,16 +55,42 @@ describe('TokenService', () => {
       },
     };
 
+    jwt = { signAsync: jest.fn().mockResolvedValue('signed-challenge'), verifyAsync: jest.fn() };
     const moduleRef = await Test.createTestingModule({
       providers: [
         TokenService,
         { provide: PrismaService, useValue: prisma },
-        { provide: JwtService, useValue: { signAsync: jest.fn() } },
+        { provide: JwtService, useValue: jwt },
       ],
     }).compile();
 
     service = moduleRef.get(TokenService);
   });
+
+  it('persiste apenas hash do desafio temporário com expiração', async () => {
+    await expect(service.generateTempToken('u1')).resolves.toBe('signed-challenge');
+    expect(jwt.signAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ sub: 'u1', scope: '2fa', jti: expect.any(String) }),
+      { expiresIn: '5m' },
+    );
+    const saved = prisma.client.usuario.updateMany.mock.calls[0]?.[0];
+    expect(saved.where).toMatchObject({ id: 'u1', ativo: true, twoFactorEnabled: true });
+    expect(saved.data.twoFactorChallengeHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.stringify(saved)).not.toContain('signed-challenge');
+  });
+
+  it('JWT malformado ou expirado resulta em 401', async () => {
+    jwt.verifyAsync.mockRejectedValue(new Error('jwt expired'));
+    await expect(service.verifyTempToken('invalid')).rejects.toThrow(UnauthorizedException);
+  });
+
+  it.each([{ sub: 'u1' }, { sub: 'u1', scope: '2fa' }, { sub: 'u1', scope: 'other', jti: 'n' }])(
+    'rejeita token fora do contrato de desafio: %j',
+    async (payload) => {
+      jwt.verifyAsync.mockResolvedValue(payload);
+      await expect(service.verifyTempToken('invalid')).rejects.toThrow(UnauthorizedException);
+    },
+  );
 
   it('refresh com token válido revoga o antigo e emite um novo', async () => {
     prisma.client.refreshToken.findUnique.mockResolvedValue({

@@ -152,13 +152,16 @@ export class AuthController {
   }
 
   @Post('2fa/enable')
-  async enable2fa(@CurrentUser() user: { id: string }, @Body() dto: Enable2faDto) {
-    return this.authService.enable2fa(user.id, dto.code);
+  async enable2fa(
+    @CurrentUser() user: { id: string; sessionId: string },
+    @Body() dto: Enable2faDto,
+  ) {
+    return this.authService.enable2fa(user.id, dto.code, user.sessionId);
   }
 
   @Post('2fa/disable')
   async disable2fa(@CurrentUser() user: { id: string }, @Body() dto: Disable2faDto) {
-    return this.authService.disable2fa(user.id, dto.password);
+    return this.authService.disable2fa(user.id, dto.password, dto.code);
   }
 
   @Public()

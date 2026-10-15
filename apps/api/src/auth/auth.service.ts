@@ -9,7 +9,14 @@ import {
 import { authenticator } from '@otplib/preset-default';
 import { Usuario } from '@prisma/client';
 import { Plano } from '@prisma/client';
-import { Role, UsuarioPublico, validarCnpj, MODULE_IDS, normalizeModules } from '@nexly/shared';
+import {
+  Role,
+  UsuarioPublico,
+  validarCnpj,
+  MODULE_IDS,
+  normalizeModules,
+  RECOVERY_CODE_BYTES,
+} from '@nexly/shared';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 import { toDataURL } from 'qrcode';
@@ -266,10 +273,11 @@ export class AuthService {
     }
 
     const secret = authenticator.generateSecret();
-    await this.prisma.client.usuario.updateMany({
-      where: { id: userId },
+    const configured = await this.prisma.client.usuario.updateMany({
+      where: { id: userId, ativo: true, twoFactorEnabled: false },
       data: { twoFactorSecret: secret },
     });
+    if (configured.count !== 1) throw new BadRequestException('Atualize o estado do autenticador');
 
     const otpauthUrl = authenticator.keyuri(usuario.email, 'Nexly', secret);
     const qrCodeUrl = await toDataURL(otpauthUrl);
@@ -278,45 +286,98 @@ export class AuthService {
   }
 
   /** Valida o código TOTP e ativa o 2FA, gerando códigos de backup. */
-  async enable2fa(userId: string, code: string) {
+  async enable2fa(userId: string, code: string, sessionId: string) {
     const usuario = await this.prisma.client.usuario.findUnique({ where: { id: userId } });
     if (!usuario || !usuario.twoFactorSecret) {
       throw new BadRequestException('2FA não inicializado');
     }
+    if (usuario.twoFactorEnabled) throw new BadRequestException('O 2FA já está ativo');
 
     const valido = authenticator.check(code, usuario.twoFactorSecret);
     if (!valido) throw new BadRequestException('Código inválido');
 
-    const backupCodes = Array.from({ length: 10 }, () => randomBytes(4).toString('hex'));
+    const backupCodes = Array.from({ length: 10 }, () =>
+      randomBytes(RECOVERY_CODE_BYTES).toString('hex'),
+    );
     const backupHashes = backupCodes.map((c) => createHash('sha256').update(c).digest('hex'));
 
-    await this.prisma.client.usuario.updateMany({
-      where: { id: userId },
-      data: { twoFactorEnabled: true, twoFactorBackupCodes: backupHashes },
+    await this.prisma.client.$transaction(async (tx) => {
+      const enabled = await tx.usuario.updateMany({
+        where: {
+          id: userId,
+          ativo: true,
+          twoFactorEnabled: false,
+          twoFactorSecret: usuario.twoFactorSecret,
+        },
+        data: {
+          twoFactorEnabled: true,
+          twoFactorBackupCodes: backupHashes,
+          twoFactorLastUsedStep: Math.floor(Date.now() / 30_000),
+        },
+      });
+      if (enabled.count !== 1)
+        throw new BadRequestException('A configuração foi alterada. Atualize a página.');
+      await tx.authSession.updateMany({
+        where: { usuarioId: userId, id: { not: sessionId }, revogado: false },
+        data: { revogado: true },
+      });
+      await tx.refreshToken.updateMany({
+        where: { usuarioId: userId, sessionId: { not: sessionId }, revogado: false },
+        data: { revogado: true },
+      });
     });
 
     return { backupCodes };
   }
 
-  /** Desativa o 2FA (requer a senha atual). */
-  async disable2fa(userId: string, password: string) {
+  /** Desativa o 2FA mediante senha e um segundo fator válido. */
+  async disable2fa(userId: string, password: string, code: string) {
     const usuario = await this.prisma.client.usuario.findUnique({ where: { id: userId } });
     if (!usuario) throw new UnauthorizedException('Usuário não encontrado');
 
     const senhaValida = await argon2.verify(usuario.senhaHash, password);
     if (!senhaValida) throw new BadRequestException('Senha incorreta');
 
-    await this.prisma.client.usuario.updateMany({
-      where: { id: userId },
-      data: { twoFactorEnabled: false, twoFactorSecret: null, twoFactorBackupCodes: [] },
+    const codeHash = createHash('sha256').update(code).digest('hex');
+    const step = Math.floor(Date.now() / 30_000);
+    const isBackup = usuario.twoFactorBackupCodes.includes(codeHash);
+    const isTotp =
+      !!usuario.twoFactorSecret &&
+      authenticator.check(code, usuario.twoFactorSecret) &&
+      (usuario.twoFactorLastUsedStep === null || usuario.twoFactorLastUsedStep < step);
+    if (!usuario.twoFactorEnabled || (!isBackup && !isTotp)) {
+      throw new BadRequestException(
+        'Código inválido ou já utilizado. Aguarde o próximo código do app.',
+      );
+    }
+
+    const disabled = await this.prisma.client.usuario.updateMany({
+      where: {
+        id: userId,
+        twoFactorEnabled: true,
+        senhaHash: usuario.senhaHash,
+        twoFactorSecret: usuario.twoFactorSecret,
+        twoFactorBackupCodes: { equals: usuario.twoFactorBackupCodes },
+        twoFactorLastUsedStep: usuario.twoFactorLastUsedStep,
+      },
+      data: {
+        twoFactorEnabled: false,
+        twoFactorSecret: null,
+        twoFactorBackupCodes: [],
+        twoFactorChallengeHash: null,
+        twoFactorChallengeExpiresAt: null,
+        twoFactorLastUsedStep: null,
+      },
     });
+    if (disabled.count !== 1)
+      throw new BadRequestException('A configuração foi alterada. Atualize a página.');
 
     return { success: true };
   }
 
   /** Verifica o código TOTP/backup e emite o JWT completo. */
   async verify2fa(tempToken: string, code: string): Promise<AuthResult> {
-    const { sub } = await this.tokenService.verifyTempToken(tempToken);
+    const { sub, challengeHash } = await this.tokenService.verifyTempToken(tempToken);
     const throttleKey = `2fa|${sub}`;
     if (await this.throttle.isBlocked(throttleKey)) {
       throw new UnauthorizedException(
@@ -327,25 +388,52 @@ export class AuthService {
     if (!usuario || !usuario.ativo || !usuario.twoFactorEnabled) {
       throw new UnauthorizedException('Usuário inválido');
     }
+    if (
+      usuario.twoFactorChallengeHash !== challengeHash ||
+      !usuario.twoFactorChallengeExpiresAt ||
+      usuario.twoFactorChallengeExpiresAt <= new Date()
+    ) {
+      throw new UnauthorizedException('Verificação expirada ou já utilizada. Entre novamente.');
+    }
 
     const codeHash = createHash('sha256').update(code).digest('hex');
     const isBackup = usuario.twoFactorBackupCodes.includes(codeHash);
-    const isTotp = !!usuario.twoFactorSecret && authenticator.check(code, usuario.twoFactorSecret);
+    const step = Math.floor(Date.now() / 30_000);
+    const isTotp =
+      !!usuario.twoFactorSecret &&
+      authenticator.check(code, usuario.twoFactorSecret) &&
+      (usuario.twoFactorLastUsedStep === null || usuario.twoFactorLastUsedStep < step);
 
     if (!isBackup && !isTotp) {
       await this.throttle.registerFailure(throttleKey);
-      throw new UnauthorizedException('Código inválido');
+      throw new UnauthorizedException(
+        'Código inválido ou já utilizado. Aguarde o próximo código do app.',
+      );
     }
 
-    // Código de backup é de uso único: remove após uso.
-    if (isBackup) {
-      const restantes = usuario.twoFactorBackupCodes.filter((c) => c !== codeHash);
-      const consumed = await this.prisma.client.usuario.updateMany({
-        where: { id: usuario.id, twoFactorBackupCodes: { equals: usuario.twoFactorBackupCodes } },
-        data: { twoFactorBackupCodes: restantes },
-      });
-      if (consumed.count !== 1) throw new UnauthorizedException('Código já utilizado');
-    }
+    // CAS único: desafio, código de backup e passo TOTP são consumidos na mesma escrita.
+    const consumed = await this.prisma.client.usuario.updateMany({
+      where: {
+        id: usuario.id,
+        ativo: true,
+        twoFactorEnabled: true,
+        twoFactorSecret: usuario.twoFactorSecret,
+        senhaHash: usuario.senhaHash,
+        twoFactorChallengeHash: challengeHash,
+        twoFactorChallengeExpiresAt: { gt: new Date() },
+        twoFactorBackupCodes: { equals: usuario.twoFactorBackupCodes },
+        twoFactorLastUsedStep: usuario.twoFactorLastUsedStep,
+      },
+      data: {
+        twoFactorChallengeHash: null,
+        twoFactorChallengeExpiresAt: null,
+        ...(isBackup
+          ? { twoFactorBackupCodes: usuario.twoFactorBackupCodes.filter((c) => c !== codeHash) }
+          : { twoFactorLastUsedStep: step }),
+      },
+    });
+    if (consumed.count !== 1)
+      throw new UnauthorizedException('Verificação já utilizada. Entre novamente.');
     await this.throttle.registerSuccess(throttleKey);
     return this.buildAuthResult(usuario);
   }

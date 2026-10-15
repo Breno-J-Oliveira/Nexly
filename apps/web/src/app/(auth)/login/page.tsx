@@ -13,7 +13,12 @@ import { Icon } from '@/components/ui/Icon';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { ErrorCodes, parseApiError } from '@/lib/errors';
-import { UsuarioPublico } from '@nexly/shared';
+import {
+  UsuarioPublico,
+  AUTHENTICATOR_CODE_PATTERN,
+  RECOVERY_CODE_PATTERN,
+  RECOVERY_CODE_LENGTH,
+} from '@nexly/shared';
 
 const schema = z.object({
   email: z.string({ required_error: 'E-mail obrigatório' }).email('E-mail inválido'),
@@ -82,8 +87,11 @@ export default function LoginPage() {
       );
       completeLogin(res.data.accessToken, res.data.usuario);
       router.push('/dashboard');
-    } catch {
-      setError('Código inválido ou expirado');
+    } catch (error) {
+      const failure = error as { response?: { data?: { message?: string } } };
+      setError(
+        failure.response?.data?.message ?? 'Não foi possível verificar o código. Tente novamente.',
+      );
     } finally {
       setVerifying(false);
     }
@@ -96,43 +104,72 @@ export default function LoginPage() {
     >
       <div className="flex justify-center">
         <div className="flex h-12 w-12 items-center justify-center">
-          <Image src="/logo.svg" alt="Nexly" width={40} height={40} className="h-10 w-10 object-contain" />
+          <Image
+            src="/logo.svg"
+            alt="Nexly"
+            width={40}
+            height={40}
+            className="h-10 w-10 object-contain"
+          />
         </div>
       </div>
 
-      <h1 className="mt-8 text-center text-[28px] font-bold tracking-tight sm:text-[30px]" style={{ color: '#FAFAFA' }}>
+      <h1
+        className="mt-8 text-center text-[28px] font-bold tracking-tight sm:text-[30px]"
+        style={{ color: '#FAFAFA' }}
+      >
         Boas-vindas ao Nexly
       </h1>
       <p className="mt-2 text-center text-[14px]" style={{ color: '#A1A1AA' }}>
         Gerencie seu negócio de forma inteligente
       </p>
 
-      <div className="mt-8 flex rounded-xl border p-1" style={{ borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#0C0C10' }}>
-        <Link href="/login" className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}>
+      <div
+        className="mt-8 flex rounded-xl border p-1"
+        style={{ borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#0C0C10' }}
+      >
+        <Link
+          href="/login"
+          className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors"
+          style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}
+        >
           Entrar
         </Link>
-        <Link href="/cadastro" className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ color: '#A1A1AA' }}>
+        <Link
+          href="/cadastro"
+          className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors"
+          style={{ color: '#A1A1AA' }}
+        >
           Criar conta
         </Link>
       </div>
 
       {twoFactor ? (
-        <div className="mt-6 space-y-4">
+        <form
+          className="mt-6 space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void verificar2fa();
+          }}
+        >
           <p className="text-center text-sm" style={{ color: '#A1A1AA' }}>
-            {backupMode
-              ? 'Digite um código de backup'
-              : 'Digite o código do seu app autenticador'}
+            {backupMode ? 'Digite um código de backup' : 'Digite o código do seu app autenticador'}
           </p>
           <input
             ref={twoFactorInputRef}
             value={twoFactorCode}
             onChange={(e) =>
-              setTwoFactorCode(backupMode ? e.target.value : e.target.value.replace(/\D/g, ''))
+              setTwoFactorCode(
+                backupMode
+                  ? e.target.value.replace(/[^a-f0-9]/gi, '').toLowerCase()
+                  : e.target.value.replace(/\D/g, ''),
+              )
             }
             placeholder={backupMode ? 'código de backup' : '000000'}
-            inputMode={backupMode ? 'text' : 'numeric'} autoComplete="one-time-code"
-            maxLength={backupMode ? 16 : 6}
-            className="w-full rounded-xl border bg-[#111116] px-4 py-3 text-center font-mono text-[40px] tracking-widest text-[#FAFAFA] placeholder:text-[#3F3F46] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30"
+            inputMode={backupMode ? 'text' : 'numeric'}
+            autoComplete="one-time-code"
+            maxLength={backupMode ? RECOVERY_CODE_LENGTH : 6}
+            className={`w-full rounded-xl border bg-[#111116] px-4 py-3 text-center font-mono ${backupMode ? 'text-base tracking-wide' : 'text-[40px] tracking-widest'} text-[#FAFAFA] placeholder:text-[#3F3F46] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30`}
             style={{ borderColor: 'rgba(255,255,255,0.08)' }}
             aria-label="Código de verificação em dois fatores"
           />
@@ -149,86 +186,149 @@ export default function LoginPage() {
               {backupMode ? 'Usar código do app' : 'Usar código de backup'}
             </button>
           </div>
-          {error && <p className="text-center text-sm text-red-400">{error}</p>}
+          {error && (
+            <p role="alert" className="text-center text-sm text-red-400">
+              {error}
+            </p>
+          )}
           <Button
-            onClick={() => void verificar2fa()}
+            type="submit"
             loading={verifying || !ready}
-            disabled={twoFactorCode.length < 6}
+            disabled={
+              backupMode
+                ? !RECOVERY_CODE_PATTERN.test(twoFactorCode)
+                : !AUTHENTICATOR_CODE_PATTERN.test(twoFactorCode)
+            }
             className="w-full rounded-xl py-3 text-[14px] font-semibold shadow-lg shadow-[#6366F1]/20"
           >
             Verificar
           </Button>
-        </div>
+          <button
+            type="button"
+            disabled={verifying}
+            className="w-full text-center text-sm text-[#A1A1AA] hover:text-white"
+            onClick={() => {
+              setTwoFactor(null);
+              setTwoFactorCode('');
+              setBackupMode(false);
+              setError(null);
+            }}
+          >
+            Entrar novamente
+          </button>
+        </form>
       ) : (
-        <form method="post" onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="mt-6 space-y-4">
-        <AuthInput
-          label="E-mail"
-          type="email"
-          autoComplete="email"
-          placeholder="contato@studionexly.com"
-          error={errors.email?.message}
-          {...register('email')}
-        />
-        <AuthInput
-          label="Senha"
-          type={showPassword ? 'text' : 'password'}
-          autoComplete="current-password"
-          placeholder="••••••••"
-          error={errors.senha?.message}
-          right={
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="text-[#71717A] transition-colors hover:text-[#A1A1AA]"
-              aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+        <form
+          method="post"
+          onSubmit={(e) => void handleSubmit(onSubmit)(e)}
+          className="mt-6 space-y-4"
+        >
+          <AuthInput
+            label="E-mail"
+            type="email"
+            autoComplete="email"
+            placeholder="contato@studionexly.com"
+            error={errors.email?.message}
+            {...register('email')}
+          />
+          <AuthInput
+            label="Senha"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            placeholder="••••••••"
+            error={errors.senha?.message}
+            right={
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="text-[#71717A] transition-colors hover:text-[#A1A1AA]"
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                <Icon name={showPassword ? 'eye-slash' : 'eye'} size="sm" color="currentColor" />
+              </button>
+            }
+            {...register('senha')}
+          />
+
+          <div className="flex justify-end">
+            <Link
+              href="/recuperar-senha"
+              className="text-[13px] font-medium hover:underline"
+              style={{ color: '#818CF8' }}
             >
-              <Icon name={showPassword ? 'eye-slash' : 'eye'} size="sm" color="currentColor" />
-            </button>
-          }
-          {...register('senha')}
-        />
+              Esqueceu a senha?
+            </Link>
+          </div>
 
-        <div className="flex justify-end">
-          <Link href="/recuperar-senha" className="text-[13px] font-medium hover:underline" style={{ color: '#818CF8' }}>
-            Esqueceu a senha?
-          </Link>
-        </div>
+          {error && <p className="text-center text-sm text-red-400">{error}</p>}
 
-        {error && <p className="text-center text-sm text-red-400">{error}</p>}
-
-        <Button type="submit" loading={isSubmitting || !ready} className="w-full rounded-xl py-3 text-[14px] font-semibold shadow-lg shadow-[#6366F1]/20">
-          Entrar no painel
-        </Button>
-      </form>
+          <Button
+            type="submit"
+            loading={isSubmitting || !ready}
+            className="w-full rounded-xl py-3 text-[14px] font-semibold shadow-lg shadow-[#6366F1]/20"
+          >
+            Entrar no painel
+          </Button>
+        </form>
       )}
 
       <div className="relative mt-6 flex items-center">
         <div className="flex-1 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
-        <span className="px-3 text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#71717A' }}>
+        <span
+          className="px-3 text-[11px] font-semibold uppercase tracking-wider"
+          style={{ color: '#71717A' }}
+        >
           outras formas de acesso
         </span>
         <div className="flex-1 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3">
-        <button type="button" disabled title="Login social ainda não disponível" className="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-medium opacity-50 disabled:cursor-not-allowed" style={{ borderColor: 'rgba(255,255,255,0.08)', color: '#FAFAFA' }}>
-          <Icon name="google" variant="brand" className="text-[18px]" style={{ color: '#4285F4' }} />
+        <button
+          type="button"
+          disabled
+          title="Login social ainda não disponível"
+          className="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-medium opacity-50 disabled:cursor-not-allowed"
+          style={{ borderColor: 'rgba(255,255,255,0.08)', color: '#FAFAFA' }}
+        >
+          <Icon
+            name="google"
+            variant="brand"
+            className="text-[18px]"
+            style={{ color: '#4285F4' }}
+          />
           Google
         </button>
-        <button type="button" disabled title="Login social ainda não disponível" className="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-medium opacity-50 disabled:cursor-not-allowed" style={{ borderColor: 'rgba(255,255,255,0.08)', color: '#FAFAFA' }}>
+        <button
+          type="button"
+          disabled
+          title="Login social ainda não disponível"
+          className="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-medium opacity-50 disabled:cursor-not-allowed"
+          style={{ borderColor: 'rgba(255,255,255,0.08)', color: '#FAFAFA' }}
+        >
           <Icon name="apple" variant="brand" className="text-[18px]" style={{ color: '#FAFAFA' }} />
           Apple
         </button>
       </div>
 
-      <p className="mt-2 text-center text-[11px] text-[#A1A1AA]">Google e Apple estarão disponíveis em breve.</p>
+      <p className="mt-2 text-center text-[11px] text-[#A1A1AA]">
+        Google e Apple estarão disponíveis em breve.
+      </p>
       <p className="mt-6 text-center text-[12px] leading-relaxed" style={{ color: '#71717A' }}>
         Ao continuar, você concorda com os{' '}
-        <Link href="/termos" className="underline hover:text-[#A1A1AA]" style={{ color: '#A1A1AA' }}>
+        <Link
+          href="/termos"
+          className="underline hover:text-[#A1A1AA]"
+          style={{ color: '#A1A1AA' }}
+        >
           Termos de Uso
         </Link>{' '}
         e{' '}
-        <Link href="/privacidade" className="underline hover:text-[#A1A1AA]" style={{ color: '#A1A1AA' }}>
+        <Link
+          href="/privacidade"
+          className="underline hover:text-[#A1A1AA]"
+          style={{ color: '#A1A1AA' }}
+        >
           Política de Privacidade
         </Link>
         .

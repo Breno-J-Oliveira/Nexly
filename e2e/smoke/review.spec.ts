@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 import { PrismaClient } from '@prisma/client';
 import { config } from 'dotenv';
 import argon2 from 'argon2';

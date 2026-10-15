@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../fixtures';
 
 const protectedRoutes = [
   'dashboard',
@@ -68,8 +68,7 @@ for (const width of [1440, 390]) {
       await expect(page.locator('body')).not.toBeEmpty();
       await page.evaluate(() => document.fonts.ready);
       // Wait for hydration/route-owned controls, then check document-level overflow.
-      // Navegação humana: também evita saturar o limite global com dezenas de recargas.
-      await page.waitForTimeout(2500);
+      await page.waitForTimeout(500);
       if (protectedRoutes.includes(route)) await expect(page).toHaveURL(new RegExp(`/${route}$`));
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),

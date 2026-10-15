@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Res } from '@nestjs/common';
 import { Role } from '@nexly/shared';
 import { Response } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { getTenantContext } from '../database/tenant-context';
 import { LgpdService } from './lgpd.service';
+import { ConfirmarSenhaLgpdDto, ExcluirContaDto } from './lgpd.dto';
 
 interface UserContext {
   id: string;
@@ -26,7 +27,7 @@ export class LgpdController {
 
   @Get('exportar/cliente/:id')
   @Roles(Role.ADMIN)
-  async exportarCliente(@Param('id') id: string, @Res() res: Response) {
+  async exportarCliente(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response) {
     const ctx = getTenantContext();
     const dados = await this.service.exportarCliente(ctx?.tenantId ?? '', id);
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -40,8 +41,8 @@ export class LgpdController {
   @Post('anonimizar/cliente/:id')
   @Roles(Role.ADMIN)
   anonimizar(
-    @Param('id') id: string,
-    @Body() body: { password: string },
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: ConfirmarSenhaLgpdDto,
     @CurrentUser() user: UserContext,
   ) {
     const ctx = getTenantContext();
@@ -50,10 +51,7 @@ export class LgpdController {
 
   @Delete('excluir-conta')
   @Roles(Role.ADMIN)
-  solicitarExclusao(
-    @Body() body: { password: string; confirmacao: string },
-    @CurrentUser() user: UserContext,
-  ) {
+  solicitarExclusao(@Body() body: ExcluirContaDto, @CurrentUser() user: UserContext) {
     const ctx = getTenantContext();
     return this.service.solicitarExclusao(
       ctx?.tenantId ?? '',

@@ -1,7 +1,8 @@
-import { IsString, Length } from 'class-validator';
+import { IsString, Matches } from 'class-validator';
+import { AUTHENTICATOR_CODE_PATTERN } from '@nexly/shared';
 
 export class Enable2faDto {
   @IsString()
-  @Length(6, 8)
+  @Matches(AUTHENTICATOR_CODE_PATTERN)
   code!: string;
 }

@@ -1,10 +1,12 @@
-import { IsString, Length } from 'class-validator';
+import { IsString, MaxLength, Matches } from 'class-validator';
+import { TWO_FACTOR_CODE_PATTERN } from '@nexly/shared';
 
 export class Verify2faDto {
   @IsString()
+  @MaxLength(2048)
   tempToken!: string;
 
   @IsString()
-  @Length(6, 64)
+  @Matches(TWO_FACTOR_CODE_PATTERN)
   code!: string;
 }

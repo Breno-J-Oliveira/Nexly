@@ -1,4 +1,5 @@
 'use client';
+import { TwoFactorSecurity } from '@/components/TwoFactorSecurity';
 import { baixarBlob } from '@/lib/download';
 
 import { PageToolbar } from '@/components/ui/PageToolbar';
@@ -172,12 +173,6 @@ export default function ConfiguracoesPage() {
   });
   const [salvandoCupom, setSalvandoCupom] = useState(false);
   const [cupomErro, setCupomErro] = useState<string | null>(null);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-  const [twoFactorCode, setTwoFactorCode] = useState('');
-  const [backupCodes, setBackupCodes] = useState<string[]>([]);
-  const [twoFactorSenha, setTwoFactorSenha] = useState('');
-  const [salvando2fa, setSalvando2fa] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [auditTotal, setAuditTotal] = useState(0);
   const [auditPagina, setAuditPagina] = useState(1);
@@ -365,57 +360,6 @@ export default function ConfiguracoesPage() {
     if (!confirm(`Excluir o cupom "${c.codigo}"?`)) return;
     await api.delete(`/cupons/${c.id}`);
     await carregarCupons();
-  };
-
-  const carregar2fa = async (): Promise<void> => {
-    const r = await api.get<{ enabled: boolean }>('/auth/2fa/status');
-    setTwoFactorEnabled(r.data.enabled);
-  };
-
-  useEffect(() => {
-    if (secao !== 'seguranca') return;
-    void carregar2fa().catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secao]);
-
-  const iniciar2fa = async (): Promise<void> => {
-    const r = await api.get<{ qrCodeUrl: string; secret: string }>('/auth/2fa/setup');
-    setQrCodeUrl(r.data.qrCodeUrl);
-  };
-
-  const ativar2fa = async (): Promise<void> => {
-    setSalvando2fa(true);
-    try {
-      const r = await api.post<{ backupCodes: string[] }>('/auth/2fa/enable', {
-        code: twoFactorCode,
-      });
-      setBackupCodes(r.data.backupCodes);
-      setTwoFactorEnabled(true);
-      setQrCodeUrl(null);
-      setTwoFactorCode('');
-      toastSuccess('2FA ativado!');
-    } catch (e) {
-      const err = e as { response?: { data?: { message?: string } } };
-      toastError(err?.response?.data?.message ?? 'Código inválido');
-    } finally {
-      setSalvando2fa(false);
-    }
-  };
-
-  const desativar2fa = async (): Promise<void> => {
-    setSalvando2fa(true);
-    try {
-      await api.post('/auth/2fa/disable', { password: twoFactorSenha });
-      setTwoFactorEnabled(false);
-      setTwoFactorSenha('');
-      setBackupCodes([]);
-      toastSuccess('2FA desativado!');
-    } catch (e) {
-      const err = e as { response?: { data?: { message?: string } } };
-      toastError(err?.response?.data?.message ?? 'Senha incorreta');
-    } finally {
-      setSalvando2fa(false);
-    }
   };
 
   const carregarAudit = async (): Promise<void> => {
@@ -1233,96 +1177,7 @@ return (
               Autenticação de dois fatores (2FA)
             </p>
 
-            <div
-              className="mt-6 rounded-xl p-5"
-              style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[14px] font-semibold" style={{ color: '#FAFAFA' }}>
-                    Autenticação de dois fatores
-                  </p>
-                  <p className="mt-0.5 text-[13px]" style={{ color: '#71717A' }}>
-                    Adicione uma camada extra de segurança com seu app autenticador
-                  </p>
-                </div>
-                {twoFactorEnabled ? (
-                  <span
-                    className="rounded-full px-3 py-1 text-xs font-semibold"
-                    style={{ backgroundColor: 'rgba(34,197,94,0.10)', color: '#4ADE80' }}
-                  >
-                    2FA ativo
-                  </span>
-                ) : (
-                  <Button onClick={() => void iniciar2fa()}>Ativar</Button>
-                )}
-              </div>
-
-              {!twoFactorEnabled && qrCodeUrl && (
-                <div className="mt-4 flex flex-col items-center gap-3">
-                  <img src={qrCodeUrl} alt="QR code 2FA" className="h-48 w-48 rounded-lg" />
-                  <p className="text-[13px]" style={{ color: '#71717A' }}>
-                    Escaneie com Google Authenticator ou Authy
-                  </p>
-                  <div className="w-full">
-                    <Input
-                      label="Código do app"
-                      value={twoFactorCode}
-                      onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
-                      placeholder="000000"
-                    />
-                  </div>
-                  <Button
-                    onClick={() => void ativar2fa()}
-                    loading={salvando2fa}
-                    disabled={twoFactorCode.length < 6}
-                    className="w-full"
-                  >
-                    Ativar 2FA
-                  </Button>
-                </div>
-              )}
-
-              {twoFactorEnabled && backupCodes.length > 0 && (
-                <div className="mt-4">
-                  <p className="mb-2 text-[13px] font-medium" style={{ color: '#A1A1AA' }}>
-                    Códigos de backup (guarde em local seguro):
-                  </p>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {backupCodes.map((c) => (
-                      <span
-                        key={c}
-                        className="rounded-md px-2 py-1 text-center font-mono text-xs"
-                        style={{ backgroundColor: '#0C0C10', color: '#A1A1AA' }}
-                      >
-                        {c}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {twoFactorEnabled && (
-                <div className="mt-4 border-t border-[rgba(255,255,255,0.06)] pt-4">
-                  <Input
-                    label="Senha atual para desativar"
-                    type="password"
-                    value={twoFactorSenha}
-                    onChange={(e) => setTwoFactorSenha(e.target.value)}
-                    placeholder="••••••••"
-                  />
-                  <Button
-                    variant="danger"
-                    onClick={() => void desativar2fa()}
-                    loading={salvando2fa}
-                    disabled={!twoFactorSenha}
-                    className="mt-2"
-                  >
-                    Desativar 2FA
-                  </Button>
-                </div>
-              )}
-            </div>
+            <div className="mt-6"><TwoFactorSecurity /></div>
 
             <div className="mt-8">
               <h3 className="text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>
