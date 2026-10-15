@@ -17,7 +17,7 @@ export function ResponsiveDetailPanel({
 }) {
   const [mobile, setMobile] = useState(false);
   useEffect(() => {
-    const query = window.matchMedia('(max-width: 767px)');
+    const query = window.matchMedia('(max-width: 1279px)');
     const update = () => setMobile(query.matches);
     update();
     query.addEventListener('change', update);
@@ -29,6 +29,6 @@ export function ResponsiveDetailPanel({
       {children}
     </Modal>
   ) : (
-    <aside className="detail-panel hidden self-start md:block">{children}</aside>
+    <aside className="detail-panel hidden self-start xl:block">{children}</aside>
   );
 }

@@ -1,3 +1,4 @@
+import { saleDateFilter } from './sale-date-filter';
 import { registrarCompraClienteTx } from '../clientes/cliente-activity';
 import {
   BadRequestException,
@@ -214,30 +215,39 @@ export class VendasService {
     limit: number,
     filtros: { dataInicio?: string; dataFim?: string; clienteId?: string },
   ) {
+    const createdAt = saleDateFilter(filtros.dataInicio, filtros.dataFim);
     const where: Prisma.VendaWhereInput = {
+      empresaId: getTenantIdOrFail(),
       ...(filtros.clienteId ? { clienteId: filtros.clienteId } : {}),
-      ...(filtros.dataInicio || filtros.dataFim
-        ? {
-            createdAt: {
-              ...(filtros.dataInicio ? { gte: new Date(filtros.dataInicio) } : {}),
-              ...(filtros.dataFim ? { lte: new Date(filtros.dataFim) } : {}),
-            },
-          }
-        : {}),
+      ...(createdAt ? { createdAt } : {}),
     };
-
-    const [data, total] = await Promise.all([
+    const [data, aggregate, items] = await Promise.all([
       this.prisma.client.venda.findMany({
         where,
-        include: { cliente: true, itens: true },
+        include: {
+          cliente: { select: { id: true, nome: true } },
+          itens: { include: { produto: { select: { id: true, nome: true } } } },
+        },
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       }),
-      this.prisma.client.venda.count({ where }),
+      this.prisma.client.venda.aggregate({ where, _sum: { total: true }, _count: { _all: true } }),
+      this.prisma.client.itemVenda.aggregate({
+        where: { venda: where },
+        _sum: { quantidade: true },
+      }),
     ]);
-
-    return { data, total, page, limit };
+    return {
+      data,
+      total: aggregate._count._all,
+      page,
+      limit,
+      resumo: {
+        totalVendido: Number(aggregate._sum.total ?? 0),
+        totalItens: items._sum.quantidade ?? 0,
+      },
+    };
   }
 
   /**

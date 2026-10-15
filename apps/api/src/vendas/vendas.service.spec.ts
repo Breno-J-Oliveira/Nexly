@@ -11,7 +11,8 @@ describe('VendasService', () => {
     client: {
       produto: { findMany: jest.Mock };
       $transaction: jest.Mock;
-      venda: { findFirst: jest.Mock };
+      venda: { findFirst: jest.Mock; findMany: jest.Mock; aggregate: jest.Mock };
+      itemVenda: { aggregate: jest.Mock };
       cliente: { findFirst: jest.Mock };
     };
   };
@@ -22,7 +23,8 @@ describe('VendasService', () => {
       client: {
         produto: { findMany: jest.fn() },
         $transaction: jest.fn(),
-        venda: { findFirst: jest.fn() },
+        venda: { findFirst: jest.fn(), findMany: jest.fn(), aggregate: jest.fn() },
+        itemVenda: { aggregate: jest.fn() },
         cliente: { findFirst: jest.fn().mockResolvedValue({ id: 'c1' }) },
       },
     };
@@ -136,5 +138,41 @@ describe('VendasService', () => {
         expect.objectContaining({ where: { id: 'foreign', empresaId: 'e1', ativo: true } }),
       );
     });
+  });
+  it('lista produtos relacionados e totais globais sem limitar o resumo a pagina', async () => {
+    prisma.client.venda.findMany.mockResolvedValue([
+      { id: 'v1', itens: [{ produto: { id: 'p1', nome: 'Produto real' } }] },
+    ]);
+    prisma.client.venda.aggregate.mockResolvedValue({
+      _count: { _all: 106 },
+      _sum: { total: 1060 },
+    });
+    prisma.client.itemVenda.aggregate.mockResolvedValue({ _sum: { quantidade: 212 } });
+    const result = await tenantStorage.run(
+      { tenantId: 'e1', userId: 'u1', role: 'ADMIN', email: 'u@x.com' },
+      () => service.listar(2, 25, { dataInicio: '2026-10-15', dataFim: '2026-10-15' }),
+    );
+    expect(result.total).toBe(106);
+    expect(result.resumo).toEqual({ totalVendido: 1060, totalItens: 212 });
+    expect(prisma.client.venda.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 25,
+        take: 25,
+        include: expect.objectContaining({
+          itens: { include: { produto: { select: { id: true, nome: true } } } },
+        }),
+      }),
+    );
+    expect(prisma.client.venda.aggregate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          empresaId: 'e1',
+          createdAt: {
+            gte: new Date('2026-10-15T00:00:00Z'),
+            lte: new Date('2026-10-15T23:59:59.999Z'),
+          },
+        },
+      }),
+    );
   });
 });

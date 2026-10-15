@@ -1,4 +1,4 @@
-import { dateRange } from '../common/validation/date-range';
+import { saleDateFilter } from '../vendas/sale-date-filter';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { csvCell } from './csv';
@@ -8,13 +8,8 @@ export class ExportService {
   constructor(private readonly prisma: PrismaService) {}
 
   async vendasCsv(dataInicio?: string, dataFim?: string): Promise<string> {
-    const where: { createdAt?: { gte?: Date; lte?: Date } } = {};
-    if (dataInicio || dataFim) {
-      where.createdAt = {};
-      if (dataInicio) where.createdAt.gte = dateRange(dataInicio, dataInicio).inicio;
-      if (dataFim) where.createdAt.lte = dateRange(dataFim, dataFim).fim;
-      if (dataInicio && dataFim) dateRange(dataInicio, dataFim);
-    }
+    const createdAt = saleDateFilter(dataInicio, dataFim);
+    const where = createdAt ? { createdAt } : {};
     const vendas = await this.prisma.client.venda.findMany({
       where,
       include: { cliente: true, itens: { include: { produto: true } } },
@@ -26,7 +21,7 @@ export class ExportService {
       const itens = v.itens.map((i) => i.quantidade + 'x ' + i.produto.nome).join('; ');
       lines.push(
         [
-          csvCell(v.createdAt.toISOString().slice(0, 10)),
+          csvCell(v.createdAt.toISOString()),
           csvCell(v.cliente?.nome ?? 'Avulso', true),
           csvCell(itens, true),
           csvCell(v.formaPagamento ?? 'Dinheiro', true),

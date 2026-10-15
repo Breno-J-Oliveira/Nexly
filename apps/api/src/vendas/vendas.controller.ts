@@ -1,15 +1,7 @@
-import {
-  Body,
-  Controller,
-  DefaultValuePipe,
-  Get,
-  Param,
-  ParseIntPipe,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { CriarVendaDto } from './dto/criar-venda.dto';
 import { VendasService } from './vendas.service';
+import { ListarVendasDto } from './dto/listar-vendas.dto';
 
 @Controller('vendas')
 export class VendasController {
@@ -25,14 +17,8 @@ export class VendasController {
   }
 
   @Get()
-  listar(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
-    @Query('dataInicio') dataInicio?: string,
-    @Query('dataFim') dataFim?: string,
-    @Query('clienteId') clienteId?: string,
-  ) {
-    return this.vendasService.listar(page, limit, { dataInicio, dataFim, clienteId });
+  listar(@Query() query: ListarVendasDto) {
+    return this.vendasService.listar(query.page ?? 1, query.limit ?? 20, query);
   }
 
   @Get(':id')
