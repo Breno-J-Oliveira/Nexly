@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind">
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <br>
-  <img src="https://img.shields.io/badge/tests-219_passing-brightgreen?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-243_passing-brightgreen?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/suites-27-7B61FF?style=flat-square" alt="Suites">
   <img src="https://img.shields.io/badge/fases-0-a-4_+_DS_concluídas-brightgreen?style=flat-square" alt="Fases">
   <img src="https://img.shields.io/badge/licença-educacional-blue?style=flat-square" alt="License">
@@ -228,7 +228,7 @@ e 20 vendas no PDV — dados suficientes para explorar o dashboard e o históric
 # Typecheck (API + Web)
 npm run typecheck
 
-# Testes unitários da API (Jest — 29 suites / 219 testes passando)
+# Testes unitários da API (Jest — 32 suites / 243 testes passando)
 cd apps/api && npm test
 ```
 
@@ -313,7 +313,7 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
 | Backend (NestJS + Prisma + PostgreSQL + Redis) | ✅ Implementado e validado |
 | Frontend (Next.js 15 + Tailwind dark + Recharts) | ✅ Implementado e validado |
 | Multi-tenant com Prisma Extension + RLS | ✅ Implementado |
-| Testes (Jest) | ✅ 29 suites / 219 testes passando |
+| Testes (Jest) | ✅ 32 suites / 243 testes passando |
 | Typecheck (TypeScript strict) | ✅ 0 erros |
 | Seed de dados demo | ✅ 30+ agendamentos, 6 produtos, 3 profissionais, 20 vendas |
 | Telas CRUD (Clientes, Profissionais, Produtos, Serviços) | ✅ Implementadas |
@@ -409,4 +409,3 @@ CRUDs REST convencionais: `GET/POST/PUT/DELETE`. Todos exigem JWT.
   Agenda + Estoque + PDV • Multi-tenant seguro • Baixa automática de insumos
 </p>
 ---
-

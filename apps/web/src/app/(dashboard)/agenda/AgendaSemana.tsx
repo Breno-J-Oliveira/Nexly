@@ -1,7 +1,10 @@
 'use client';
 
 import { StatusAgendamento } from '@nexly/shared';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { isCancel } from 'axios';
+import { useAuth } from '@/lib/auth';
+import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
 import { Icon } from '@/components/ui/Icon';
 import { toastSuccess } from '@/components/ui/Toaster';
@@ -68,6 +71,11 @@ function statusColor(status: StatusAgendamento): { bg: string; border: string; t
 export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [erro,setErro]=useState('');
+  const [concluindo,setConcluindo]=useState<string|null>(null);
+  const request=useRef<AbortController|null>(null);
+  const {user}=useAuth();
+  const podeConcluir=['ADMIN','GESTOR','RECEPCIONISTA'].includes(user?.role||'');
 
   const diasSemana = useMemo(() => {
     const inicioSemana = new Date(dataInicio);
@@ -75,35 +83,27 @@ export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) 
     return Array.from({ length: 7 }).map((_, i) => addDias(inicioSemana, i));
   }, [dataInicio]);
 
-  const carregar = async () => {
-    setCarregando(true);
-    try {
-      const primeiro = diasSemana[0];
-      const ultimo = diasSemana[6];
-      if (!primeiro || !ultimo) return;
-      const res = await api.get<{ data: Agendamento[] }>('/agendamentos', {
-        params: {
-          data: dataISO(primeiro),
-          dataFim: dataISO(ultimo),
-          limit: 500,
-          profissionalId: profissionalId || undefined,
-        },
-      });
-      setAgendamentos(res.data.data);
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  useEffect(() => {
-    void carregar();
-  }, [diasSemana[0]?.toISOString(), profissionalId]);
-
-  const concluir = async (id: string) => {
-    await api.patch(`/agendamentos/${id}/status`, { status: 'CONCLUIDO' });
-    toastSuccess('Serviço concluído!');
-    void carregar();
-    onConcluir?.(id);
+  const primeiroDia=diasSemana[0]?dataISO(diasSemana[0]):'';
+  const ultimoDia=diasSemana[6]?dataISO(diasSemana[6]):'';
+  const carregar=useCallback(async()=>{
+    request.current?.abort();const controller=new AbortController();request.current=controller;
+    setCarregando(true);setErro('');setAgendamentos([]);
+    try{
+      let pagina=1;let total=0;const itens:Agendamento[]=[];
+      do {
+        const res=await api.get<{data:Agendamento[];total:number}>('/agendamentos',{signal:controller.signal,params:{data:primeiroDia,dataFim:ultimoDia,limit:500,page:pagina,profissionalId:profissionalId||undefined}});
+        itens.push(...res.data.data);total=res.data.total;pagina++;
+        if(!res.data.data.length)break;
+      }while(itens.length<total);
+      if(!controller.signal.aborted)setAgendamentos(itens);
+    }catch(e){if(!isCancel(e)&&!controller.signal.aborted)setErro('Não foi possível carregar a semana. Tente novamente.');}
+    finally{if(!controller.signal.aborted)setCarregando(false);}
+  },[primeiroDia,ultimoDia,profissionalId]);
+  const cancelarCarga=useCallback(()=>request.current?.abort(),[]);
+  useEffect(()=>{void carregar();return cancelarCarga;},[carregar,cancelarCarga]);
+  const concluir=async(id:string)=>{
+    if(concluindo)return;setConcluindo(id);setErro('');
+    try{await api.patch(`/agendamentos/${id}/status`,{status:'CONCLUIDO'});toastSuccess('Serviço concluído!');await carregar();onConcluir?.(id);}catch{setErro('Não foi possível concluir o atendimento. Atualize a agenda e tente novamente.');}finally{setConcluindo(null);}
   };
 
   const slots = useMemo(() => {
@@ -126,6 +126,7 @@ export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) 
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
+      {erro&&<div role="alert" className="flex flex-wrap items-center gap-3 border-b border-red-400/30 p-4 text-sm text-red-200">{erro}<Button variant="ghost" onClick={()=>void carregar()}>Tentar novamente</Button></div>}
       <div className="grid grid-cols-8 border-b border-[rgba(255,255,255,0.08)]">
         <div className="p-3 text-[12px] font-semibold uppercase tracking-wider text-[#71717A]">Hora</div>
         {diasSemana.map((d, i) => (
@@ -185,10 +186,13 @@ export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) 
                   <div className="truncate font-medium text-[#FAFAFA]">{a.cliente.nome}</div>
                   <div className="truncate text-[10px] opacity-80">{a.servico.nome}</div>
                   <div className="truncate text-[10px] opacity-70">{a.profissional.nome}</div>
-                  {a.status === 'CONFIRMADO' && (
+                  {a.status === 'CONFIRMADO' && podeConcluir && (
                     <button
+                      type="button"
+                      disabled={concluindo!==null}
+                      aria-label={`Concluir atendimento de ${a.cliente.nome}`}
                       onClick={() => void concluir(a.id)}
-                      className="mt-1 flex w-full items-center justify-center gap-1 rounded bg-[#22C55E] px-1.5 py-0.5 text-[10px] font-semibold text-white opacity-0 transition-opacity hover:bg-[#16A34A] group-hover:opacity-100"
+                      className="mt-1 flex w-full items-center justify-center gap-1 rounded bg-[#22C55E] px-1.5 py-0.5 text-[10px] font-semibold text-[#052E16] opacity-100 transition-opacity hover:bg-[#16A34A] sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 disabled:opacity-50"
                     >
                       <Icon name="check" size="xs" /> Concluir
                     </button>

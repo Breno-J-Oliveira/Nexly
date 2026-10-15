@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { isCancel } from 'axios';
 import { api } from './api';
 
 interface UseApiOptions {
@@ -20,31 +21,43 @@ export function useApi<T>(url: string, options?: UseApiOptions): UseApiResult<T>
   const [loading, setLoading] = useState(options?.immediate !== false);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const requestRef = useRef<AbortController | null>(null);
+  const paramsKey = JSON.stringify(options?.params ?? {});
 
   const fetchData = useCallback(async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get<T>(url, { params: options?.params });
-      if (mountedRef.current) {
+      const res = await api.get<T>(url, {
+        params: JSON.parse(paramsKey) as Record<string, unknown>,
+        signal: controller.signal,
+      });
+      if (mountedRef.current && !controller.signal.aborted) {
         setData(res.data);
       }
     } catch (e: unknown) {
-      if (mountedRef.current) {
+      if (isCancel(e)) return;
+      if (mountedRef.current && !controller.signal.aborted) {
         const err = e as { response?: { data?: { message?: string } } };
         setError(err?.response?.data?.message ?? 'Erro ao carregar dados');
       }
     } finally {
-      if (mountedRef.current) setLoading(false);
+      if (mountedRef.current && !controller.signal.aborted) setLoading(false);
     }
-  }, [url, JSON.stringify(options?.params)]);
+  }, [url, paramsKey]);
 
   useEffect(() => {
     mountedRef.current = true;
     if (options?.immediate !== false) {
       void fetchData();
     }
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+      requestRef.current?.abort();
+    };
   }, [fetchData, options?.immediate]);
 
   return { data, loading, error, refetch: fetchData };

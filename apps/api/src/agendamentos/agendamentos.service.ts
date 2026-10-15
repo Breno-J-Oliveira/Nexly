@@ -42,6 +42,15 @@ export class AgendamentosService {
   ) {}
 
   async listar(page: number, limit: number, filtros: FiltrosAgendamento) {
+    if (
+      !Number.isInteger(page) ||
+      page < 1 ||
+      page > 100000 ||
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > 500
+    )
+      throw new BadRequestException('Página ou limite inválido (1 a 500 registros por página)');
     const where: Prisma.AgendamentoWhereInput = {};
 
     if (filtros.data) {

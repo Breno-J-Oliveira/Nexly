@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Cliente, Prisma } from '@prisma/client';
 import {
   decodeCursor,
@@ -41,6 +41,8 @@ export class ClientesService {
     search?: string,
     cursor?: string,
   ): Promise<ListaClientesResult> {
+    if (!Number.isInteger(page) || page < 1 || page > 100000)
+      throw new BadRequestException('Página inválida');
     const where: Prisma.ClienteWhereInput = {
       ativo: true,
       ...(search
@@ -78,7 +80,7 @@ export class ClientesService {
         where,
         skip: (page - 1) * limite,
         take: limite,
-        orderBy: { nome: 'asc' },
+        orderBy: [{ nome: 'asc' }, { id: 'asc' }],
       }),
       this.prisma.client.cliente.count({ where }),
     ]);
