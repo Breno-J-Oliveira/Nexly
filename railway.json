@@ -5,7 +5,7 @@
     "buildCommand": "npm run build --workspace @nexly/shared && npx prisma generate --schema apps/api/prisma/schema.prisma && npm run build --workspace @nexly/api"
   },
   "deploy": {
-    "startCommand": "NODE_ENV=production node apps/api/dist/src/main.js",
+    "startCommand": "npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && NODE_ENV=production node apps/api/dist/src/main.js",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 30
   }

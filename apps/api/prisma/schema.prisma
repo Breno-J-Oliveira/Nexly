@@ -87,6 +87,8 @@ model Empresa {
   instagram      String?
   whatsapp       String?
   segmento       String?
+  preset         String?
+  modulos        String[] @default(["agenda", "clientes", "profissionais", "servicos", "estoque", "pdv", "vendas", "relatorios", "comissao", "fidelidade"])
   cidade         String?
   dadosPagamento Json?   @map("dados_pagamento")
   horarios       Json?   @map("horarios")
@@ -117,15 +119,38 @@ model Usuario {
   twoFactorSecret       String?  @map("two_factor_secret")
   twoFactorEnabled      Boolean  @default(false) @map("two_factor_enabled")
   twoFactorBackupCodes  String[] @map("two_factor_backup_codes")
+  diasDeUso             Int @default(0) @map("dias_de_uso")
+  ultimoDiaUso          String? @map("ultimo_dia_uso")
+  lembrarAvaliacaoEm    DateTime? @map("lembrar_avaliacao_em")
+  naoPedirAvaliacao     Boolean @default(false) @map("nao_pedir_avaliacao")
   createdAt  DateTime @default(now()) @map("created_at")
 
   empresa       Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
   termosAceite  TermoAceite[]
+  depoimento    Depoimento?
 
   @@index([empresaId])
   @@map("usuarios")
+}
+
+model Depoimento {
+  id String @id @default(uuid())
+  empresaId String @map("empresa_id")
+  usuarioId String @unique @map("usuario_id")
+  nota Int
+  texto String
+  nomePublico String @map("nome_publico")
+  ocupacao String
+  autorizaPublicacao Boolean @default(false) @map("autoriza_publicacao")
+  status String @default("PENDENTE")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  @@index([empresaId])
+  @@index([status, autorizaPublicacao, createdAt])
+  @@map("depoimentos")
 }
 
 model RefreshToken {

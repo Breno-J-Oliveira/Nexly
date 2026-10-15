@@ -10,4 +10,4 @@ cmds = [
 ]
 
 [start]
-cmd = "NODE_ENV=production node apps/api/dist/src/main.js"
+cmd = "npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && NODE_ENV=production node apps/api/dist/src/main.js"

@@ -8,7 +8,7 @@ import {
 import { authenticator } from '@otplib/preset-default';
 import { Usuario } from '@prisma/client';
 import { Plano } from '@prisma/client';
-import { Role, UsuarioPublico, validarCnpj } from '@nexly/shared';
+import { Role, UsuarioPublico, validarCnpj, MODULE_IDS, normalizeModules } from '@nexly/shared';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 import { toDataURL } from 'qrcode';
@@ -61,6 +61,8 @@ export class AuthService {
         telefone: dto.telefone,
         segmento: dto.segmento,
         cidade: dto.cidade,
+        preset: dto.preset,
+        modulos: normalizeModules(dto.modulos ?? MODULE_IDS),
         plano: Plano.FREE,
         usuarios: {
           create: {

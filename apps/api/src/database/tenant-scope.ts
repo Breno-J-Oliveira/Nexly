@@ -16,6 +16,7 @@ const DIRECT_MODELS = new Set([
   'ConviteUsuario',
   'AuditLog',
   'ExclusaoConta',
+  'Depoimento',
 ]);
 
 const PARENT_SCOPES: Record<string, string> = {

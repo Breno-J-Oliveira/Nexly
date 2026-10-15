@@ -39,12 +39,14 @@ import { ComissaoModule } from './comissao/comissao.module';
 import { ExportModule } from './export/export.module';
 import { FinanceiroModule } from './financeiro/financeiro.module';
 import { RedisModule } from './redis/redis.module';
+import { ExperienciaModule } from './experiencia/experiencia.controller';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
     RedisModule,
+    ExperienciaModule,
     EventEmitterModule.forRoot(),
     JwtModule.registerAsync({
       global: true,

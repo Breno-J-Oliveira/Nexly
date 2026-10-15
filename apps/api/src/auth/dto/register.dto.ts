@@ -7,12 +7,28 @@ import {
   IsString,
   Length,
   MaxLength,
+  IsArray,
+  ArrayMinSize,
+  ArrayMaxSize,
+  ArrayUnique,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { MODULE_IDS, PRESETS } from '@nexly/shared';
 
 const PLANOS_PERMITIDOS = ['FREE', 'BASIC', 'PRO', 'ENTERPRISE'] as const;
 
 export class RegisterDto {
+  @IsOptional()
+  @IsIn(PRESETS.map((p) => p.id))
+  preset?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MODULE_IDS.length)
+  @ArrayUnique()
+  @IsIn(MODULE_IDS, { each: true })
+  modulos?: string[];
   @IsString()
   @Length(2, 120)
   empresaNome!: string;
