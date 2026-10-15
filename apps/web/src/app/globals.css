@@ -121,6 +121,10 @@ header:has(#page-toolbar .page-toolbar) .shell-global-search { display: none; }
 @media (max-width: 767px) { header:has(#page-toolbar .page-toolbar) > button { display: none; } #page-toolbar { flex-basis: 100%; } }
 
 @media (max-width: 767px) {
+  .dashboard-content :is(button, input, select, textarea) {
+    scroll-margin-top: 120px;
+    scroll-margin-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
   .page-toolbar > .with-search,
   .page-toolbar > .agenda-heading {
     display: grid;

@@ -141,6 +141,7 @@ export default function ConfiguracoesPage() {
   );
   const [salvando, setSalvando] = useState(false);
   const [fusoHorario, setFusoHorario] = useState('America/Sao_Paulo');
+  const [erroHorarios, setErroHorarios] = useState('');
   const [linkAgendamento, setLinkAgendamento] = useState<string | null>(null);
   const [carregandoLink, setCarregandoLink] = useState(false);
   const [whatsappStatus, setWhatsappStatus] = useState<{ provider: string; enabled: boolean } | null>(null);
@@ -266,11 +267,12 @@ export default function ConfiguracoesPage() {
 
   const salvarHorarios = async () => {
     setSalvando(true);
+    setErroHorarios('');
     try {
       await api.put('/configuracoes', { horarios, fusoHorario });
       toastSuccess('Horários salvos!');
     } catch {
-      toastError('Não foi possível salvar os horários. Verifique os dados e tente novamente.');
+      setErroHorarios('Não foi possível salvar os horários. Verifique os dados e tente novamente.');
     } finally {
       setSalvando(false);
     }
@@ -828,6 +830,7 @@ return (
               >
                 Copiar horário de Segunda para todos os dias
               </button>
+              {erroHorarios && <p role="alert" className="mt-4 text-sm text-red-300">{erroHorarios}</p>}
               <div className="mt-4 flex justify-end">
                 <Button onClick={() => void salvarHorarios()} loading={salvando}>
                   Salvar horários

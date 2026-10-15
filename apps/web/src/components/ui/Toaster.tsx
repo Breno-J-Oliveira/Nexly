@@ -7,6 +7,7 @@ export { toast };
 export function Toaster() {
   return (
     <SonnerToaster
+      closeButton
       position="bottom-right"
       mobileOffset={{
         bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
@@ -14,6 +15,7 @@ export function Toaster() {
         right: 16,
       }}
       toastOptions={{
+        closeButtonAriaLabel: 'Fechar notificação',
         style: {
           background: '#18181F',
           color: '#FAFAFA',
