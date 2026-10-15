@@ -1,3 +1,4 @@
+import { filtrarDashboard } from './dashboard-access';
 import { Controller, Get } from '@nestjs/common';
 import { AuthUser } from '@nexly/shared';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -8,7 +9,8 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get()
-  getDashboard(@CurrentUser() user: AuthUser) {
-    return this.dashboardService.getDashboard(user.empresaId);
+  async getDashboard(@CurrentUser() user: AuthUser) {
+    const data = await this.dashboardService.getDashboard(user.empresaId);
+    return filtrarDashboard(data as Record<string, unknown>, user.role);
   }
 }

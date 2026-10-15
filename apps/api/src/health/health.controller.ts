@@ -1,4 +1,7 @@
-import { Controller, Get } from '@nestjs/common';
+import { Response } from 'express';
+import { Role } from '@nexly/shared';
+import { Roles } from '../common/decorators/roles.decorator';
+import { Controller, Get, Res } from '@nestjs/common';
 import { Public } from '../common/decorators/public.decorator';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
@@ -33,9 +36,10 @@ export class HealthController {
    */
   @Public()
   @Get('deep')
-  async checkDeep() {
+  async checkDeep(@Res({ passthrough: true }) response?: Response) {
     const db = await this.checkDb();
     const redis = await this.checkRedis();
+    if (!db.ok || !redis.ok) response?.status(503);
     const apiOk = true; // el mero hecho de que este handler responda implica API OK.
     return {
       status: db.ok && redis.ok ? 'ok' : 'degraded',
@@ -72,7 +76,7 @@ export class HealthController {
    * - `applied: number` total de migrations já aplicadas
    * - `failed: string[]` migrations com status "failed" (precisam de atenção)
    */
-  @Public()
+  @Roles(Role.ADMIN)
   @Get('migrations')
   async migrations() {
     try {
@@ -93,10 +97,10 @@ export class HealthController {
         // para detectar pending, rode `prisma migrate status` na CLI.
         lastAppliedAt: applied.at(-1)?.finished_at ?? null,
       };
-    } catch (error) {
+    } catch {
       return {
         ok: false,
-        error: `Não foi possível ler _prisma_migrations: ${String(error)}`,
+        error: 'Não foi possível consultar o estado das migrations.',
       };
     }
   }
@@ -106,8 +110,8 @@ export class HealthController {
     try {
       await this.prisma.client.$queryRaw`SELECT 1`;
       return { ok: true, latencyMs: Date.now() - start };
-    } catch (error) {
-      return { ok: false, error: String(error) };
+    } catch {
+      return { ok: false };
     }
   }
 

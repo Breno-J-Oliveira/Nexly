@@ -1,5 +1,5 @@
+import { StrictBoolean } from '../../common/validation/strict-boolean';
 import {
-  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -36,6 +36,6 @@ export class AtualizarCupomDto {
   validade?: string;
 
   @IsOptional()
-  @IsBoolean()
+  @StrictBoolean()
   ativo?: boolean;
 }

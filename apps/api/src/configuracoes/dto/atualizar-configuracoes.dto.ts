@@ -1,4 +1,5 @@
-import { IsBoolean, IsObject, IsOptional, IsString } from 'class-validator';
+import { StrictBoolean } from '../../common/validation/strict-boolean';
+import { IsObject, IsOptional, IsString } from 'class-validator';
 
 export class AtualizarConfiguracoesDto {
   @IsOptional()
@@ -42,7 +43,7 @@ export class AtualizarConfiguracoesDto {
   notificacoes?: Record<string, unknown>;
 
   @IsOptional()
-  @IsBoolean()
+  @StrictBoolean()
   lembretesAtivos?: boolean;
 
   @IsOptional()

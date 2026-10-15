@@ -1,4 +1,5 @@
-import { IsBoolean, IsEmail, IsOptional, IsString, Length } from 'class-validator';
+import { StrictBoolean } from '../../common/validation/strict-boolean';
+import { IsEmail, IsOptional, IsString, Length } from 'class-validator';
 
 export class AtualizarFornecedorDto {
   @IsOptional()
@@ -19,6 +20,6 @@ export class AtualizarFornecedorDto {
   email?: string;
 
   @IsOptional()
-  @IsBoolean()
+  @StrictBoolean()
   ativo?: boolean;
 }
