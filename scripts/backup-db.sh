@@ -21,6 +21,7 @@
 # (idempotente) em vez de acumular lixo.
 
 set -euo pipefail
+umask 077
 
 : "${BACKUP_DATABASE_URL:?defina BACKUP_DATABASE_URL}"
 : "${BKP_PASSPHRASE:?defina BKP_PASSPHRASE (senha de cifragem)}"
@@ -30,10 +31,17 @@ BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${BASE_DIR}/backups"
 STAMP="$(date -u +%Y-%m-%d)"
-RAW_FILE="${OUT_DIR}/nexly-${STAMP}.dump"
-ENC_FILE="${RAW_FILE}.gpg"
+ENC_FILE="${OUT_DIR}/nexly-${STAMP}.dump.gpg"
 
 mkdir -p "${OUT_DIR}"
+WORK_DIR="$(mktemp -d "${OUT_DIR}/.backup.XXXXXX")"
+RAW_FILE="${WORK_DIR}/database.dump"
+ENC_TMP="${WORK_DIR}/database.dump.gpg"
+cleanup() {
+  rm -f -- "${RAW_FILE}" "${ENC_TMP}"
+  rmdir -- "${WORK_DIR}"
+}
+trap cleanup EXIT
 
 echo "[backup] iniciando dump de ${STAMP} (UTC)"
 
@@ -42,6 +50,8 @@ echo "[backup] iniciando dump de ${STAMP} (UTC)"
 pg_dump \
   --dbname="${BACKUP_DATABASE_URL}" \
   --format=custom \
+  --schema=public \
+  --strict-names \
   --no-owner \
   --no-acl \
   --file="${RAW_FILE}"
@@ -54,11 +64,11 @@ fi
 echo "[backup] dump gerado: ${RAW_BYTES} bytes"
 
 # Cifra em repouso: o dump contém dados pessoais (LGPD Art. 46).
-gpg --batch --yes --symmetric --cipher-algo AES256 \
-  --passphrase "${BKP_PASSPHRASE}" \
-  --output "${ENC_FILE}" \
+printf '%s' "${BKP_PASSPHRASE}" | gpg --batch --yes --pinentry-mode loopback \
+  --symmetric --cipher-algo AES256 --passphrase-fd 0 \
+  --output "${ENC_TMP}" \
   "${RAW_FILE}"
-rm -f "${RAW_FILE}"
+mv -f -- "${ENC_TMP}" "${ENC_FILE}"
 echo "[backup] cifrado: $(basename "${ENC_FILE}")"
 
 if [ -n "${S3_BUCKET:-}" ]; then

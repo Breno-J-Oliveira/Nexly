@@ -21,16 +21,39 @@
 #   MIN_USUARIOS       mínimo esperado de usuários (padrão: 1)
 
 set -euo pipefail
+umask 077
 
 : "${RESTORE_ADMIN_URL:?defina RESTORE_ADMIN_URL (conexão ao banco postgres do servidor)}"
 : "${BKP_PASSPHRASE:?defina BKP_PASSPHRASE}"
-: "${TEST_DB_NAME:=nexly_restore_test}"
+: "${TEST_DB_NAME:=nexly_restore_test_$(date -u +%s)_${RANDOM}}"
 : "${MIN_EMPRESAS:=1}"
 : "${MIN_USUARIOS:=1}"
 
 S3_PREFIX="${S3_PREFIX:-postgres}"
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WORK_DIR="${BASE_DIR}/backups/restore-test"
+# Nome restrito antes de interpolar identificadores SQL ou instalar o cleanup.
+if [[ ! "${TEST_DB_NAME}" =~ ^nexly_restore_test(_[a-z0-9]+)*$ ]] || [ "${#TEST_DB_NAME}" -gt 63 ]; then
+  echo '[restore] ERRO: use um identificador seguro iniciado por nexly_restore_test.' >&2
+  exit 1
+fi
+mkdir -p "${BASE_DIR}/backups"
+WORK_DIR="$(mktemp -d "${BASE_DIR}/backups/restore-test.XXXXXX")"
+RAW_FILE="${WORK_DIR}/restore.dump"
+DOWNLOADED_FILE=''
+CREATED_DB=0
+
+cleanup() {
+  local result=$?
+  if [ "${CREATED_DB}" -eq 1 ]; then
+    echo "[restore] limpando banco ${TEST_DB_NAME}"
+    dropdb --maintenance-db="${RESTORE_ADMIN_URL}" --if-exists --force "${TEST_DB_NAME}" || result=1
+  fi
+  rm -f -- "${RAW_FILE}" || result=1
+  if [ -n "${DOWNLOADED_FILE}" ]; then rm -f -- "${DOWNLOADED_FILE}" || result=1; fi
+  rmdir -- "${WORK_DIR}" || result=1
+  exit "${result}"
+}
+trap cleanup EXIT
 
 # Deriva o URL do banco de teste trocando o nome do banco no path.
 TEST_URL="$(printf '%s' "${RESTORE_ADMIN_URL}" | sed -E "s#/[^/?]+(\?|$)#/${TEST_DB_NAME}\1#")"
@@ -38,26 +61,6 @@ if [ "${TEST_URL}" = "${RESTORE_ADMIN_URL}" ]; then
   echo "[restore] ERRO: não foi possível derivar o URL do banco de teste." >&2
   exit 1
 fi
-
-# Salvaguarda: jamais tocar em um banco que não seja o de teste.
-case "${TEST_DB_NAME}" in
-  *test*|*tmp*) ;;
-  *)
-    echo "[restore] ERRO: TEST_DB_NAME='${TEST_DB_NAME}' não contém 'test'/'tmp'." >&2
-    echo "          Abortando para não arriscar dados reais." >&2
-    exit 1
-    ;;
-esac
-
-cleanup() {
-  echo "[restore] limpando banco ${TEST_DB_NAME}"
-  psql "${RESTORE_ADMIN_URL}" -v ON_ERROR_STOP=1 \
-    -c "DROP DATABASE IF EXISTS ${TEST_DB_NAME} WITH (FORCE)" >/dev/null 2>&1 || true
-  rm -rf "${WORK_DIR}"
-}
-trap cleanup EXIT
-
-mkdir -p "${WORK_DIR}"
 
 # ── 1. Obtém o dump cifrado ──────────────────────────────────
 ENC_FILE="${DUMP_FILE:-}"
@@ -75,7 +78,12 @@ if [ -z "${ENC_FILE}" ]; then
     echo "[restore] ERRO: nenhum backup encontrado no bucket." >&2
     exit 1
   fi
+  if [[ ! "${NOME}" =~ ^nexly-[0-9]{4}-[0-9]{2}-[0-9]{2}\.dump\.gpg$ ]]; then
+    echo '[restore] ERRO: nome de backup inesperado.' >&2
+    exit 1
+  fi
   ENC_FILE="${WORK_DIR}/${NOME}"
+  DOWNLOADED_FILE="${ENC_FILE}"
   aws s3 cp "s3://${S3_BUCKET}/${S3_PREFIX}/${NOME}" "${ENC_FILE}" "${AWS_ARGS[@]}"
 fi
 
@@ -85,18 +93,16 @@ if [ ! -f "${ENC_FILE}" ]; then
 fi
 
 # ── 2. Decifra e restaura ────────────────────────────────────
-RAW_FILE="${WORK_DIR}/restore.dump"
 echo "[restore] decifrando $(basename "${ENC_FILE}")"
-gpg --batch --yes --quiet --decrypt \
-  --passphrase "${BKP_PASSPHRASE}" \
+printf '%s' "${BKP_PASSPHRASE}" | gpg --batch --yes --quiet --pinentry-mode loopback --decrypt \
+  --passphrase-fd 0 \
   --output "${RAW_FILE}" \
   "${ENC_FILE}"
 
-echo "[restore] recriando ${TEST_DB_NAME}"
-psql "${RESTORE_ADMIN_URL}" -v ON_ERROR_STOP=1 \
-  -c "DROP DATABASE IF EXISTS ${TEST_DB_NAME} WITH (FORCE)" >/dev/null
-psql "${RESTORE_ADMIN_URL}" -v ON_ERROR_STOP=1 \
-  -c "CREATE DATABASE ${TEST_DB_NAME}" >/dev/null
+echo "[restore] criando banco descartável ${TEST_DB_NAME}"
+# Se o banco já existir, CREATE falha e o cleanup não o remove.
+createdb --maintenance-db="${RESTORE_ADMIN_URL}" "${TEST_DB_NAME}"
+CREATED_DB=1
 
 echo "[restore] restaurando (pg_restore)"
 pg_restore \

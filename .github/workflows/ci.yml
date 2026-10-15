@@ -142,7 +142,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:17-alpine
         env:
           POSTGRES_USER: nexly
           POSTGRES_PASSWORD: nexly_test_password
@@ -166,8 +166,7 @@ jobs:
         with:
           node-version: '24.18.0'
           cache: 'npm'
-      - name: Instala cliente do Postgres
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - uses: ./.github/actions/backup-tools
       - run: npm ci
       - run: npm run build --workspace @nexly/shared
       - run: npx prisma generate --schema apps/api/prisma/schema.prisma
@@ -198,12 +197,21 @@ jobs:
       - name: Confere que não sobrou banco de teste
         run: |
           EXISTE="$(psql "postgresql://nexly:nexly_test_password@localhost:5432/postgres" -tAc \
-            "SELECT count(*) FROM pg_database WHERE datname = 'nexly_restore_test'")"
+            "SELECT count(*) FROM pg_database WHERE datname LIKE 'nexly_restore_test%'")"
           if [ "$EXISTE" != "0" ]; then
             echo "::error::O banco de teste não foi limpo (cleanup falhou)."
             exit 1
           fi
           echo "✅ Cleanup OK."
+
+      - name: Confere salvaguardas do backup e restore
+        env:
+          BACKUP_DATABASE_URL: postgresql://nexly:nexly_test_password@localhost:5432/nexly_test
+          RESTORE_ADMIN_URL: postgresql://nexly:nexly_test_password@localhost:5432/postgres
+          BKP_PASSPHRASE: senha-de-teste
+        run: |
+          export DUMP_FILE="$PWD/$(ls backups/*.dump.gpg | head -1)"
+          bash scripts/test-backup-safety.sh
 
   e2e:
     name: E2E (Playwright)

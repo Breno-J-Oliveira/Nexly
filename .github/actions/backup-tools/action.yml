@@ -1,0 +1,18 @@
+name: Ferramentas de backup
+description: Cliente PostgreSQL 17 compatível com o banco de produção
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        if ! apt-cache show postgresql-client-17 >/dev/null 2>&1; then
+          . /etc/os-release
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          printf 'Types: deb\nURIs: https://apt.postgresql.org/pub/repos/apt\nSuites: %s-pgdg\nComponents: main\nSigned-By: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc\n' "$VERSION_CODENAME" | sudo tee /etc/apt/sources.list.d/pgdg.sources >/dev/null
+          sudo apt-get update
+        fi
+        sudo apt-get install -y --no-install-recommends postgresql-client-17 gnupg
+        echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"

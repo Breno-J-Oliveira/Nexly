@@ -18,6 +18,13 @@ permissions:
   contents: read
   issues: write
 
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: ${{ vars.BACKUP_S3_REGION || 'auto' }}
+  AWS_PAGER: ''
+  TZ: UTC
+
 jobs:
   backup:
     name: Backup (pg_dump cifrado)
@@ -28,19 +35,18 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Instala cliente do Postgres e gpg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-client gnupg
-
-      - name: Configura credenciais do storage
+      - name: Valida configuração do backup
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BKP_PASSPHRASE: ${{ secrets.BKP_PASSPHRASE }}
+          S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
         run: |
-          aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
-          aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
-          aws configure set default.region auto
+          for required in BACKUP_DATABASE_URL BKP_PASSPHRASE S3_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            if [ -z "${!required}" ]; then echo "::error::Configure o secret correspondente a $required para ativar o backup."; exit 1; fi
+          done
+          aws --version
+
+      - uses: ./.github/actions/backup-tools
 
       - name: Executa o backup
         env:
@@ -59,10 +65,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Instala cliente do Postgres e gpg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-client gnupg
+      - uses: ./.github/actions/backup-tools
 
       - name: Executa o teste de restore
         id: restore
@@ -122,13 +125,16 @@ jobs:
     if: github.event_name == 'schedule' || inputs.tarefa == 'verificar'
     steps:
       - uses: actions/checkout@v6
-      - name: Instala AWS CLI
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends awscli
+      - name: Confere AWS CLI do runner
+        run: aws --version
       - name: Verifica a idade do último backup
         env:
           S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
           S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
         run: |
+          : "${S3_BUCKET:?Configure BACKUP_S3_BUCKET}"
+          : "${AWS_ACCESS_KEY_ID:?Configure BACKUP_S3_ACCESS_KEY_ID}"
+          : "${AWS_SECRET_ACCESS_KEY:?Configure BACKUP_S3_SECRET_ACCESS_KEY}"
           AWS_ARGS=()
           [ -n "$S3_ENDPOINT" ] && AWS_ARGS+=(--endpoint-url "$S3_ENDPOINT")
           ULTIMO="$(aws s3 ls "s3://$S3_BUCKET/postgres/" "${AWS_ARGS[@]}" \
