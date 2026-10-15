@@ -69,14 +69,56 @@ test('reports export uses authentication and staff dashboard respects permission
     await expect(page.getByRole('link', { name: 'Agenda', exact: true }).first()).toBeVisible();
     await expect(page.getByText('FATURAMENTO HOJE', { exact: true })).toHaveCount(0);
     await expect(page.getByText('TICKET MÉDIO', { exact: true })).toHaveCount(0);
+    const cliente = await p.cliente.create({
+      data: { empresaId: empresa.id, nome: 'TESTE atendimento mobile' },
+    });
+    const profissional = await p.profissional.create({
+      data: { empresaId: empresa.id, nome: 'TESTE profissional mobile' },
+    });
+    const servico = await p.servico.create({
+      data: { empresaId: empresa.id, nome: 'Consulta teste', preco: 100, duracaoMin: 60 },
+    });
+    const horario = new Date();
+    horario.setHours(10, 0, 0, 0);
+    const agendamento = await p.agendamento.create({
+      data: {
+        empresaId: empresa.id,
+        clienteId: cliente.id,
+        profissionalId: profissional.id,
+        servicoId: servico.id,
+        status: 'CONFIRMADO',
+        dataHora: horario,
+        dataHoraFim: new Date(horario.getTime() + 3600000),
+      },
+    });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/dashboard');
     await expect(page.getByText('ATENDIMENTOS HOJE', { exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
+    await page.goto('/agenda');
+    await page.getByRole('button', { name: 'Semana', exact: true }).click();
+    const concluir = page.getByRole('button', {
+      name: 'Concluir atendimento de TESTE atendimento mobile',
+      exact: true,
+    });
+    await expect(concluir).toBeVisible();
+    await concluir.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: 'docs/review-agenda-mobile.png', fullPage: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await concluir.click();
+    await expect
+      .poll(async () => (await p.agendamento.findUnique({ where: { id: agendamento.id } }))?.status)
+      .toBe('CONCLUIDO');
   } finally {
     await p.venda.deleteMany({ where: { empresaId: empresa.id } });
+    await p.agendamento.deleteMany({ where: { empresaId: empresa.id } });
+    await p.servico.deleteMany({ where: { empresaId: empresa.id } });
+    await p.profissional.deleteMany({ where: { empresaId: empresa.id } });
+    await p.cliente.deleteMany({ where: { empresaId: empresa.id } });
     await p.empresa.delete({ where: { id: empresa.id } });
     await p.$disconnect();
   }

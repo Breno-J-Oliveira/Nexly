@@ -71,11 +71,11 @@ function statusColor(status: StatusAgendamento): { bg: string; border: string; t
 export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [carregando, setCarregando] = useState(true);
-  const [erro,setErro]=useState('');
-  const [concluindo,setConcluindo]=useState<string|null>(null);
-  const request=useRef<AbortController|null>(null);
-  const {user}=useAuth();
-  const podeConcluir=['ADMIN','GESTOR','RECEPCIONISTA'].includes(user?.role||'');
+  const [erro, setErro] = useState('');
+  const [concluindo, setConcluindo] = useState<string | null>(null);
+  const request = useRef<AbortController | null>(null);
+  const { user } = useAuth();
+  const podeConcluir = ['ADMIN', 'GESTOR', 'RECEPCIONISTA'].includes(user?.role || '');
 
   const diasSemana = useMemo(() => {
     const inicioSemana = new Date(dataInicio);
@@ -83,27 +83,62 @@ export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) 
     return Array.from({ length: 7 }).map((_, i) => addDias(inicioSemana, i));
   }, [dataInicio]);
 
-  const primeiroDia=diasSemana[0]?dataISO(diasSemana[0]):'';
-  const ultimoDia=diasSemana[6]?dataISO(diasSemana[6]):'';
-  const carregar=useCallback(async()=>{
-    request.current?.abort();const controller=new AbortController();request.current=controller;
-    setCarregando(true);setErro('');setAgendamentos([]);
-    try{
-      let pagina=1;let total=0;const itens:Agendamento[]=[];
+  const primeiroDia = diasSemana[0] ? dataISO(diasSemana[0]) : '';
+  const ultimoDia = diasSemana[6] ? dataISO(diasSemana[6]) : '';
+  const carregar = useCallback(async () => {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    setCarregando(true);
+    setErro('');
+    setAgendamentos([]);
+    try {
+      let pagina = 1;
+      let total = 0;
+      const itens: Agendamento[] = [];
       do {
-        const res=await api.get<{data:Agendamento[];total:number}>('/agendamentos',{signal:controller.signal,params:{data:primeiroDia,dataFim:ultimoDia,limit:500,page:pagina,profissionalId:profissionalId||undefined}});
-        itens.push(...res.data.data);total=res.data.total;pagina++;
-        if(!res.data.data.length)break;
-      }while(itens.length<total);
-      if(!controller.signal.aborted)setAgendamentos(itens);
-    }catch(e){if(!isCancel(e)&&!controller.signal.aborted)setErro('Não foi possível carregar a semana. Tente novamente.');}
-    finally{if(!controller.signal.aborted)setCarregando(false);}
-  },[primeiroDia,ultimoDia,profissionalId]);
-  const cancelarCarga=useCallback(()=>request.current?.abort(),[]);
-  useEffect(()=>{void carregar();return cancelarCarga;},[carregar,cancelarCarga]);
-  const concluir=async(id:string)=>{
-    if(concluindo)return;setConcluindo(id);setErro('');
-    try{await api.patch(`/agendamentos/${id}/status`,{status:'CONCLUIDO'});toastSuccess('Serviço concluído!');await carregar();onConcluir?.(id);}catch{setErro('Não foi possível concluir o atendimento. Atualize a agenda e tente novamente.');}finally{setConcluindo(null);}
+        const res = await api.get<{ data: Agendamento[]; total: number }>('/agendamentos', {
+          signal: controller.signal,
+          params: {
+            data: primeiroDia,
+            dataFim: ultimoDia,
+            limit: 500,
+            page: pagina,
+            profissionalId: profissionalId || undefined,
+          },
+        });
+        itens.push(...res.data.data);
+        total = res.data.total;
+        pagina++;
+        if (!res.data.data.length) break;
+      } while (itens.length < total);
+      if (!controller.signal.aborted) setAgendamentos(itens);
+    } catch (e) {
+      if (!isCancel(e) && !controller.signal.aborted)
+        setErro('Não foi possível carregar a semana. Tente novamente.');
+    } finally {
+      if (!controller.signal.aborted) setCarregando(false);
+    }
+  }, [primeiroDia, ultimoDia, profissionalId]);
+  const cancelarCarga = useCallback(() => request.current?.abort(), []);
+  useEffect(() => {
+    void carregar();
+    return cancelarCarga;
+  }, [carregar, cancelarCarga]);
+  const concluir = async (id: string) => {
+    if (concluindo) return;
+    setConcluindo(id);
+    setErro('');
+    try {
+      await api.patch(`/agendamentos/${id}/status`, { status: 'CONCLUIDO' });
+      toastSuccess('Serviço concluído!');
+      await carregar();
+      onConcluir?.(id);
+    } catch {
+      setErro('Não foi possível concluir o atendimento. Atualize a agenda e tente novamente.');
+    } finally {
+      setConcluindo(null);
+    }
   };
 
   const slots = useMemo(() => {
@@ -125,85 +160,104 @@ export function AgendaSemana({ dataInicio, profissionalId, onConcluir }: Props) 
   }, [agendamentos]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
-      {erro&&<div role="alert" className="flex flex-wrap items-center gap-3 border-b border-red-400/30 p-4 text-sm text-red-200">{erro}<Button variant="ghost" onClick={()=>void carregar()}>Tentar novamente</Button></div>}
-      <div className="grid grid-cols-8 border-b border-[rgba(255,255,255,0.08)]">
-        <div className="p-3 text-[12px] font-semibold uppercase tracking-wider text-[#71717A]">Hora</div>
-        {diasSemana.map((d, i) => (
-          <div key={i} className="p-3 text-center text-[13px] font-medium text-[#A1A1AA]">
-            <span className="hidden sm:inline">{DIAS[d.getDay()]} </span>
-            <span>{String(d.getDate()).padStart(2, '0')}/{String(d.getMonth() + 1).padStart(2, '0')}</span>
+    <div className="overflow-x-auto rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
+      {erro && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-3 border-b border-red-400/30 p-4 text-sm text-red-200"
+        >
+          {erro}
+          <Button variant="ghost" onClick={() => void carregar()}>
+            Tentar novamente
+          </Button>
+        </div>
+      )}
+      <p className="p-3 text-xs text-[#A1A1AA] sm:hidden">
+        Deslize para os lados para ver os dias da semana.
+      </p>
+      <div className="min-w-[800px]">
+        <div className="grid grid-cols-8 border-b border-[rgba(255,255,255,0.08)]">
+          <div className="p-3 text-[12px] font-semibold uppercase tracking-wider text-[#71717A]">
+            Hora
           </div>
-        ))}
+          {diasSemana.map((d, i) => (
+            <div key={i} className="p-3 text-center text-[13px] font-medium text-[#A1A1AA]">
+              <span className="hidden sm:inline">{DIAS[d.getDay()]} </span>
+              <span>
+                {String(d.getDate()).padStart(2, '0')}/{String(d.getMonth() + 1).padStart(2, '0')}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="relative grid grid-cols-8" style={{ height: `${slots.length * 64}px` }}>
+          {slots.map((hora, idx) => (
+            <div
+              key={hora}
+              className="absolute left-0 right-0 border-t border-[rgba(255,255,255,0.05)]"
+              style={{ top: `${idx * 64}px` }}
+            >
+              <span className="absolute -top-2 left-2 text-[11px] text-[#71717A]">
+                {String(Math.floor(hora)).padStart(2, '0')}:
+                {String(Math.round((hora % 1) * 60)).padStart(2, '0')}
+              </span>
+            </div>
+          ))}
+
+          {slots.map((hora, idx) => (
+            <div
+              key={`hora-${hora}`}
+              className="col-start-1 border-r border-[rgba(255,255,255,0.05)]"
+              style={{ gridRow: idx + 1, height: '64px' }}
+            />
+          ))}
+
+          {diasSemana.map((_, diaIdx) => (
+            <div
+              key={`dia-${diaIdx}`}
+              className="relative border-r border-[rgba(255,255,255,0.05)]"
+              style={{ gridColumn: diaIdx + 2, gridRow: `1 / span ${slots.length}` }}
+            >
+              {agendamentosPorDia[diaIdx]!.map((a) => {
+                const inicio = horaDecimal(a.dataHora);
+                const duracao = duracaoMin(a.dataHora, a.dataHoraFim);
+                const top = (inicio - HORA_INICIO) * (60 / SLOT_MINUTOS) * 64;
+                const height = (duracao / SLOT_MINUTOS) * 64;
+                const colors = statusColor(a.status);
+
+                return (
+                  <div
+                    key={a.id}
+                    className="group absolute left-1 right-1 rounded-lg border p-2 text-[11px] transition-opacity hover:opacity-90"
+                    style={{
+                      top: `${top}px`,
+                      height: `${Math.max(height, 28)}px`,
+                      backgroundColor: colors.bg,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    }}
+                  >
+                    <div className="truncate font-medium text-[#FAFAFA]">{a.cliente.nome}</div>
+                    <div className="truncate text-[10px] opacity-80">{a.servico.nome}</div>
+                    <div className="truncate text-[10px] opacity-70">{a.profissional.nome}</div>
+                    {a.status === 'CONFIRMADO' && podeConcluir && (
+                      <button
+                        type="button"
+                        disabled={concluindo !== null}
+                        aria-label={`Concluir atendimento de ${a.cliente.nome}`}
+                        onClick={() => void concluir(a.id)}
+                        className="mt-1 flex w-full items-center justify-center gap-1 rounded bg-[#22C55E] px-1.5 py-0.5 text-[10px] font-semibold text-[#052E16] opacity-100 transition-opacity hover:bg-[#16A34A] sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 disabled:opacity-50"
+                      >
+                        <Icon name="check" size="xs" /> Concluir
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
-
-      <div className="relative grid grid-cols-8" style={{ height: `${slots.length * 64}px` }}>
-        {slots.map((hora, idx) => (
-          <div
-            key={hora}
-            className="absolute left-0 right-0 border-t border-[rgba(255,255,255,0.05)]"
-            style={{ top: `${idx * 64}px` }}
-          >
-            <span className="absolute -top-2 left-2 text-[11px] text-[#71717A]">
-              {String(Math.floor(hora)).padStart(2, '0')}:{String(Math.round((hora % 1) * 60)).padStart(2, '0')}
-            </span>
-          </div>
-        ))}
-
-        {slots.map((hora, idx) => (
-          <div
-            key={`hora-${hora}`}
-            className="col-start-1 border-r border-[rgba(255,255,255,0.05)]"
-            style={{ gridRow: idx + 1, height: '64px' }}
-          />
-        ))}
-
-        {diasSemana.map((_, diaIdx) => (
-          <div
-            key={`dia-${diaIdx}`}
-            className="relative border-r border-[rgba(255,255,255,0.05)]"
-            style={{ gridColumn: diaIdx + 2, gridRow: `1 / span ${slots.length}` }}
-          >
-            {agendamentosPorDia[diaIdx]!.map((a) => {
-              const inicio = horaDecimal(a.dataHora);
-              const duracao = duracaoMin(a.dataHora, a.dataHoraFim);
-              const top = (inicio - HORA_INICIO) * (60 / SLOT_MINUTOS) * 64;
-              const height = (duracao / SLOT_MINUTOS) * 64;
-              const colors = statusColor(a.status);
-
-              return (
-                <div
-                  key={a.id}
-                  className="group absolute left-1 right-1 rounded-lg border p-2 text-[11px] transition-opacity hover:opacity-90"
-                  style={{
-                    top: `${top}px`,
-                    height: `${Math.max(height, 28)}px`,
-                    backgroundColor: colors.bg,
-                    borderColor: colors.border,
-                    color: colors.text,
-                  }}
-                >
-                  <div className="truncate font-medium text-[#FAFAFA]">{a.cliente.nome}</div>
-                  <div className="truncate text-[10px] opacity-80">{a.servico.nome}</div>
-                  <div className="truncate text-[10px] opacity-70">{a.profissional.nome}</div>
-                  {a.status === 'CONFIRMADO' && podeConcluir && (
-                    <button
-                      type="button"
-                      disabled={concluindo!==null}
-                      aria-label={`Concluir atendimento de ${a.cliente.nome}`}
-                      onClick={() => void concluir(a.id)}
-                      className="mt-1 flex w-full items-center justify-center gap-1 rounded bg-[#22C55E] px-1.5 py-0.5 text-[10px] font-semibold text-[#052E16] opacity-100 transition-opacity hover:bg-[#16A34A] sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 disabled:opacity-50"
-                    >
-                      <Icon name="check" size="xs" /> Concluir
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-
       {carregando && (
         <div className="p-6 text-center text-sm text-[#A1A1AA]">Carregando agenda da semana...</div>
       )}
