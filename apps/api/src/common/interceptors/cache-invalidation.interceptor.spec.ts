@@ -5,11 +5,20 @@ import { CacheInvalidationInterceptor } from './cache-invalidation.interceptor';
 describe('Cache por empresa após escrita', () => {
   const redis = { del: jest.fn().mockResolvedValue(undefined) };
   const interceptor = new CacheInvalidationInterceptor(redis as unknown as RedisService);
-  const context = (method: string) =>
+  const context = (method: string, path = '/api/vendas') =>
     ({
-      switchToHttp: () => ({ getRequest: () => ({ method, user: { empresaId: 'e1' } }) }),
+      switchToHttp: () => ({ getRequest: () => ({ method, path, user: { empresaId: 'e1' } }) }),
     }) as never;
   beforeEach(() => redis.del.mockClear());
+
+  it('atividade pessoal preserva o cache dos indicadores', async () => {
+    await lastValueFrom(
+      interceptor.intercept(context('POST', '/api/experiencia/atividade'), {
+        handle: () => of({}),
+      }),
+    );
+    expect(redis.del).not.toHaveBeenCalled();
+  });
 
   it('invalida somente a empresa atual antes de retornar a escrita', async () => {
     await expect(

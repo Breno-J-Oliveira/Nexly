@@ -56,6 +56,8 @@ export class ExperienciaService {
     return {
       ...empresa,
       diasDeUso: usuario.diasDeUso,
+      podeRecomendar:
+        usuario.diasDeUso >= 3 && Date.now() - usuario.createdAt.getTime() >= 7 * 86400000,
       pedirRecomendacao: podePedirRecomendacao(usuario, !!depoimento),
       depoimento,
     };

@@ -10,6 +10,9 @@ export class CacheInvalidationInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const req = context.switchToHttp().getRequest<Request>();
     const empresaId = req.user?.empresaId;
+    // Preferências e atividade pessoal não alteram os indicadores financeiros.
+    if (req.path === '/api/experiencia' || req.path?.startsWith('/api/experiencia/'))
+      return next.handle();
     if (!empresaId || !['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method))
       return next.handle();
     return next.handle().pipe(
