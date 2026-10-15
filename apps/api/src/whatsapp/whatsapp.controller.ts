@@ -19,8 +19,10 @@ export class WhatsAppController {
   @Post('test')
   @Roles('ADMIN')
   async testSend(@Body() dto: EnviarMensagemDto) {
-    const ok = await this.whatsapp.send(dto);
-    return { sent: ok, provider: process.env.WHATSAPP_PROVIDER || 'disabled' };
+    const status = this.whatsapp.getStatus();
+    if (status.mode === 'simulation') return { sent: false, simulated: true, ...status };
+    const sent = await this.whatsapp.send(dto);
+    return { sent, simulated: false, ...status };
   }
 
   @Post('reminder/test')

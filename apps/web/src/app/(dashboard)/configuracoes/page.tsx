@@ -144,7 +144,13 @@ export default function ConfiguracoesPage() {
   const [erroHorarios, setErroHorarios] = useState('');
   const [linkAgendamento, setLinkAgendamento] = useState<string | null>(null);
   const [carregandoLink, setCarregandoLink] = useState(false);
-  const [whatsappStatus, setWhatsappStatus] = useState<{ provider: string; enabled: boolean } | null>(null);
+  const [whatsappStatus, setWhatsappStatus] = useState<{
+    provider: string; enabled: boolean;
+    mode: 'ready' | 'simulation' | 'disabled' | 'unconfigured' | 'unavailable';
+  } | null>(null);
+  const [telefoneTeste, setTelefoneTeste] = useState('');
+  const [testandoWhatsapp, setTestandoWhatsapp] = useState(false);
+  const [erroWhatsapp, setErroWhatsapp] = useState('');
   const [cupons, setCupons] = useState<
     {
       id: string;
@@ -204,14 +210,16 @@ export default function ConfiguracoesPage() {
           lembretesAtivos: d.lembretesAtivos ?? false,
           templateLembrete: d.templateLembrete ?? '',
         });
+        const destinatarioTeste: unknown = d.whatsapp || d.telefone;
+        setTelefoneTeste(typeof destinatarioTeste === 'string' ? destinatarioTeste : '');
         if (d.horarios) setHorarios(d.horarios as Record<string, { abre: string; fecha: string; aberto: boolean }>);
         if (d.notificacoes) setNotificacoes(d.notificacoes as Record<string, { ativo?: boolean; template?: string }>);
       })
       .catch(() => undefined);
     api
-      .get<{ provider: string; enabled: boolean }>('/whatsapp/status')
+      .get<NonNullable<typeof whatsappStatus>>('/whatsapp/status')
       .then((r) => setWhatsappStatus(r.data ?? null))
-      .catch(() => setWhatsappStatus({ provider: 'disabled', enabled: false }));
+      .catch(() => setWhatsappStatus({ provider: 'unknown', enabled: false, mode: 'unavailable' }));
   }, []);
 
   const setEmp = (k: keyof typeof empresa, v: string) =>
@@ -302,17 +310,25 @@ export default function ConfiguracoesPage() {
   }, [empresa.templateLembrete]);
 
   const enviarTesteWhatsapp = async () => {
-    setSalvando(true);
+    if (testandoWhatsapp) return;
+    setErroWhatsapp('');
+    if (!/^(?:\d{10,11}|55\d{10,11})$/.test(telefoneTeste.replace(/\D/g, ''))) {
+      setErroWhatsapp('Informe o telefone que receberá o teste, com DDD.');
+      return;
+    }
+    setTestandoWhatsapp(true);
     try {
-      await api.post('/whatsapp/test', {
-        phone: empresa.telefone || empresa.whatsapp || '5511999999999',
+      const { data } = await api.post<{ sent: boolean; simulated?: boolean }>('/whatsapp/test', {
+        phone: telefoneTeste,
         message: previewLembrete,
       });
-      toastSuccess('Mensagem de teste enviada!');
+      if (data.simulated) toastSuccess('Simulação concluída. Nenhuma mensagem foi enviada.');
+      else if (data.sent) toastSuccess('Envio aceito pelo provedor. Confira o recebimento no WhatsApp.');
+      else setErroWhatsapp('O provedor não aceitou o envio. Verifique a configuração da integração e tente novamente.');
     } catch {
-      toastError('Não foi possível enviar a mensagem de teste');
+      setErroWhatsapp('Não foi possível solicitar o envio. Verifique a integração e tente novamente.');
     } finally {
-      setSalvando(false);
+      setTestandoWhatsapp(false);
     }
   };
 
@@ -861,9 +877,14 @@ return (
                       Envia lembrete ao cliente na véspera do agendamento
                     </p>
                     <p className="mt-1 text-[12px]" style={{ color: '#71717A' }}>
-                      Conexão:{' '}
-                      <span style={{ color: whatsappStatus?.enabled ? '#22C55E' : '#EF4444' }}>
-                        {whatsappStatus?.enabled ? '● Conectado' : '● Desconectado'}
+                      Integração:{' '}
+                      <span style={{ color: whatsappStatus?.enabled ? '#22C55E' : '#FBBF24' }}>
+                        {!whatsappStatus ? 'Consultando…'
+                          : whatsappStatus.mode === 'simulation' ? 'Modo de simulação — sem envio real'
+                          : whatsappStatus.mode === 'ready' ? 'Configurada — entrega ainda não verificada'
+                          : whatsappStatus.mode === 'unconfigured' ? 'Configuração incompleta'
+                          : whatsappStatus.mode === 'unavailable' ? 'Não foi possível consultar o status'
+                          : 'Desativada'}
                       </span>
                     </p>
                   </div>
@@ -896,14 +917,29 @@ return (
                     >
                       {previewLembrete}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => void enviarTesteWhatsapp()}
-                      className="mt-3 text-[13px] font-medium hover:opacity-80"
-                      style={{ color: '#6366F1' }}
-                    >
-                      Enviar mensagem de teste →
-                    </button>
+                    <div className="mt-4 space-y-3">
+                      <Input
+                        label="Telefone para receber o teste"
+                        type="tel"
+                        autoComplete="tel"
+                        placeholder="(11) 99999-9999"
+                        maxLength={20}
+                        value={telefoneTeste}
+                        onChange={(event) => setTelefoneTeste(event.target.value)}
+                      />
+                      <p className="text-xs leading-5 text-[#A1A1AA]">
+                        Confira o destinatário antes de enviar. Este teste usa a prévia acima e não altera o telefone do negócio.
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={() => void enviarTesteWhatsapp()}
+                        loading={testandoWhatsapp}
+                        disabled={!telefoneTeste.trim() || !['ready', 'simulation'].includes(whatsappStatus?.mode ?? '')}
+                      >
+                        {whatsappStatus?.mode === 'simulation' ? 'Simular mensagem de teste' : 'Enviar mensagem de teste'}
+                      </Button>
+                      {erroWhatsapp && <p role="alert" className="text-sm text-red-300">{erroWhatsapp}</p>}
+                    </div>
                   </div>
                 )}
               </div>

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
 import { EvolutionProvider } from './providers/evolution.provider';
+import { normalizarTelefoneWhatsapp } from './whatsapp-phone';
 
 /* ------------------------------------------------------------------ */
 /*  WhatsApp Service — envia lembretes de agendamento e campanhas      */
@@ -9,7 +10,7 @@ import { EvolutionProvider } from './providers/evolution.provider';
 /*  Provider pluggable:                                                */
 /*   - Evolution API (on-premise, WhatsApp Baileys)                    */
 /*   - Twilio / Meta Cloud API (oficial)                               */
-/*   - test (apenas loga, útil para o TCC)                             */
+/*   - test (simulação sem entrega ou dados nos logs)                             */
 /*                                                                     */
 /*  Config via env: WHATSAPP_PROVIDER, EVOLUTION_API_URL,             */
 /*  EVOLUTION_API_KEY, EVOLUTION_INSTANCE                              */
@@ -27,7 +28,7 @@ const TEMPLATE_PADRAO =
 export class WhatsAppService {
   private readonly logger = new Logger(WhatsAppService.name);
   private readonly provider: string;
-  private readonly enabled: boolean;
+  private readonly mode: 'ready' | 'simulation' | 'disabled' | 'unconfigured';
 
   constructor(
     private readonly config: ConfigService,
@@ -35,39 +36,47 @@ export class WhatsAppService {
     private readonly evolution: EvolutionProvider,
   ) {
     this.provider = this.config.get<string>('WHATSAPP_PROVIDER', 'disabled');
-    this.enabled = this.provider !== 'disabled';
-    if (!this.enabled) {
-      this.logger.warn('WhatsApp disabled — set WHATSAPP_PROVIDER to enable');
-    }
+    const required: Record<string, string[]> = {
+      evolution: ['EVOLUTION_API_URL', 'EVOLUTION_API_KEY', 'EVOLUTION_INSTANCE'],
+      twilio: ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_PHONE_NUMBER'],
+      meta: ['META_PHONE_ID', 'META_API_KEY'],
+    };
+    this.mode =
+      this.provider === 'disabled'
+        ? 'disabled'
+        : this.provider === 'test'
+          ? 'simulation'
+          : required[this.provider]?.every((key) => this.config.get<string>(key, '').trim())
+            ? 'ready'
+            : 'unconfigured';
+    if (this.mode !== 'ready') this.logger.warn(`WhatsApp: ${this.mode}`);
   }
 
   isEnabled(): boolean {
-    return this.enabled;
+    return this.mode === 'ready';
   }
 
-  /** Estado da conexão (usado pelo frontend em Configurações). */
+  /** Configuração disponível; não comprova conexão nem entrega ao destinatário. */
   getStatus() {
-    return { provider: this.provider, enabled: this.enabled };
+    return { provider: this.provider, enabled: this.isEnabled(), mode: this.mode };
   }
 
   /* ── Send a single message ── */
   async send({ phone, message }: SendMessageParams): Promise<boolean> {
-    if (!this.enabled) return false;
+    if (!this.isEnabled()) return false;
+    const number = normalizarTelefoneWhatsapp(phone);
+    if (!number || !message.trim() || message.length > 1000) return false;
     try {
       if (this.provider === 'evolution') {
-        await this.evolution.sendMessage(phone, message);
+        await this.evolution.sendMessage(number, message);
         return true;
       }
-      if (this.provider === 'test') {
-        this.logger.log(`[whatsapp:test] → ${phone}: ${message}`);
-        return true;
-      }
-      if (this.provider === 'twilio') return this.sendViaTwilio(phone, message);
-      if (this.provider === 'meta') return this.sendViaMeta(phone, message);
-      this.logger.warn(`Unknown WhatsApp provider: ${this.provider}`);
+      if (this.provider === 'twilio') return await this.sendViaTwilio(`+${number}`, message);
+      if (this.provider === 'meta') return await this.sendViaMeta(number, message);
       return false;
-    } catch (err) {
-      this.logger.error(`WhatsApp send failed: ${(err as Error).message}`);
+    } catch {
+      // Respostas de provedores podem conter telefone, mensagem ou credenciais.
+      this.logger.error('Falha ao solicitar envio de WhatsApp ao provedor');
       return false;
     }
   }
@@ -108,7 +117,11 @@ Qualquer d\u00FAvida, responda esta mensagem. At\u00E9 l\u00E1! \u{1F60A}`;
         headers: {
           Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
         },
-        body: new URLSearchParams({ To: phone, From: from, Body: message }),
+        body: new URLSearchParams({
+          To: `whatsapp:${phone}`,
+          From: from.startsWith('whatsapp:') ? from : `whatsapp:${from}`,
+          Body: message,
+        }),
         signal: AbortSignal.timeout(15000),
       },
     );
@@ -132,12 +145,13 @@ Qualquer d\u00FAvida, responda esta mensagem. At\u00E9 l\u00E1! \u{1F60A}`;
       }),
       signal: AbortSignal.timeout(15000),
     });
-    if (!res.ok) throw new Error(`Meta API: ${res.status} ${await res.text()}`);
+    if (!res.ok) throw new Error(`Meta API: ${res.status}`);
     return true;
   }
 
   /* ── Schedule daily reminders (called via cron) ── */
   async sendDailyReminders(): Promise<{ sent: number; failed: number }> {
+    if (!this.isEnabled()) return { sent: 0, failed: 0 };
     const amanha = new Date();
     amanha.setDate(amanha.getDate() + 1);
     const inicio = new Date(amanha);

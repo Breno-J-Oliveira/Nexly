@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { normalizarTelefoneWhatsapp } from '../whatsapp-phone';
 
 export interface WhatsAppMessageProvider {
   sendMessage(phone: string, message: string): Promise<void>;
@@ -34,13 +35,13 @@ export class EvolutionProvider implements WhatsAppMessageProvider {
       signal: AbortSignal.timeout(15000),
     });
 
-    if (!res.ok) throw new Error(`Evolution API: ${res.status} ${await res.text()}`);
+    if (!res.ok) throw new Error(`Evolution API: ${res.status}`);
   }
 
   /** Remove não-dígitos e garante o DDI 55 quando ausente. */
   static formatPhone(phone: string): string {
-    const digits = phone.replace(/\D/g, '');
-    if (digits.startsWith('55')) return digits;
-    return `55${digits}`;
+    const number = normalizarTelefoneWhatsapp(phone);
+    if (!number) throw new Error('Telefone inválido');
+    return number;
   }
 }
