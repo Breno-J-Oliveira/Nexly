@@ -77,7 +77,7 @@ describe('VendasService', () => {
         { id: 'p2', nome: 'Condicionador', preco: 30, estoqueAtual: 5, ativo: true },
       ]);
 
-      const txVenda = { id: 'v1' };
+      const txVenda = { id: 'v1', createdAt: new Date('2026-10-15T12:00Z') };
       let receivedData: { clienteId?: string; total: number; desconto?: number } | null = null;
       prisma.client.$transaction.mockImplementation((cb) => {
         const fakeTx = {
@@ -88,6 +88,7 @@ describe('VendasService', () => {
             }),
           },
           itemVenda: { create: jest.fn().mockResolvedValue({}) },
+          cliente: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
         };
         return cb(fakeTx);
       });

@@ -12,7 +12,9 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
 import { maskTelefone, soDigitos } from '@/lib/format';
-import { toastSuccess } from '@/components/ui/Toaster';
+import { toastSuccess, toastError } from '@/components/ui/Toaster';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { isCancel } from 'axios';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ClienteDrawer } from './ClienteDrawer';
 
@@ -41,6 +43,19 @@ export default function ClientesPage() {
   const podeCriar = hasPermission(user?.role, 'clientes:create');
   const podeEditar = hasPermission(user?.role, 'clientes:update');
   const podeExcluir = hasPermission(user?.role, 'clientes:delete');
+  const podeVerCompras = hasPermission(user?.role, 'vendas:read');
+  const [pagina, setPagina] = useState(1);
+  const [inspectorInline, setInspectorInline] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1280px)');
+    const atualizar = () => setInspectorInline(media.matches);
+    atualizar();
+    media.addEventListener('change', atualizar);
+    return () => media.removeEventListener('change', atualizar);
+  }, []);
+  const [erroCarga, setErroCarga] = useState('');
+  const request = useRef<AbortController | null>(null);
+  const consultaAtual = useRef('');
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [busca, setBusca] = useState('');
   const [carregando, setCarregando] = useState(true);
@@ -68,26 +83,48 @@ export default function ClientesPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const carregar = useCallback(async (search?: string) => {
-    setCarregando(true);
-    try {
-      const res = await api.get<{ data: Cliente[]; total: number }>('/clientes', {
-        params: { limit: 100, search },
-      });
-      setClientes(res.data.data);
-      setTotalClientes(res.data.total);
-    } finally {
-      setCarregando(false);
-    }
-  }, []);
+  const carregar = useCallback(
+    async (search?: string) => {
+      request.current?.abort();
+      const controller = new AbortController();
+      request.current = controller;
+      setCarregando(true);
+      setErroCarga('');
+      const consulta = JSON.stringify([pagina, search ?? '']);
+      if (consultaAtual.current !== consulta) setClientes([]);
+      consultaAtual.current = consulta;
+      try {
+        const res = await api.get<{ data: Cliente[]; total: number }>('/clientes', {
+          signal: controller.signal,
+          params: { page: pagina, limit: 25, search },
+        });
+        if (controller.signal.aborted) return;
+        setTotalClientes(res.data.total);
+        const ultimaPagina = Math.max(1, Math.ceil(res.data.total / 25));
+        if (pagina > ultimaPagina) {
+          setPagina(ultimaPagina);
+          return;
+        }
+        setClientes(res.data.data);
+        setClienteDrawer((atual) =>
+          atual ? (res.data.data.find((cliente) => cliente.id === atual.id) ?? null) : null,
+        );
+      } catch (error) {
+        if (!isCancel(error) && !controller.signal.aborted)
+          setErroCarga('Não foi possível carregar os clientes. Tente novamente.');
+      } finally {
+        if (!controller.signal.aborted) setCarregando(false);
+      }
+    },
+    [pagina],
+  );
 
   useEffect(() => {
-    void carregar();
-  }, [carregar]);
-
-  useEffect(() => {
-    const t = setTimeout(() => void carregar(busca || undefined), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => void carregar(busca.trim() || undefined), 250);
+    return () => {
+      clearTimeout(timer);
+      request.current?.abort();
+    };
   }, [busca, carregar]);
 
   const abrirNovo = (): void => {
@@ -105,6 +142,7 @@ export default function ClientesPage() {
   };
 
   const salvar = async (): Promise<void> => {
+    if (salvando) return;
     setSalvando(true);
     setErro(null);
     try {
@@ -130,10 +168,18 @@ export default function ClientesPage() {
   };
 
   const excluir = async (c: Cliente): Promise<void> => {
-    if (!confirm(`Excluir o cliente "${c.nome}"?`)) return;
-    await api.delete(`/clientes/${c.id}`);
-    toastSuccess('Cliente excluído!');
-    await carregar(busca || undefined);
+    if (!confirm(`Desativar o cliente "${c.nome}"? O histórico será preservado.`)) return;
+    try {
+      await api.delete(`/clientes/${c.id}`);
+      toastSuccess('Cliente desativado');
+      await carregar(busca || undefined);
+    } catch (error) {
+      const response = error as { response?: { data?: { message?: string } } };
+      toastError(
+        response.response?.data?.message ??
+          'Não foi possível desativar o cliente. Tente novamente.',
+      );
+    }
   };
 
   return (
@@ -155,7 +201,10 @@ export default function ClientesPage() {
                 aria-label="Buscar cliente"
                 placeholder="Buscar cliente..."
                 value={busca}
-                onChange={(e) => setBusca(e.target.value)}
+                onChange={(e) => {
+                  setBusca(e.target.value);
+                  setPagina(1);
+                }}
               />
             </div>
             {podeCriar && (
@@ -187,6 +236,9 @@ export default function ClientesPage() {
             ]}
           />
 
+          {erroCarga && (
+            <ErrorState message={erroCarga} onRetry={() => void carregar(busca || undefined)} />
+          )}
           <div className="hidden overflow-x-auto md:block rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-[rgba(255,255,255,0.08)] bg-[#18181F]/40">
@@ -195,7 +247,9 @@ export default function ClientesPage() {
                   <th className="px-3 py-3 font-medium text-[#A1A1AA]">E-mail</th>
                   <th className="px-3 py-3 font-medium text-[#A1A1AA]">Telefone</th>
                   <th className="px-3 py-3 font-medium text-[#A1A1AA]">Última Visita</th>
-                  <th className="px-3 py-3 font-medium text-[#A1A1AA]">Total Gasto</th>
+                  {podeVerCompras && (
+                    <th className="px-3 py-3 font-medium text-[#A1A1AA]">Total em vendas</th>
+                  )}
                   <th className="px-3 py-3 font-medium text-[#A1A1AA]">Status</th>
                   <th className="px-3 py-3" />
                 </tr>
@@ -203,14 +257,17 @@ export default function ClientesPage() {
               <tbody className="divide-y divide-[rgba(255,255,255,0.08)]">
                 {carregando && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-[#A1A1AA]">
+                    <td
+                      colSpan={podeVerCompras ? 7 : 6}
+                      className="px-4 py-6 text-center text-[#A1A1AA]"
+                    >
                       Carregando…
                     </td>
                   </tr>
                 )}
-                {!carregando && clientes.length === 0 && (
+                {!carregando && !erroCarga && clientes.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-16">
+                    <td colSpan={podeVerCompras ? 7 : 6} className="px-4 py-16">
                       <EmptyState
                         icon="users-slash"
                         title={
@@ -254,12 +311,14 @@ export default function ClientesPage() {
                     <td className="whitespace-nowrap px-3 py-3 text-[#A1A1AA]">
                       {c.ultimaVisita ? new Date(c.ultimaVisita).toLocaleDateString('pt-BR') : '—'}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3 font-medium">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }).format(Number(c.totalGasto || 0))}
-                    </td>
+                    {podeVerCompras && (
+                      <td className="whitespace-nowrap px-3 py-3 font-medium">
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                        }).format(Number(c.totalGasto || 0))}
+                      </td>
+                    )}
                     <td className="px-3 py-3">
                       <span
                         className={`rounded px-2 py-1 text-[10px] ${c.tag === 'VIP' ? 'bg-[#6366F1]/10 text-[#818CF8]' : 'bg-green-500/10 text-green-400'}`}
@@ -304,6 +363,11 @@ export default function ClientesPage() {
           </div>
 
           <div className="space-y-3 md:hidden">
+            {carregando && (
+              <p role="status" className="text-sm text-[#A1A1AA]">
+                Carregando clientes…
+              </p>
+            )}
             {clientes.map((c) => (
               <button
                 key={c.id}
@@ -318,17 +382,20 @@ export default function ClientesPage() {
                   <span className="block truncate text-xs text-[#71717A]">
                     {c.email || c.telefone || 'Sem contato informado'}
                   </span>
-                  <span className="block text-xs text-[#A1A1AA]">
-                    Total:{' '}
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                      Number(c.totalGasto || 0),
-                    )}
-                  </span>
+                  {podeVerCompras && (
+                    <span className="block text-xs text-[#A1A1AA]">
+                      Em vendas:{' '}
+                      {new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      }).format(Number(c.totalGasto || 0))}
+                    </span>
+                  )}
                 </span>
                 <span className="text-[#71717A]">&rsaquo;</span>
               </button>
             ))}
-            {!carregando && clientes.length === 0 && (
+            {!carregando && !erroCarga && clientes.length === 0 && (
               <EmptyState
                 icon="users"
                 title="Nenhum cliente encontrado"
@@ -336,19 +403,34 @@ export default function ClientesPage() {
               />
             )}
           </div>
+          {!erroCarga && (
+            <nav
+              aria-label="Paginação de clientes"
+              className="mt-5 flex flex-wrap items-center gap-3"
+            >
+              <Button
+                variant="secondary"
+                disabled={carregando || pagina <= 1}
+                onClick={() => setPagina((atual) => atual - 1)}
+              >
+                Anterior
+              </Button>
+              <span role="status" className="text-sm text-[#A1A1AA]">
+                Página {pagina} de {Math.max(1, Math.ceil(totalClientes / 25))}
+              </span>
+              <Button
+                variant="secondary"
+                disabled={carregando || pagina * 25 >= totalClientes}
+                onClick={() => setPagina((atual) => atual + 1)}
+              >
+                Próxima
+              </Button>
+            </nav>
+          )}
         </div>
-        <div className="hidden xl:block">
-          <ClienteDrawer
-            inline
-            cliente={clienteDrawer || clientes[0] || null}
-            onClose={() => setClienteDrawer(null)}
-            onAtualizar={() => void carregar(busca || undefined)}
-          />
-        </div>
-      </div>
-      <div className="xl:hidden">
         <ClienteDrawer
-          cliente={clienteDrawer}
+          inline={inspectorInline}
+          cliente={clienteDrawer || (inspectorInline ? clientes[0] : null) || null}
           onClose={() => setClienteDrawer(null)}
           onAtualizar={() => void carregar(busca || undefined)}
         />
@@ -358,11 +440,22 @@ export default function ClientesPage() {
         <Modal
           open
           title={editandoId ? 'Editar cliente' : 'Novo cliente'}
-          onClose={() => setModalAberto(false)}
+          onClose={() => {
+            if (!salvando) setModalAberto(false);
+          }}
         >
-          <div className="mt-4 space-y-3">
+          <form
+            className="mt-4 space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void salvar();
+            }}
+          >
             <Input
               label="Nome"
+              required
+              minLength={2}
+              maxLength={120}
               value={form.nome}
               onChange={(e) => setForm({ ...form, nome: e.target.value })}
               placeholder="Nome do cliente"
@@ -375,21 +468,31 @@ export default function ClientesPage() {
             />
             <Input
               label="E-mail"
+              maxLength={254}
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="email@exemplo.com"
             />
-            {erro && <p className="text-sm text-red-400">{erro}</p>}
+            {erro && (
+              <p role="alert" className="text-sm text-red-300">
+                {erro}
+              </p>
+            )}
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="secondary" onClick={() => setModalAberto(false)}>
+              <Button
+                type="button"
+                disabled={salvando}
+                variant="secondary"
+                onClick={() => setModalAberto(false)}
+              >
                 Cancelar
               </Button>
-              <Button onClick={() => void salvar()} loading={salvando} disabled={!form.nome}>
+              <Button type="submit" loading={salvando} disabled={!form.nome}>
                 Salvar
               </Button>
             </div>
-          </div>
+          </form>
         </Modal>
       )}
     </div>

@@ -143,10 +143,10 @@ export class ClientesService {
    *
    * - totalVisitas: agendamentos CONCLUIDO.
    * - totalGasto: soma do `total` das vendas vinculadas ao cliente.
-   * - ticketMedio: totalGasto / totalVisitas.
+   * - ticketMedio: totalGasto / quantidade de vendas.
    * - frequenciaMediaDias: intervalo médio entre visitas (dias).
    */
-  async metricas(id: string) {
+  async metricas(id: string, incluirVendas = true) {
     await this.obter(id);
 
     const [agendamentos, vendas] = await Promise.all([
@@ -155,15 +155,17 @@ export class ClientesService {
         orderBy: { dataHora: 'asc' },
         select: { dataHora: true, servicoId: true },
       }),
-      this.prisma.client.venda.findMany({
-        where: { clienteId: id },
-        select: { total: true },
-      }),
+      incluirVendas
+        ? this.prisma.client.venda.findMany({
+            where: { clienteId: id },
+            select: { total: true },
+          })
+        : Promise.resolve([]),
     ]);
 
     const totalVisitas = agendamentos.length;
     const totalGasto = vendas.reduce((acc, v) => acc + Number(v.total), 0);
-    const ticketMedio = totalVisitas > 0 ? totalGasto / totalVisitas : 0;
+    const ticketMedio = vendas.length > 0 ? totalGasto / vendas.length : 0;
     const primeiraVisita = agendamentos[0]?.dataHora;
     const ultimaVisita = agendamentos[totalVisitas - 1]?.dataHora;
     const frequenciaMediaDias =
@@ -197,8 +199,9 @@ export class ClientesService {
 
     return {
       totalVisitas,
-      totalGasto,
-      ticketMedio,
+      totalGasto: incluirVendas ? totalGasto : null,
+      ticketMedio: incluirVendas ? ticketMedio : null,
+      totalCompras: incluirVendas ? vendas.length : null,
       // frequenciaMediaDias = 0 quando insuficiente; senão média entre
       // visitas consecutivas em dias.
       frequenciaMediaDias:

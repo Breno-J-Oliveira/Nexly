@@ -13,7 +13,7 @@ describe('AgendamentosService', () => {
       $transaction: jest.Mock;
       $queryRaw: jest.Mock;
       servico: { findFirst: jest.Mock };
-      cliente: { findFirst: jest.Mock };
+      cliente: { findFirst: jest.Mock; updateMany: jest.Mock };
       profissional: { findFirst: jest.Mock };
       agendamento: {
         findFirst: jest.Mock;
@@ -37,7 +37,10 @@ describe('AgendamentosService', () => {
         $transaction: jest.fn(),
         $queryRaw: jest.fn(),
         servico: { findFirst: jest.fn() },
-        cliente: { findFirst: jest.fn().mockResolvedValue(cliente) },
+        cliente: {
+          findFirst: jest.fn().mockResolvedValue(cliente),
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
         profissional: { findFirst: jest.fn().mockResolvedValue(profissional) },
         agendamento: {
           findFirst: jest.fn(),
@@ -221,7 +224,7 @@ describe('AgendamentosService', () => {
       await service.obter('a1');
       const args = prisma.client.agendamento.findFirst.mock.calls[0][0];
       expect(args.include).toMatchObject({
-        cliente: true,
+        cliente: { select: { id: true, nome: true, telefone: true, email: true } },
         profissional: true,
         servico: true,
       });
@@ -229,7 +232,13 @@ describe('AgendamentosService', () => {
   });
 
   describe('atualizarStatus', () => {
-    const base = { id: 'a1', status: StatusAgendamento.AGENDADO, servicoId: 's1' };
+    const base = {
+      id: 'a1',
+      status: StatusAgendamento.AGENDADO,
+      servicoId: 's1',
+      clienteId: 'c1',
+      dataHora: new Date('2026-10-15T10:00Z'),
+    };
 
     it('não emite baixa duplicada se outra requisição já mudou o status', async () => {
       prisma.client.agendamento.findFirst.mockResolvedValue(base);

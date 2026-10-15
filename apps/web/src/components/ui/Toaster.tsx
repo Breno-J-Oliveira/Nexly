@@ -8,6 +8,11 @@ export function Toaster() {
   return (
     <SonnerToaster
       position="bottom-right"
+      mobileOffset={{
+        bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+        left: 16,
+        right: 16,
+      }}
       toastOptions={{
         style: {
           background: '#18181F',

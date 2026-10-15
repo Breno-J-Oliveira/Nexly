@@ -1,3 +1,4 @@
+import { registrarVisitaClienteTx } from '../clientes/cliente-activity';
 import { calendarRange } from '../common/validation/calendar-range';
 import { bloquearAgenda } from '../database/agenda-lock';
 import {
@@ -22,7 +23,7 @@ const TRANSICOES: Record<StatusAgendamento, StatusAgendamento[]> = {
 };
 
 const includeCompleto = {
-  cliente: true,
+  cliente: { select: { id: true, nome: true, telefone: true, email: true } },
   profissional: true,
   servico: true,
 } satisfies Prisma.AgendamentoInclude;
@@ -164,23 +165,33 @@ export class AgendamentosService {
       );
     }
 
-    const changed = await this.prisma.client.agendamento.updateMany({
-      where: { id, status: agendamento.status },
-      data: { status: novoStatus },
-    });
-    if (changed.count !== 1) {
-      throw new ConflictException(
-        'O agendamento foi alterado. Atualize a agenda e tente novamente.',
-      );
-    }
+    const atualizado = await this.prisma.client.$transaction(async (tx) => {
+      const changed = await tx.agendamento.updateMany({
+        where: { id, status: agendamento.status },
+        data: { status: novoStatus },
+      });
+      if (changed.count !== 1) {
+        throw new ConflictException(
+          'O agendamento foi alterado. Atualize a agenda e tente novamente.',
+        );
+      }
 
-    const atualizado = await this.prisma.client.agendamento.findFirst({
-      where: { id },
-      include: includeCompleto,
+      const atualizado = await tx.agendamento.findFirst({
+        where: { id },
+        include: includeCompleto,
+      });
+      if (!atualizado) {
+        throw new NotFoundException('Agendamento não encontrado');
+      }
+      if (novoStatus === StatusAgendamento.CONCLUIDO)
+        await registrarVisitaClienteTx(
+          tx as unknown as Prisma.TransactionClient,
+          getTenantIdOrFail(),
+          atualizado.clienteId,
+          atualizado.dataHora,
+        );
+      return atualizado;
     });
-    if (!atualizado) {
-      throw new NotFoundException('Agendamento não encontrado');
-    }
 
     // Hook de conclusão — ponto de extensão para a integração com estoque (Fase 4).
     if (novoStatus === StatusAgendamento.CONCLUIDO) {

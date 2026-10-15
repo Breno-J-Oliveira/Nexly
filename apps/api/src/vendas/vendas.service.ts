@@ -1,3 +1,4 @@
+import { registrarCompraClienteTx } from '../clientes/cliente-activity';
 import {
   BadRequestException,
   ConflictException,
@@ -184,6 +185,14 @@ export class VendasService {
           throw new ConflictException('Cupom alterado por outra venda. Tente novamente.');
       }
 
+      if (clienteId)
+        await registrarCompraClienteTx(
+          tx as unknown as Prisma.TransactionClient,
+          empresaId,
+          clienteId,
+          total,
+          v.createdAt,
+        );
       return v;
     });
 
