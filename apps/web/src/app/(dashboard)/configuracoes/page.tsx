@@ -71,20 +71,12 @@ const PLANO_LABEL: Record<string, string> = {
   ENTERPRISE: 'Empresarial',
 };
 
-function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
+function Toggle({ on, onChange, label }: { on: boolean; onChange: () => void; label: string }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      onClick={onChange}
-      className="relative h-5 w-9 shrink-0 rounded-full transition-colors"
-      style={{ backgroundColor: on ? '#6366F1' : '#3F3F46' }}
-    >
-      <span
-        className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform"
-        style={{ left: on ? 'calc(100% - 18px)' : '2px', marginTop: 2 }}
-      />
+    <button type="button" role="switch" aria-label={label} aria-checked={on} onClick={onChange} className="flex h-11 w-11 shrink-0 items-center justify-start rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#818CF8]">
+      <span className="relative block h-5 w-9 rounded-full transition-colors" style={{ backgroundColor: on ? '#6366F1' : '#3F3F46' }}>
+        <span className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform" style={{ left: on ? 'calc(100% - 18px)' : 2 }} />
+      </span>
     </button>
   );
 }
@@ -148,6 +140,7 @@ export default function ConfiguracoesPage() {
     NOTIFICACOES_PADRAO,
   );
   const [salvando, setSalvando] = useState(false);
+  const [fusoHorario, setFusoHorario] = useState('America/Sao_Paulo');
   const [linkAgendamento, setLinkAgendamento] = useState<string | null>(null);
   const [carregandoLink, setCarregandoLink] = useState(false);
   const [whatsappStatus, setWhatsappStatus] = useState<{ provider: string; enabled: boolean } | null>(null);
@@ -195,6 +188,8 @@ export default function ConfiguracoesPage() {
       .get('/configuracoes')
       .then((r) => {
         const d = r.data ?? {};
+        const fusoSalvo: unknown = d.fusoHorario;
+        setFusoHorario(typeof fusoSalvo === 'string' ? fusoSalvo : 'America/Sao_Paulo');
         setEmpresa({
           nome: d.nome ?? '',
           cnpj: d.cnpj ?? '',
@@ -272,8 +267,10 @@ export default function ConfiguracoesPage() {
   const salvarHorarios = async () => {
     setSalvando(true);
     try {
-      await api.put('/configuracoes', { horarios });
+      await api.put('/configuracoes', { horarios, fusoHorario });
       toastSuccess('Horários salvos!');
+    } catch {
+      toastError('Não foi possível salvar os horários. Verifique os dados e tente novamente.');
     } finally {
       setSalvando(false);
     }
@@ -505,6 +502,13 @@ export default function ConfiguracoesPage() {
 return (
     <>
     <PageToolbar><div><h2 className="font-semibold">Configurações</h2><p className="mt-1">Personalize seu sistema e preferências</p></div></PageToolbar>
+    <nav aria-label="Seções de configurações" className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 md:hidden">
+      {SECOES.map((item) => item.id === 'usuarios' ? (
+        <Link key={item.id} href="/usuarios" className="flex min-h-11 items-center rounded-xl border border-white/10 bg-[#111116] px-3 py-2 text-sm text-[#A1A1AA]">{item.label}</Link>
+      ) : (
+        <button key={item.id} type="button" aria-pressed={secao === item.id} onClick={() => setSecao(item.id)} className={`min-h-11 rounded-xl border px-3 py-2 text-left text-sm ${secao === item.id ? 'border-[#6366F1]/40 bg-[#6366F1]/10 text-[#A5B4FC]' : 'border-white/10 bg-[#111116] text-[#A1A1AA]'}`}>{item.label}</button>
+      ))}
+    </nav>
     <div className="flex gap-6">
       {/* Nav lateral */}
       <div
@@ -741,6 +745,27 @@ return (
               Configure os dias e horários de atendimento
             </p>
 
+            <div className="mt-5">
+              <label htmlFor="config-fuso" className="mb-2 block text-sm text-[#A1A1AA]">Fuso horário do estabelecimento</label>
+              <select id="config-fuso" value={fusoHorario} onChange={(event) => setFusoHorario(event.target.value)} className="w-full rounded-xl border border-white/10 bg-[#111116] px-3 py-3 text-sm text-[#FAFAFA]">
+                {[
+                  ['America/Sao_Paulo', 'Brasília / São Paulo (UTC−3)'],
+                  ['America/Bahia', 'Bahia (UTC−3)'],
+                  ['America/Fortaleza', 'Ceará / Nordeste (UTC−3)'],
+                  ['America/Belem', 'Pará / Belém (UTC−3)'],
+                  ['America/Manaus', 'Amazonas / Manaus (UTC−4)'],
+                  ['America/Cuiaba', 'Mato Grosso / Cuiabá (UTC−4)'],
+                  ['America/Campo_Grande', 'Mato Grosso do Sul (UTC−4)'],
+                  ['America/Porto_Velho', 'Rondônia (UTC−4)'],
+                  ['America/Boa_Vista', 'Roraima (UTC−4)'],
+                  ['America/Rio_Branco', 'Acre (UTC−5)'],
+                  ['America/Eirunepe', 'Amazonas / Eirunepé (UTC−5)'],
+                  ['America/Noronha', 'Fernando de Noronha (UTC−2)'],
+                ].map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+              <p className="mt-2 text-xs leading-5 text-[#A1A1AA]">O agendamento online usa este fuso mesmo quando o cliente está em outra região.</p>
+            </div>
+
             <div
               className="mt-6 rounded-xl p-6"
               style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}
@@ -749,24 +774,26 @@ return (
                 {DIAS_SEMANA.map((d) => {
                   const val = horarios[d.key] ?? { abre: '09:00', fecha: '19:00', aberto: false };
                   return (
-                    <div key={d.key} className="flex items-center gap-3">
+                    <div key={d.key} className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 sm:flex sm:gap-3">
                       <Toggle
+                        label={`Atendimento: ${d.label}`}
                         on={val.aberto}
                         onChange={() => setDia(d.key, { aberto: !val.aberto })}
                       />
-                      <span className="w-28 text-[13px] font-medium" style={{ color: '#FAFAFA' }}>
+                      <span className="min-w-0 text-[13px] font-medium sm:w-28" style={{ color: '#FAFAFA' }}>
                         {d.label}
                       </span>
                       <div
-                        className="ml-auto flex items-center gap-2"
+                        className="col-span-2 grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-2 sm:ml-auto sm:flex"
                         style={{ opacity: val.aberto ? 1 : 0.4 }}
                       >
                         <input
                           type="time"
+                          aria-label={`Abertura: ${d.label}`}
                           value={val.abre}
                           disabled={!val.aberto}
                           onChange={(e) => setDia(d.key, { abre: e.target.value })}
-                          className="h-9 rounded-lg border bg-transparent px-2 text-sm outline-none"
+                          className="h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 text-sm outline-none sm:w-28"
                           style={{
                             borderColor: 'rgba(255,255,255,0.10)',
                             color: '#FAFAFA',
@@ -776,10 +803,11 @@ return (
                         <span style={{ color: '#71717A' }}>—</span>
                         <input
                           type="time"
+                          aria-label={`Fechamento: ${d.label}`}
                           value={val.fecha}
                           disabled={!val.aberto}
                           onChange={(e) => setDia(d.key, { fecha: e.target.value })}
-                          className="h-9 rounded-lg border bg-transparent px-2 text-sm outline-none"
+                          className="h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 text-sm outline-none sm:w-28"
                           style={{
                             borderColor: 'rgba(255,255,255,0.10)',
                             color: '#FAFAFA',
@@ -837,6 +865,7 @@ return (
                     </p>
                   </div>
                   <Toggle
+                    label="Lembretes automáticos de WhatsApp"
                     on={empresa.lembretesAtivos}
                     onChange={() => setEmpresa((p) => ({ ...p, lembretesAtivos: !p.lembretesAtivos }))}
                   />
@@ -888,6 +917,7 @@ return (
                   </p>
                 </div>
                 <Toggle
+                  label="Confirmação de agendamento"
                   on={notificacoes.confirmacao?.ativo ?? false}
                   onChange={() =>
                     setNotif('confirmacao', { ativo: !notificacoes.confirmacao?.ativo })
@@ -907,6 +937,7 @@ return (
                   </p>
                 </div>
                 <Toggle
+                  label="Alertas de estoque"
                   on={notificacoes.estoque?.ativo ?? false}
                   onChange={() => setNotif('estoque', { ativo: !notificacoes.estoque?.ativo })}
                 />
@@ -924,6 +955,7 @@ return (
                   </p>
                 </div>
                 <Toggle
+                  label="Notificações de venda"
                   on={notificacoes.venda?.ativo ?? false}
                   onChange={() => setNotif('venda', { ativo: !notificacoes.venda?.ativo })}
                 />

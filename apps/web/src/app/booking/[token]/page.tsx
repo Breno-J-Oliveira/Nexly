@@ -1,7 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
+import { BookingApiError, bookingRequest as getJson, mensagemErro } from '@/lib/public-booking-api';
+import { formatarMoeda } from '@/lib/format';
 import { env } from '@/lib/env';
 import { Icon } from '@/components/ui/Icon';
 
@@ -12,6 +15,7 @@ import { Icon } from '@/components/ui/Icon';
 interface EmpresaInfo {
   nome: string;
   logo: string | null;
+  fusoHorario: string;
 }
 
 interface EmpresaComHorarios {
@@ -34,6 +38,7 @@ interface Profissional {
 
 interface Disponibilidade {
   slots: string[];
+  instantes: Record<string, string>;
 }
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -43,22 +48,6 @@ type Step = 1 | 2 | 3 | 4 | 5;
 /* ------------------------------------------------------------------ */
 
 const API = env.NEXT_PUBLIC_API_URL;
-
-const API_DOWN = Symbol('apiDown');
-
-async function getJson<T>(url: string): Promise<T | typeof API_DOWN> {
-  try {
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return API_DOWN;
-    return (await res.json()) as T;
-  } catch {
-    return API_DOWN;
-  }
-}
-
-function formatarMoeda(v: number): string {
-  return `R$ ${v.toFixed(2)}`;
-}
 
 function maskTelefone(v: string): string {
   const d = v.replace(/\D/g, '').slice(0, 11);
@@ -92,7 +81,7 @@ function toISODate(d: Date): string {
 
 function Stepper({ step }: { step: Step }) {
   return (
-    <div className="flex items-center justify-center gap-1">
+    <div role="progressbar" aria-label="Etapas do agendamento" aria-valuemin={1} aria-valuemax={5} aria-valuenow={step} className="flex items-center justify-center gap-1">
       {[1, 2, 3, 4, 5].map((n) => {
         const done = n < step;
         const current = n === step;
@@ -140,16 +129,15 @@ function IniciaisAvatar({ nome }: { nome: string }) {
 /* Calendário                                                          */
 /* ------------------------------------------------------------------ */
 
-function Mes({ offset, selecionado, onSelecionar }: { offset: number; selecionado: string; onSelecionar: (iso: string) => void }) {
-  const hoje = new Date();
+function Mes({ offset, selecionado, onSelecionar, hojeIso }: { offset: number; selecionado: string; onSelecionar: (iso: string) => void; hojeIso: string }) {
+  const hoje = new Date(`${hojeIso}T12:00:00`);
   const base = new Date(hoje.getFullYear(), hoje.getMonth() + offset, 1);
   const primeiroDiaSemana = base.getDay();
   const diasNoMes = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
   const diasMesAnterior = new Date(base.getFullYear(), base.getMonth(), 0).getDate();
-  const hojeIso = toISODate(hoje);
 
   const cells: (string | null)[] = [];
-  for (let i = 0; i < primeiroDiaSemana; i++) cells.push(`prev:${diasMesAnterior - i}`);
+  for (let i = 0; i < primeiroDiaSemana; i++) cells.push(`prev:${diasMesAnterior - primeiroDiaSemana + i + 1}`);
   for (let d = 1; d <= diasNoMes; d++) cells.push(`cur:${d}`);
   while (cells.length % 7 !== 0) cells.push(null);
 
@@ -185,6 +173,8 @@ function Mes({ offset, selecionado, onSelecionar }: { offset: number; selecionad
             <button
               key={i}
               disabled={passado}
+              aria-label={`Selecionar ${formatarDataBR(iso)}`}
+              aria-pressed={sel}
               onClick={() => onSelecionar(iso)}
               className="flex h-9 items-center justify-center rounded-lg text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               style={
@@ -210,13 +200,23 @@ function Mes({ offset, selecionado, onSelecionar }: { offset: number; selecionad
 export default function BookingPage() {
   const { token } = useParams<{ token: string }>();
 
+  const stepHeading = useRef<HTMLHeadingElement>(null);
+
   const [empresa, setEmpresa] = useState<EmpresaInfo | null>(null);
-  const [erro, setErro] = useState(false);
+  const [erro, setErro] = useState('');
+  const [carregando, setCarregando] = useState(true);
+  const [tentativa, setTentativa] = useState(0);
+  const [erroEtapa, setErroEtapa] = useState('');
+  const [instantes, setInstantes] = useState<Record<string, string>>({});
+  const [profissionaisLoading, setProfissionaisLoading] = useState(false);
 
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
 
   const [step, setStep] = useState<Step>(1);
+  useEffect(() => {
+    if (step !== 1) stepHeading.current?.focus();
+  }, [step]);
   const [servicoId, setServicoId] = useState<string>('');
   const [profissionalId, setProfissionalId] = useState<string>('');
   const [data, setData] = useState<string>('');
@@ -231,46 +231,76 @@ export default function BookingPage() {
   const [confirmando, setConfirmando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
 
-  /* Carrega empresa no mount */
   useEffect(() => {
-    getJson<EmpresaComHorarios>(`${API}/api/booking/${token}`).then((r) => {
-      if (r === API_DOWN) {
-        setErro(true);
-        return;
-      }
-      setEmpresa(r.empresa);
-    });
-  }, [token]);
-
-  /* Carrega serviços no mount */
-  useEffect(() => {
-    getJson<Servico[]>(`${API}/api/booking/${token}/servicos`).then((r) => {
-      if (r !== API_DOWN) setServicos(r);
-    });
-  }, [token]);
-
-  /* Carrega profissionais quando entra no step 2 */
-  useEffect(() => {
-    if (step === 2) {
-      getJson<Profissional[]>(`${API}/api/booking/${token}/profissionais`).then((r) => {
-        if (r !== API_DOWN) setProfissionais(r);
+    const controller = new AbortController();
+    setCarregando(true);
+    setErro('');
+    void Promise.all([
+      getJson<EmpresaComHorarios>(`${API}/api/booking/${token}`, { signal: controller.signal }),
+      getJson<Servico[]>(`${API}/api/booking/${token}/servicos`, { signal: controller.signal }),
+    ])
+      .then(([info, lista]) => {
+        if (controller.signal.aborted) return;
+        setEmpresa(info.empresa);
+        setServicos(lista);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setErro(mensagemErro(error));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCarregando(false);
       });
-    }
-  }, [step, token]);
+    return () => controller.abort();
+  }, [token, tentativa]);
 
-  /* Busca disponibilidade quando entra no step 4 */
   useEffect(() => {
-    if (step === 4 && servicoId && data) {
-      setSlotsLoading(true);
-      setHorario('');
-      getJson<Disponibilidade>(
-        `${API}/api/booking/${token}/disponibilidade?servicoId=${servicoId}&data=${data}`,
-      ).then((r) => {
-        setSlots(r !== API_DOWN ? r.slots : []);
-        setSlotsLoading(false);
+    if (step !== 2) return;
+    const controller = new AbortController();
+    setProfissionaisLoading(true);
+    setErroEtapa('');
+    void getJson<Profissional[]>(`${API}/api/booking/${token}/profissionais`, {
+      signal: controller.signal,
+    })
+      .then((lista) => {
+        if (!controller.signal.aborted) setProfissionais(lista);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setErroEtapa(mensagemErro(error));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setProfissionaisLoading(false);
       });
-    }
-  }, [step, servicoId, data, token]);
+    return () => controller.abort();
+  }, [step, token, tentativa]);
+
+  useEffect(() => {
+    if (step !== 4 || !servicoId || !data) return;
+    const controller = new AbortController();
+    setSlotsLoading(true);
+    setHorario('');
+    setSlots([]);
+    setInstantes({});
+    setErroEtapa('');
+    const params = new URLSearchParams({ servicoId, data });
+    if (profissionalId && profissionalId !== 'qualquer')
+      params.set('profissionalId', profissionalId);
+    void getJson<Disponibilidade>(`${API}/api/booking/${token}/disponibilidade?${params}`, {
+      signal: controller.signal,
+    })
+      .then((result) => {
+        if (!controller.signal.aborted) {
+          setSlots(result.slots);
+          setInstantes(result.instantes ?? {});
+        }
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setErroEtapa(mensagemErro(error));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setSlotsLoading(false);
+      });
+    return () => controller.abort();
+  }, [step, servicoId, profissionalId, data, token, tentativa]);
 
   const servicoSelecionado = useMemo(() => servicos.find((s) => s.id === servicoId), [servicos, servicoId]);
   const profissionalSelecionado = useMemo(
@@ -279,10 +309,10 @@ export default function BookingPage() {
   );
 
   const podeProximo: Record<Step, boolean> = {
-    1: servicoId !== '',
-    2: profissionalId !== '',
+    1: !carregando && !!servicoSelecionado,
+    2: !profissionaisLoading && !erroEtapa && profissionais.length > 0 && profissionalId !== '',
     3: data !== '',
-    4: horario !== '',
+    4: !slotsLoading && !erroEtapa && horario !== '',
     5: true,
   };
 
@@ -298,35 +328,62 @@ export default function BookingPage() {
     setTelefone('');
     setEmail('');
     setSucesso(false);
+    setErroEtapa('');
   }, []);
 
   const confirmar = useCallback(async () => {
-    if (!servicoId || !horario || !data || !nome || !telefone) return;
+    if (
+      confirmando ||
+      !servicoId ||
+      !horario ||
+      !data ||
+      nome.trim().length < 2 ||
+      telefone.replace(/\D/g, '').length < 10
+    )
+      return;
+    const dataHora = instantes[horario];
+    if (!dataHora) {
+      setErroEtapa('Consulte novamente os horários disponíveis.');
+      setStep(4);
+      return;
+    }
     setConfirmando(true);
-    const dataHora = `${data}T${horario}:00`;
+    setErroEtapa('');
     try {
-      const res = await fetch(`${API}/api/booking/${token}`, {
+      await getJson(`${API}/api/booking/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          clienteNome: nome,
+          clienteNome: nome.trim(),
           clienteTelefone: telefone,
-          clienteEmail: email || undefined,
+          clienteEmail: email.trim() || undefined,
           servicoId,
           profissionalId: profissionalId === 'qualquer' ? undefined : profissionalId,
           dataHora,
         }),
-        cache: 'no-store',
       });
-      if (res.ok) {
-        setSucesso(true);
-      }
-    } catch {
-      // mantém na tela atual
+      setSucesso(true);
+    } catch (error) {
+      setErroEtapa(
+        error instanceof BookingApiError
+          ? error.message
+          : 'Não foi possível confirmar a reserva. Verifique com o estabelecimento antes de tentar novamente.',
+      );
     } finally {
       setConfirmando(false);
     }
-  }, [servicoId, horario, data, nome, telefone, email, profissionalId, token]);
+  }, [
+    confirmando,
+    servicoId,
+    horario,
+    data,
+    nome,
+    telefone,
+    email,
+    profissionalId,
+    token,
+    instantes,
+  ]);
 
   /* ------------------------- telas de borda ------------------------ */
 
@@ -336,11 +393,12 @@ export default function BookingPage() {
         <Icon name="circle-exclamation" className="text-[#EF4444]" size="lg" />
       </div>
       <h1 className="mt-5 text-lg font-semibold" style={{ color: '#FAFAFA' }}>
-        Link de agendamento inválido ou expirado.
+        {erro}
       </h1>
       <p className="mt-1 text-sm" style={{ color: '#A1A1AA' }}>
-        Verifique o endereço e tente novamente.
+        Verifique o endereço ou tente carregar novamente.
       </p>
+      <button type="button" className="mt-5 rounded-xl bg-[#6366F1] px-5 py-3 text-sm text-white" onClick={() => setTentativa(v=>v+1)}>Tentar novamente</button>
     </div>
   );
 
@@ -362,7 +420,7 @@ export default function BookingPage() {
               Agendamento confirmado!
             </h1>
             <p className="mt-1 text-sm" style={{ color: '#A1A1AA' }}>
-              Você receberá uma confirmação no WhatsApp.
+              Sua reserva foi registrada. Guarde os detalhes abaixo.
             </p>
 
             <div className="mt-6 w-full rounded-xl p-5" style={{ backgroundColor: '#111116', border: '1px solid rgba(99,102,241,0.30)' }}>
@@ -402,8 +460,22 @@ export default function BookingPage() {
   }
 /* --------------------------- render ------------------------------ */
 
-  const refData = new Date();
-  const labelMes = new Date(refData.getFullYear(), refData.getMonth() + mesOffset, 1).toLocaleDateString('pt-BR', {
+  const fusoHorario = empresa?.fusoHorario || 'America/Sao_Paulo';
+  const hojePartes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: fusoHorario,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const hojeIso = ['year', 'month', 'day']
+    .map((type) => hojePartes.find((part) => part.type === type)?.value)
+    .join('-');
+  const refData = new Date(`${hojeIso}T12:00:00`);
+  const labelMes = new Date(
+    refData.getFullYear(),
+    refData.getMonth() + mesOffset,
+    1,
+  ).toLocaleDateString('pt-BR', {
     month: 'long',
     year: 'numeric',
   });
@@ -417,7 +489,7 @@ export default function BookingPage() {
       >
         <div className="mx-auto flex w-full max-w-md items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg text-[13px] font-semibold" style={{ backgroundColor: '#6366F1', color: '#FFFFFF' }}>
-            {empresa?.logo ? <img src={empresa.logo} alt="" className="h-full w-full object-cover" /> : ((empresa?.nome ?? 'N').charAt(0) || 'N').toUpperCase()}
+            {empresa?.logo ? <Image src={empresa.logo} unoptimized width={32} height={32} alt="" className="h-full w-full object-cover" /> : ((empresa?.nome ?? 'N').charAt(0) || 'N').toUpperCase()}
           </div>
           <span className="text-[15px] font-semibold" style={{ color: '#FAFAFA' }}>{empresa?.nome ?? 'Agendamento'}</span>
         </div>
@@ -428,24 +500,27 @@ export default function BookingPage() {
           <Stepper step={step} />
         </div>
 
+        <p className="mb-4 text-center text-xs text-[#A1A1AA]">Horários do estabelecimento: {fusoHorario.replace('America/','').replaceAll('_',' ')}</p>
+        {erroEtapa&&<div role="alert" className="mb-5 rounded-xl border border-red-400/20 bg-red-500/5 p-4 text-sm text-red-200"><p>{erroEtapa}</p><button type="button" disabled={confirmando} onClick={()=>{if(step===5)setStep(4);else setTentativa(v=>v+1);}} className="mt-3 font-medium underline">{step===5?'Escolher outro horário':'Tentar novamente'}</button></div>}
         {/* STEP 1 — Serviço */}
         {step === 1 && (
           <section>
-            <h2 className="text-lg font-semibold" style={{ color: '#FAFAFA' }}>Escolha o serviço</h2>
+            <h2 ref={stepHeading} tabIndex={-1} className="text-lg font-semibold outline-none" style={{ color: '#FAFAFA' }}>Escolha o serviço</h2>
             <p className="mt-1 text-sm" style={{ color: '#A1A1AA' }}>Selecione o que você deseja agendar</p>
-            {servicos.length === 0 ? (
+            {carregando ? (
               <div className="mt-4 space-y-3">
                 <div className="h-16 rounded-xl skeleton-shimmer" />
                 <div className="h-16 rounded-xl skeleton-shimmer" />
                 <div className="h-16 rounded-xl skeleton-shimmer" />
               </div>
-            ) : (
+            ) : servicos.length===0 ? <p role="status" className="mt-5 rounded-xl border border-white/10 p-5 text-sm text-[#A1A1AA]">Este estabelecimento ainda não disponibilizou serviços para agendamento online.</p> : (
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {servicos.map((s) => {
                   const sel = s.id === servicoId;
                   return (
                     <button
                       key={s.id}
+                      aria-pressed={sel}
                       onClick={() => setServicoId(s.id)}
                       className="rounded-xl p-4 text-left transition-colors"
                       style={sel ? { backgroundColor: 'rgba(99,102,241,0.08)', border: '1px solid #6366F1' } : { backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}
@@ -475,10 +550,11 @@ export default function BookingPage() {
 {/* STEP 2 — Profissional */}
         {step === 2 && (
           <section>
-            <h2 className="text-lg font-semibold" style={{ color: '#FAFAFA' }}>Escolha o profissional</h2>
+            <h2 ref={stepHeading} tabIndex={-1} className="text-lg font-semibold outline-none" style={{ color: '#FAFAFA' }}>Escolha o profissional</h2>
             <p className="mt-1 text-sm" style={{ color: '#A1A1AA' }}>Quem você prefere atender</p>
             <div className="mt-4 space-y-3">
               <button
+                disabled={profissionaisLoading || profissionais.length===0 || !!erroEtapa}
                 onClick={() => setProfissionalId('qualquer')}
                 className="flex w-full items-center gap-3 rounded-xl p-4 transition-colors"
                 style={profissionalId === 'qualquer' ? { backgroundColor: 'rgba(99,102,241,0.08)', border: '1px solid #6366F1' } : { backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}
@@ -492,17 +568,18 @@ export default function BookingPage() {
                 </div>
               </button>
 
-              {profissionais.length === 0 ? (
+              {profissionaisLoading ? (
                 <div className="space-y-3">
                   <div className="h-16 rounded-xl skeleton-shimmer" />
                   <div className="h-16 rounded-xl skeleton-shimmer" />
                 </div>
-              ) : (
+              ) : profissionais.length===0 ? <p role="status" className="text-sm text-[#A1A1AA]">Nenhum profissional disponível para agendamento online.</p> : (
                 profissionais.map((p) => {
                   const sel = p.id === profissionalId;
                   return (
                     <button
                       key={p.id}
+                      aria-pressed={sel}
                       onClick={() => setProfissionalId(p.id)}
                       className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-colors"
                       style={sel ? { backgroundColor: 'rgba(99,102,241,0.08)', border: '1px solid #6366F1' } : { backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}
@@ -539,7 +616,7 @@ export default function BookingPage() {
 {/* STEP 3 — Data */}
         {step === 3 && (
           <section>
-            <h2 className="text-lg font-semibold" style={{ color: '#FAFAFA' }}>Escolha a data</h2>
+            <h2 ref={stepHeading} tabIndex={-1} className="text-lg font-semibold outline-none" style={{ color: '#FAFAFA' }}>Escolha a data</h2>
             <p className="mt-1 text-sm" style={{ color: '#A1A1AA' }}>Selecione o melhor dia</p>
             <div className="mt-4 rounded-xl p-4" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
               <div className="mb-3 flex items-center justify-between">
@@ -562,7 +639,7 @@ export default function BookingPage() {
                   <Icon name="chevron-right" size="sm" />
                 </button>
               </div>
-              <Mes offset={mesOffset} selecionado={data} onSelecionar={setData} />
+              <Mes offset={mesOffset} selecionado={data} onSelecionar={setData} hojeIso={hojeIso} />
             </div>
             <div className="mt-6 flex gap-3">
               <button
@@ -586,7 +663,7 @@ export default function BookingPage() {
 {/* STEP 4 — Horário */}
         {step === 4 && (
           <section>
-            <h2 className="text-lg font-semibold" style={{ color: '#FAFAFA' }}>Escolha o horário</h2>
+            <h2 ref={stepHeading} tabIndex={-1} className="text-lg font-semibold outline-none" style={{ color: '#FAFAFA' }}>Escolha o horário</h2>
             <p className="mt-1 text-sm" style={{ color: '#A1A1AA' }}>{formatarDataBR(data)}</p>
 
             {slotsLoading ? (
@@ -598,7 +675,7 @@ export default function BookingPage() {
                 <div className="h-10 rounded-lg skeleton-shimmer" />
                 <div className="h-10 rounded-lg skeleton-shimmer" />
               </div>
-            ) : slots.length === 0 ? (
+            ) : erroEtapa ? null : slots.length === 0 ? (
               <div className="mt-6 rounded-xl p-6 text-center" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <p className="text-sm" style={{ color: '#A1A1AA' }}>
                   Nenhum horário disponível para esta data. Escolha outro dia.
@@ -618,6 +695,7 @@ export default function BookingPage() {
                   return (
                     <button
                       key={h}
+                      aria-pressed={sel}
                       onClick={() => setHorario(h)}
                       className="h-10 rounded-lg text-sm font-medium transition-colors"
                       style={sel ? { backgroundColor: '#6366F1', color: '#FFFFFF' } : { backgroundColor: '#18181F', color: '#A1A1AA', border: '1px solid rgba(255,255,255,0.06)' }}
@@ -650,8 +728,8 @@ export default function BookingPage() {
         )}
 {/* STEP 5 — Dados + confirmação */}
         {step === 5 && (
-          <section>
-            <h2 className="text-lg font-semibold" style={{ color: '#FAFAFA' }}>Seus dados</h2>
+          <form aria-busy={confirmando} onSubmit={(event)=>{event.preventDefault();void confirmar();}}>
+            <h2 ref={stepHeading} tabIndex={-1} className="text-lg font-semibold outline-none" style={{ color: '#FAFAFA' }}>Seus dados</h2>
             <p className="mt-1 text-sm" style={{ color: '#A1A1AA' }}>Preencha para confirmar</p>
 
             <div className="mt-4 rounded-xl p-5" style={{ backgroundColor: '#111116', border: '1px solid rgba(99,102,241,0.30)' }}>
@@ -678,6 +756,7 @@ export default function BookingPage() {
                 <label htmlFor="booking-nome" className="mb-1 block text-sm" style={{ color: '#A1A1AA' }}>Seu nome completo</label>
                 <input
                   id="booking-nome"
+                  autoComplete="name" required minLength={2} maxLength={120} disabled={confirmando}
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Ex: Maria Silva"
@@ -689,6 +768,7 @@ export default function BookingPage() {
                 <label htmlFor="booking-telefone" className="mb-1 block text-sm" style={{ color: '#A1A1AA' }}>WhatsApp</label>
                 <input
                   id="booking-telefone"
+                  autoComplete="tel-national" type="tel" required minLength={14} maxLength={15} disabled={confirmando}
                   value={telefone}
                   onChange={(e) => setTelefone(maskTelefone(e.target.value))}
                   placeholder="(00) 00000-0000"
@@ -701,6 +781,7 @@ export default function BookingPage() {
                 <label htmlFor="booking-email" className="mb-1 block text-sm" style={{ color: '#A1A1AA' }}>E-mail <span style={{ color: '#71717A' }}>(opcional)</span></label>
                 <input
                   id="booking-email"
+                  autoComplete="email" maxLength={254} disabled={confirmando}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="voce@email.com"
@@ -713,6 +794,7 @@ export default function BookingPage() {
 
             <div className="mt-6 flex gap-3">
               <button
+                type="button" disabled={confirmando}
                 onClick={() => setStep(4)}
                 className="h-11 w-24 rounded-md border font-medium transition-colors hover:bg-white/5"
                 style={{ borderColor: 'rgba(255,255,255,0.10)', color: '#A1A1AA' }}
@@ -720,15 +802,15 @@ export default function BookingPage() {
                 ← Voltar
               </button>
               <button
-                disabled={confirmando || !nome || !telefone}
-                onClick={() => { void confirmar(); }}
+                disabled={confirmando || nome.trim().length<2 || telefone.replace(/\D/g,'').length<10 || (!!email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))}
+                type="submit"
                 className="h-12 flex-1 rounded-md font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:opacity-90"
                 style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}
               >
                 {confirmando ? 'Confirmando…' : 'Confirmar agendamento'}
               </button>
             </div>
-          </section>
+          </form>
         )}
       </main>
     </div>

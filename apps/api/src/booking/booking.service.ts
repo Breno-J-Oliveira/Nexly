@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { AgendarPublicoDto } from './dto/agendar-publico.dto';
+import { diaNoFuso, instanteNoFuso, instanteSolicitado, periodoNoFuso } from './booking-time';
 
 /** Chave do JSON `empresa.horarios` para cada dia da semana (0=domingo). */
 const DIAS_SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'] as const;
@@ -47,11 +48,11 @@ export class BookingService {
   async getEmpresa(token: string) {
     const empresa = await this.prisma.client.empresa.findUnique({
       where: { bookingToken: token },
-      select: { id: true, nome: true, horarios: true },
+      select: { id: true, nome: true, horarios: true, fusoHorario: true },
     });
     if (!empresa) throw new NotFoundException('Pagina de agendamento nao encontrada');
     return {
-      empresa: { nome: empresa.nome, logo: null },
+      empresa: { nome: empresa.nome, logo: null, fusoHorario: empresa.fusoHorario },
       horarios: (empresa.horarios as Record<string, { abre: string; fecha: string }> | null) ?? {},
     };
   }
@@ -62,6 +63,7 @@ export class BookingService {
       where: { bookingToken: token },
       select: {
         id: true,
+        fusoHorario: true,
         horarios: true,
         horarioAbertura: true,
         horarioFechamento: true,
@@ -140,6 +142,7 @@ export class BookingService {
   private async calcularSlots(
     empresa: {
       id: string;
+      fusoHorario: string;
       horarios: unknown;
       horarioAbertura: string | null;
       horarioFechamento: string | null;
@@ -149,10 +152,9 @@ export class BookingService {
     profissionalId?: string,
     duracaoMin = 30,
   ): Promise<string[]> {
-    const data = new Date(`${dataStr}T00:00:00`);
-    if (Number.isNaN(data.getTime())) throw new BadRequestException('Data invalida');
-
-    const expediente = this.expedienteDoDia(empresa, data.getDay());
+    const { inicio, fimExclusivo } = periodoNoFuso(dataStr, empresa.fusoHorario);
+    const diaSemana = new Date(`${dataStr}T12:00:00Z`).getUTCDay();
+    const expediente = this.expedienteDoDia(empresa, diaSemana);
     if (!expediente) return [];
     const { abreMin, fechaMin } = expediente;
     const duracao = duracaoMin > 0 ? duracaoMin : 30;
@@ -168,13 +170,12 @@ export class BookingService {
     });
     if (profissionais.length === 0) return [];
 
-    const inicio = new Date(`${dataStr}T00:00:00`);
-    const fim = new Date(`${dataStr}T23:59:59`);
     const ocupados = await this.prisma.client.agendamento.findMany({
       where: {
         empresaId: empresa.id,
         profissionalId: { in: profissionais.map((p) => p.id) },
-        dataHora: { gte: inicio, lte: fim },
+        dataHora: { lt: fimExclusivo },
+        dataHoraFim: { gt: inicio },
         status: { in: ['AGENDADO', 'CONFIRMADO'] },
       },
       select: { profissionalId: true, dataHora: true, dataHoraFim: true },
@@ -182,8 +183,8 @@ export class BookingService {
 
     const slots: string[] = [];
     for (let inicioMin = abreMin; inicioMin + duracao <= fechaMin; inicioMin += 30) {
-      const slotInicio = new Date(data);
-      slotInicio.setHours(0, inicioMin, 0, 0);
+      const slotInicio = instanteNoFuso(dataStr, formatarHorario(inicioMin), empresa.fusoHorario);
+      if (slotInicio.getTime() <= Date.now()) continue;
       const slotFim = new Date(slotInicio.getTime() + duracao * 60000);
       const livre = profissionais.some(
         (p) =>
@@ -203,7 +204,8 @@ export class BookingService {
       where: { id: servicoId, empresaId, ativo: true },
       select: { duracaoMin: true },
     });
-    return servico?.duracaoMin ?? 30;
+    if (!servico) throw new NotFoundException('Servico nao encontrado');
+    return servico.duracaoMin;
   }
 
   /** Formato consumido pela página pública: `{ slots }`. */
@@ -215,7 +217,17 @@ export class BookingService {
   ) {
     const empresa = await this.carregarEmpresa(token);
     const duracaoMin = await this.duracaoDoServico(empresa.id, servicoId);
-    return { slots: await this.calcularSlots(empresa, dataStr, profissionalId, duracaoMin) };
+    const slots = await this.calcularSlots(empresa, dataStr, profissionalId, duracaoMin);
+    return {
+      slots,
+      instantes: Object.fromEntries(
+        slots.map((hour) => [
+          hour,
+          instanteNoFuso(dataStr, hour, empresa.fusoHorario).toISOString(),
+        ]),
+      ),
+      fusoHorario: empresa.fusoHorario,
+    };
   }
 
   async getHorariosDisponiveis(token: string, dataStr: string, profissionalId: string) {
@@ -227,7 +239,7 @@ export class BookingService {
     const empresa = await this.carregarEmpresa(token);
     const { servicoId, profissionalId, dataHora, clienteNome, clienteTelefone, clienteEmail } = dto;
 
-    const inicio = new Date(dataHora);
+    const inicio = instanteSolicitado(dataHora, empresa.fusoHorario);
     if (Number.isNaN(inicio.getTime())) throw new BadRequestException('Data/hora invalida');
     if (inicio.getTime() < Date.now())
       throw new BadRequestException('Nao e possivel agendar em data passada');
@@ -241,12 +253,15 @@ export class BookingService {
     const fim = new Date(inicio.getTime() + servico.duracaoMin * 60000);
 
     // O agendamento precisa caber no expediente do dia (mesma fonte usada nos slots).
-    const expediente = this.expedienteDoDia(empresa, inicio.getDay());
+    const dia = diaNoFuso(inicio, empresa.fusoHorario);
+    const expediente = this.expedienteDoDia(empresa, new Date(`${dia}T12:00:00Z`).getUTCDay());
     if (!expediente) throw new BadRequestException('Empresa nao atende nesse dia');
-    const abertura = new Date(inicio);
-    abertura.setHours(0, expediente.abreMin, 0, 0);
-    const fechamento = new Date(inicio);
-    fechamento.setHours(0, expediente.fechaMin, 0, 0);
+    const abertura = instanteNoFuso(dia, formatarHorario(expediente.abreMin), empresa.fusoHorario);
+    const fechamento = instanteNoFuso(
+      dia,
+      formatarHorario(expediente.fechaMin),
+      empresa.fusoHorario,
+    );
     if (inicio < abertura || fim > fechamento) {
       throw new BadRequestException('Horario fora do funcionamento');
     }

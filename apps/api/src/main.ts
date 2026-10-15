@@ -122,12 +122,13 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // Rate limit para agendamento público: 20 req / 15min por IP (anti-flood de agenda).
+  // Anti-flood de reservas: leitura do catálogo usa o limite global, sem consumir reservas.
   app.use(
     '/api/booking',
     rateLimit({
       windowMs: 15 * 60 * 1000,
       max: 20,
+      skip: (req) => req.method !== 'POST',
       standardHeaders: true,
       legacyHeaders: false,
       message: {

@@ -2,6 +2,7 @@ import { Controller, Get, Param, Post, Body, Query } from '@nestjs/common';
 import { Public } from '../common/decorators/public.decorator';
 import { BookingService } from './booking.service';
 import { AgendarPublicoDto } from './dto/agendar-publico.dto';
+import { DisponibilidadeDto } from './dto/disponibilidade.dto';
 
 /**
  * Página pública de agendamento (sem login). O `@Public()` é obrigatório:
@@ -32,23 +33,21 @@ export class BookingController {
 
   /* GET /booking/:token/disponibilidade?data=YYYY-MM-DD&profissionalId=xxx&servicoId=xxx */
   @Get(':token/disponibilidade')
-  async disponibilidade(
-    @Param('token') token: string,
-    @Query('data') data: string,
-    @Query('profissionalId') profissionalId?: string,
-    @Query('servicoId') servicoId?: string,
-  ) {
-    return this.service.getDisponibilidade(token, data, profissionalId, servicoId);
+  async disponibilidade(@Param('token') token: string, @Query() query: DisponibilidadeDto) {
+    return this.service.getDisponibilidade(
+      token,
+      query.data,
+      query.profissionalId,
+      query.servicoId,
+    );
   }
 
   /* GET /booking/:token/horarios?data=YYYY-MM-DD&profissionalId=xxx */
   @Get(':token/horarios')
-  async horarios(
-    @Param('token') token: string,
-    @Query('data') data: string,
-    @Query('profissionalId') profissionalId: string,
-  ) {
-    return this.service.getHorariosDisponiveis(token, data, profissionalId);
+  async horarios(@Param('token') token: string, @Query() query: DisponibilidadeDto) {
+    return this.service
+      .getDisponibilidade(token, query.data, query.profissionalId, query.servicoId)
+      .then((result) => result.slots);
   }
 
   /* POST /booking/:token/agendar — cria agendamento publico */

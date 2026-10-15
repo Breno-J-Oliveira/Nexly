@@ -68,6 +68,7 @@ export class ConfiguracoesController {
     await this.prisma.client.empresa.update({
       where: { id: ctx.tenantId },
       data: {
+        ...(body.fusoHorario !== undefined ? { fusoHorario: body.fusoHorario } : {}),
         ...(body.nome !== undefined ? { nome: body.nome } : {}),
         ...(body.cnpj !== undefined ? { cnpj: body.cnpj } : {}),
         ...(body.telefone !== undefined ? { telefone: body.telefone } : {}),

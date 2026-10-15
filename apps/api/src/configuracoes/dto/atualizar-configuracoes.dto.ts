@@ -1,7 +1,13 @@
 import { StrictBoolean } from '../../common/validation/strict-boolean';
-import { IsObject, IsOptional, IsString } from 'class-validator';
+import { IsBusinessHours } from '../../common/validation/business-hours';
+import { IsObject, IsOptional, IsString, IsTimeZone, MaxLength } from 'class-validator';
 
 export class AtualizarConfiguracoesDto {
+  @IsOptional()
+  @IsTimeZone()
+  @MaxLength(64)
+  fusoHorario?: string;
+
   @IsOptional()
   @IsString()
   nome?: string;
@@ -36,6 +42,7 @@ export class AtualizarConfiguracoesDto {
 
   @IsOptional()
   @IsObject()
+  @IsBusinessHours()
   horarios?: Record<string, unknown>;
 
   @IsOptional()

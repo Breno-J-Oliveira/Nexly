@@ -77,6 +77,7 @@ model Empresa {
   cnpj      String   @unique
   plano     Plano    @default(FREE)
   bookingToken String? @unique @map("booking_token")
+  fusoHorario String @default("America/Sao_Paulo") @map("fuso_horario")
   horarioAbertura   String? @default("08:00") @map("horario_abertura")
   horarioFechamento String? @default("20:00") @map("horario_fechamento")
   diasFuncionamento String? @default("1,2,3,4,5,6") @map("dias_funcionamento")
