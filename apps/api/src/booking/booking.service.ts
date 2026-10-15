@@ -1,3 +1,4 @@
+import { bloquearAgenda } from '../database/agenda-lock';
 import {
   BadRequestException,
   ConflictException,
@@ -276,35 +277,38 @@ export class BookingService {
       profissionalEscolhido = livre.id;
     }
 
-    const conflito = await this.prisma.client.agendamento.findFirst({
-      where: { empresaId: empresa.id, profissionalId: profissionalEscolhido, ...semConflito },
-      select: { id: true },
-    });
-    if (conflito) throw new ConflictException('Horario ja ocupado');
-
-    // Find or create cliente
-    const telefone = clienteTelefone.replace(/\D/g, '');
-    let cliente = await this.prisma.client.cliente.findFirst({
-      where: { empresaId: empresa.id, telefone },
-      select: { id: true },
-    });
-    if (!cliente) {
-      cliente = await this.prisma.client.cliente.create({
-        data: { empresaId: empresa.id, nome: clienteNome, telefone, email: clienteEmail || null },
+    const agendamento = await this.prisma.client.$transaction(async (tx) => {
+      await bloquearAgenda(tx, profissionalEscolhido);
+      const conflito = await tx.agendamento.findFirst({
+        where: { empresaId: empresa.id, profissionalId: profissionalEscolhido, ...semConflito },
         select: { id: true },
       });
-    }
+      if (conflito) throw new ConflictException('Horario ja ocupado');
 
-    const agendamento = await this.prisma.client.agendamento.create({
-      data: {
-        empresaId: empresa.id,
-        clienteId: cliente.id,
-        profissionalId: profissionalEscolhido,
-        servicoId: servico.id,
-        dataHora: inicio,
-        dataHoraFim: fim,
-      },
-      select: { id: true },
+      // Find or create cliente
+      const telefone = clienteTelefone.replace(/\D/g, '');
+      let cliente = await tx.cliente.findFirst({
+        where: { empresaId: empresa.id, telefone },
+        select: { id: true },
+      });
+      if (!cliente) {
+        cliente = await tx.cliente.create({
+          data: { empresaId: empresa.id, nome: clienteNome, telefone, email: clienteEmail || null },
+          select: { id: true },
+        });
+      }
+
+      return tx.agendamento.create({
+        data: {
+          empresaId: empresa.id,
+          clienteId: cliente.id,
+          profissionalId: profissionalEscolhido,
+          servicoId: servico.id,
+          dataHora: inicio,
+          dataHoraFim: fim,
+        },
+        select: { id: true },
+      });
     });
 
     return { ok: true, agendamentoId: agendamento.id, mensagem: 'Agendamento confirmado!' };

@@ -23,7 +23,31 @@ export class LgpdService {
         this.prisma.client.venda.findMany({ where: { empresaId } }),
       ]);
 
+    const [
+      tarefas,
+      filiais,
+      documentos,
+      campanhas,
+      consentimentosMarketing,
+      automacoes,
+      recorrencias,
+    ] = await Promise.all([
+      this.prisma.client.tarefa.findMany({ where: { empresaId } }),
+      this.prisma.client.filial.findMany({ where: { empresaId } }),
+      this.prisma.client.documento.findMany({ where: { empresaId } }),
+      this.prisma.client.campanha.findMany({ where: { empresaId } }),
+      this.prisma.client.consentimentoMarketing.findMany({ where: { empresaId } }),
+      this.prisma.client.automacao.findMany({ where: { empresaId } }),
+      this.prisma.client.recorrencia.findMany({ where: { empresaId } }),
+    ]);
     return {
+      tarefas,
+      filiais,
+      documentos,
+      campanhas,
+      consentimentosMarketing,
+      automacoes,
+      recorrencias,
       exportadoEm: new Date().toISOString(),
       empresaId,
       clientes,
@@ -46,7 +70,12 @@ export class LgpdService {
       },
     });
     if (!cliente) throw new NotFoundException('Cliente não encontrado');
-    return cliente;
+    return {
+      ...cliente,
+      consentimentoMarketing: await this.prisma.client.consentimentoMarketing.findFirst({
+        where: { empresaId, clienteId },
+      }),
+    };
   }
 
   /** Anonimiza um cliente (direito ao esquecimento), preservando agendamentos. */
@@ -63,15 +92,18 @@ export class LgpdService {
     });
     if (!cliente) throw new NotFoundException('Cliente não encontrado');
 
-    await this.prisma.client.cliente.updateMany({
-      where: { id: clienteId },
-      data: {
-        nome: 'Cliente Removido',
-        telefone: null,
-        email: null,
-        observacoes: null,
-      },
-    });
+    await this.prisma.client.$transaction([
+      this.prisma.client.consentimentoMarketing.deleteMany({ where: { empresaId, clienteId } }),
+      this.prisma.client.cliente.updateMany({
+        where: { id: clienteId },
+        data: {
+          nome: 'Cliente Removido',
+          telefone: null,
+          email: null,
+          observacoes: null,
+        },
+      }),
+    ]);
 
     this.audit.registrar({
       empresaId,

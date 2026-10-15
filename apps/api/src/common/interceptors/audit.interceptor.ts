@@ -91,6 +91,7 @@ function extrairRecurso(path: string): { recurso: string; recursoId?: string } {
     .replace(/^\/api\//, '')
     .split('/')
     .filter(Boolean);
+  if (segments[0] === 'operacoes') segments.shift();
   const nome = segments[0] ?? 'desconhecido';
   const recurso = nome.charAt(0).toUpperCase() + nome.slice(1);
   const recursoId = segments[1];

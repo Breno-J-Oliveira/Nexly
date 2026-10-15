@@ -97,6 +97,13 @@ model Empresa {
   templateLembrete String? @map("template_lembrete")
   createdAt DateTime @default(now()) @map("created_at")
 
+  tarefas Tarefa[]
+  filiais Filial[]
+  documentos Documento[]
+  campanhas Campanha[]
+  consentimentosMarketing ConsentimentoMarketing[]
+  automacoes Automacao[]
+  recorrencias Recorrencia[]
   usuarios Usuario[]
   cupons   Cupom[]
   fornecedores Fornecedor[]
@@ -255,6 +262,8 @@ model Agendamento {
   cliente      Cliente      @relation(fields: [clienteId], references: [id], onDelete: Restrict)
   profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Restrict)
   servico      Servico      @relation(fields: [servicoId], references: [id], onDelete: Restrict)
+  recorrenciaId String? @map("recorrencia_id")
+  recorrencia Recorrencia? @relation(fields: [recorrenciaId], references: [id], onDelete: SetNull)
   vendas       Venda[]
   avaliacoes   Avaliacao[]
 
@@ -502,4 +511,119 @@ model ExclusaoConta {
 
   @@index([empresaId])
   @@map("exclusoes_conta")
+}
+
+model Filial {
+  id        String   @id @default(uuid())
+  empresaId String   @map("empresa_id")
+  nome      String
+  endereco  String
+  telefone  String?
+  ativa     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  tarefas   Tarefa[]
+
+  @@index([empresaId, nome])
+  @@map("filiais")
+}
+
+model Tarefa {
+  id            String     @id @default(uuid())
+  empresaId     String     @map("empresa_id")
+  titulo        String
+  descricao     String     @default("")
+  status        String     @default("PENDENTE")
+  prioridade    String     @default("NORMAL")
+  prazo         DateTime?
+  responsavelId String?    @map("responsavel_id")
+  filialId      String?    @map("filial_id")
+  automacaoId   String?    @map("automacao_id")
+  ocorrencia    DateTime?
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  empresa       Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  filial        Filial?    @relation(fields: [filialId], references: [id], onDelete: SetNull)
+  automacao     Automacao? @relation(fields: [automacaoId], references: [id], onDelete: SetNull)
+
+  @@unique([automacaoId, ocorrencia])
+  @@index([empresaId, status, prazo])
+  @@map("tarefas")
+}
+
+model Documento {
+  id        String   @id @default(uuid())
+  empresaId String   @map("empresa_id")
+  titulo    String
+  conteudo  String
+  categoria String   @default("GERAL")
+  versao    Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, updatedAt])
+  @@map("documentos")
+}
+
+model Campanha {
+  id        String   @id @default(uuid())
+  empresaId String   @map("empresa_id")
+  titulo    String
+  mensagem  String
+  status    String   @default("RASCUNHO")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, createdAt])
+  @@map("campanhas")
+}
+
+model ConsentimentoMarketing {
+  id         String   @id @default(uuid())
+  empresaId  String   @map("empresa_id")
+  clienteId  String   @map("cliente_id")
+  autorizado Boolean
+  evidencia  String
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  empresa    Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, clienteId])
+  @@map("consentimentos_marketing")
+}
+
+model Automacao {
+  id              String    @id @default(uuid())
+  empresaId       String    @map("empresa_id")
+  titulo          String
+  descricao       String    @default("")
+  intervaloDias   Int       @map("intervalo_dias")
+  proximaExecucao DateTime  @map("proxima_execucao")
+  ultimaExecucao  DateTime? @map("ultima_execucao")
+  responsavelId   String?   @map("responsavel_id")
+  ativa           Boolean   @default(true)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  empresa         Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  tarefas         Tarefa[]
+
+  @@index([ativa, proximaExecucao])
+  @@index([empresaId])
+  @@map("automacoes")
+}
+
+model Recorrencia {
+  id            String        @id @default(uuid())
+  empresaId     String        @map("empresa_id")
+  titulo        String
+  intervaloDias Int           @map("intervalo_dias")
+  quantidade    Int
+  inicio        DateTime
+  cancelada     Boolean       @default(false)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  empresa       Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  agendamentos  Agendamento[]
+
+  @@index([empresaId, inicio])
+  @@map("recorrencias")
 }

@@ -61,6 +61,18 @@ export class AuditService {
     const where = { id: recursoId, empresaId };
 
     switch (recurso) {
+      case 'Tarefas':
+        return sanitizar(paraJson(await this.prisma.client.tarefa.findFirst({ where })));
+      case 'Filiais':
+        return sanitizar(paraJson(await this.prisma.client.filial.findFirst({ where })));
+      case 'Documentos':
+        return sanitizar(paraJson(await this.prisma.client.documento.findFirst({ where })));
+      case 'Campanhas':
+        return sanitizar(paraJson(await this.prisma.client.campanha.findFirst({ where })));
+      case 'Automacoes':
+        return sanitizar(paraJson(await this.prisma.client.automacao.findFirst({ where })));
+      case 'Recorrencias':
+        return sanitizar(paraJson(await this.prisma.client.recorrencia.findFirst({ where })));
       case 'Clientes':
         return sanitizar(paraJson(await this.prisma.client.cliente.findFirst({ where })));
       case 'Produtos':

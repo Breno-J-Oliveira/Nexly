@@ -1,3 +1,4 @@
+import { OperacoesModule } from './operacoes/operacoes.controller';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -47,6 +48,7 @@ import { ExperienciaModule } from './experiencia/experiencia.controller';
     DatabaseModule,
     RedisModule,
     ExperienciaModule,
+    OperacoesModule,
     EventEmitterModule.forRoot(),
     JwtModule.registerAsync({
       global: true,

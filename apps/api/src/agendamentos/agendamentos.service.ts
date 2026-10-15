@@ -1,3 +1,4 @@
+import { bloquearAgenda } from '../database/agenda-lock';
 import {
   BadRequestException,
   ConflictException,
@@ -6,6 +7,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { getTenantIdOrFail } from '../database/tenant-context';
 import { Prisma } from '@prisma/client';
 import { StatusAgendamento } from '@nexly/shared';
 import { PrismaService } from '../database/prisma.service';
@@ -112,17 +114,34 @@ export class AgendamentosService {
     if (!cliente) throw new NotFoundException('Cliente não encontrado');
     if (!profissional) throw new NotFoundException('Profissional não encontrado');
 
-    await this.validarConflito(dto.profissionalId, dataHora, dataHoraFim);
-
-    return this.prisma.client.agendamento.create({
-      data: {
-        clienteId: dto.clienteId,
-        profissionalId: dto.profissionalId,
-        servicoId: dto.servicoId,
-        dataHora,
-        dataHoraFim,
-      } as Prisma.AgendamentoUncheckedCreateInput,
-      include: includeCompleto,
+    const empresaId = getTenantIdOrFail();
+    return this.prisma.client.$transaction(async (tx) => {
+      await bloquearAgenda(tx, dto.profissionalId);
+      const conflito = await tx.agendamento.findFirst({
+        where: {
+          empresaId,
+          profissionalId: dto.profissionalId,
+          status: { in: ['AGENDADO', 'CONFIRMADO'] },
+          dataHora: { lt: dataHoraFim },
+          dataHoraFim: { gt: dataHora },
+        },
+      });
+      if (conflito)
+        throw new ConflictException({
+          code: 'BUSY_PROFESSIONAL',
+          message: 'Profissional ja tem agendamento nesse horario',
+        });
+      return tx.agendamento.create({
+        data: {
+          empresaId,
+          clienteId: dto.clienteId,
+          profissionalId: dto.profissionalId,
+          servicoId: dto.servicoId,
+          dataHora,
+          dataHoraFim,
+        },
+        include: includeCompleto,
+      });
     });
   }
 
@@ -163,29 +182,5 @@ export class AgendamentosService {
     }
 
     return atualizado;
-  }
-
-  private async validarConflito(
-    profissionalId: string,
-    inicio: Date,
-    fim: Date,
-    excluirId?: string,
-  ): Promise<void> {
-    const conflito = await this.prisma.client.agendamento.findFirst({
-      where: {
-        profissionalId,
-        ...(excluirId ? { id: { not: excluirId } } : {}),
-        status: { in: [StatusAgendamento.AGENDADO, StatusAgendamento.CONFIRMADO] },
-        dataHora: { lt: fim },
-        dataHoraFim: { gt: inicio },
-      },
-    });
-
-    if (conflito) {
-      throw new ConflictException({
-        code: 'BUSY_PROFESSIONAL',
-        message: 'Profissional já tem agendamento nesse horário',
-      });
-    }
   }
 }

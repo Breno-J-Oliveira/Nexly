@@ -2,6 +2,20 @@ import { applyTenantScope } from './tenant-scope';
 
 describe('Escopo de empresa', () => {
   it.each([
+    'Tarefa',
+    'Filial',
+    'Documento',
+    'Campanha',
+    'ConsentimentoMarketing',
+    'Automacao',
+    'Recorrencia',
+  ])('escopa o novo modelo %s', (model) => {
+    const args = { where: { id: 'externo', empresaId: 'e2' }, data: { empresaId: 'e2' } };
+    applyTenantScope(model, 'updateMany', args, 'e1');
+    expect(args.where.empresaId).toBe('e1');
+    expect(args.data.empresaId).toBe('e1');
+  });
+  it.each([
     'findUnique',
     'findFirst',
     'findMany',

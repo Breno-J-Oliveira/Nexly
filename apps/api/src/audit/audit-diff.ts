@@ -25,6 +25,12 @@ const CAMPOS_SENSIVEIS = new Set([
  * Só recursos com `id` + `empresaId` podem ter o "antes" recuperado.
  */
 export const RECURSO_PARA_MODELO: Record<string, string> = {
+  Tarefas: 'tarefa',
+  Filiais: 'filial',
+  Documentos: 'documento',
+  Campanhas: 'campanha',
+  Automacoes: 'automacao',
+  Recorrencias: 'recorrencia',
   Clientes: 'cliente',
   Produtos: 'produto',
   Servicos: 'servico',

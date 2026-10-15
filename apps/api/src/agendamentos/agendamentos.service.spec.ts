@@ -1,3 +1,4 @@
+jest.mock('../database/tenant-context', () => ({ getTenantIdOrFail: () => 'empresa1' }));
 import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -9,6 +10,8 @@ describe('AgendamentosService', () => {
   let service: AgendamentosService;
   let prisma: {
     client: {
+      $transaction: jest.Mock;
+      $queryRaw: jest.Mock;
       servico: { findFirst: jest.Mock };
       cliente: { findFirst: jest.Mock };
       profissional: { findFirst: jest.Mock };
@@ -31,6 +34,8 @@ describe('AgendamentosService', () => {
   beforeEach(async () => {
     prisma = {
       client: {
+        $transaction: jest.fn(),
+        $queryRaw: jest.fn(),
         servico: { findFirst: jest.fn() },
         cliente: { findFirst: jest.fn().mockResolvedValue(cliente) },
         profissional: { findFirst: jest.fn().mockResolvedValue(profissional) },
@@ -44,6 +49,9 @@ describe('AgendamentosService', () => {
         },
       },
     };
+    prisma.client.$transaction.mockImplementation((callback: (tx: unknown) => unknown) =>
+      callback(prisma.client),
+    );
     emitter = { emit: jest.fn() };
 
     const moduleRef = await Test.createTestingModule({
