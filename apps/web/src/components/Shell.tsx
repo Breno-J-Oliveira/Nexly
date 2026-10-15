@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { canAccessWorkspaceRoute as hasAccess } from '@nexly/shared';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useWorkspace } from '@/lib/workspace';
 import { useNotifications } from '@/lib/notifications';
 import { formatarDataHora } from '@/lib/format';
 import { Icon } from '@/components/ui/Icon';
@@ -12,6 +14,7 @@ import { Icon } from '@/components/ui/Icon';
 /* --- Breadcrumb labels --- */
 const PAGE_LABELS: Record<string, string> = {
   '/dashboard': 'Painel Geral',
+  '/meu-nexly': 'Meu Nexly',
   '/agenda': 'Agenda',
   '/clientes': 'Clientes',
   '/profissionais': 'Profissionais',
@@ -50,6 +53,7 @@ const NAV_GROUPS: NavGroup[] = [
     { label: 'Comissões', href: '/comissao', icon: 'money-bill-wave' },
     { label: 'Fidelidade', href: '/fidelidade', icon: 'star' },
     { label: 'Usuários', href: '/usuarios', icon: 'user-group' },
+    { label: 'Meu Nexly', href: '/meu-nexly', icon: 'wand-magic-sparkles' },
     { label: 'Configurações', href: '/configuracoes', icon: 'gear' },
   ]},
 ];
@@ -58,16 +62,6 @@ const NAV_GROUPS: NavGroup[] = [
  * RBAC no menu: esconde itens que o papel não pode acessar.
  * Mantido em sintonia com apps/api/src/common/auth/permissions.ts.
  */
-function hasAccess(route: string, role: string): boolean {
-  if (role === 'ADMIN') return true;
-  if (role === 'GESTOR') return route !== '/usuarios';
-  const permitidas: Record<string, string[]> = {
-    PROFISSIONAL: ['/dashboard', '/agenda'],
-    RECEPCIONISTA: ['/dashboard', '/agenda', '/clientes', '/profissionais', '/servicos'],
-    CAIXA: ['/dashboard', '/clientes', '/produtos', '/estoque', '/pdv', '/vendas'],
-  };
-  return (permitidas[role] ?? []).includes(route);
-}
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
@@ -88,6 +82,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 
 export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { enabled } = useWorkspace();
   const { user, logout } = useAuth();
   const { notificacoes, naoLidas, marcarLida } = useNotifications();
   const [sidebarAberta, setSidebarAberta] = useState(false);
@@ -100,9 +95,11 @@ export function Shell({ children }: { children: ReactNode }) {
   const pageLabel = PAGE_LABELS[pathname] ?? '';
   const nome = user?.nome ?? 'Usuário';
   const role = user?.role ?? '';
-  const resultados = NAV_GROUPS.flatMap(group => group.items).filter(item => hasAccess(item.href, role) && item.label.toLocaleLowerCase('pt-BR').includes(busca.toLocaleLowerCase('pt-BR')));
+  const resultados = NAV_GROUPS.flatMap(group => group.items).filter(item => hasAccess(item.href, role) && enabled(item.href) && item.label.toLocaleLowerCase('pt-BR').includes(busca.toLocaleLowerCase('pt-BR')));
   const dataHoje = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
   const iniciais = nome.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+
+  useEffect(() => { setSidebarAberta(false); setBusca(''); }, [pathname]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -145,7 +142,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
         <nav aria-label="Menu principal" className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
           {NAV_GROUPS.map((group, idx) => {
-            const items = group.items.filter((item) => hasAccess(item.href, role));
+            const items = group.items.filter((item) => hasAccess(item.href, role) && enabled(item.href));
             if (items.length === 0) return null;
             return (
               <div key={idx}>
@@ -294,7 +291,7 @@ export function Shell({ children }: { children: ReactNode }) {
           { href: '/dashboard', label: 'Início', icon: 'gauge-high' },
           { href: '/agenda', label: 'Agenda', icon: 'calendar-days' },
           { href: '/clientes', label: 'Clientes', icon: 'users' },
-        ].filter(item => hasAccess(item.href, role)).map(item => (
+        ].filter(item => hasAccess(item.href, role) && enabled(item.href)).map(item => (
           <Link key={item.href} href={item.href} aria-current={pathname === item.href ? 'page' : undefined}
             className={`flex min-h-16 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium ${pathname === item.href ? 'text-[#818CF8]' : 'text-[#A1A1AA]'}`}>
             <Icon name={item.icon} size="lg" color="currentColor" />{item.label}

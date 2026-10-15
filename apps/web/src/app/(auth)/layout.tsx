@@ -8,7 +8,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           background: 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.22) 0%, transparent 55%)',
         }}
       />
-      <div className="relative z-10 w-full max-w-[440px]">{children}</div>
+      <div className="auth-content relative z-10 w-full max-w-[440px]">{children}</div>
     </div>
   );
 }

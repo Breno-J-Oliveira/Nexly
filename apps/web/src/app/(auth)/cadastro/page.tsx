@@ -4,10 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { UsuarioPublico, validarCnpj } from '@nexly/shared';
+import { UsuarioPublico, validarCnpj, normalizeModules, PRESETS, ModuleId } from '@nexly/shared';
+import { ModulePicker } from '@/components/ModulePicker';
 import { AuthInput, AuthSelect as Select, useAuthReady } from '@/components/ui/AuthField';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
@@ -16,36 +17,36 @@ import { useAuth } from '@/lib/auth';
 import { ErrorCodes, parseApiError } from '@/lib/errors';
 import { maskCnpj, maskTelefone, soDigitos } from '@/lib/format';
 
-const PASSO_COUNT = 4;
+const PASSO_COUNT = 5;
 
 const planos = [{ id: 'FREE', nome: 'Acesso gratuito', preco: 0, periodo: '', descricao: 'Comece a organizar seu negócio sem informar cartão.', recursos: ['Agenda e clientes', 'Estoque e PDV', 'Relatórios e gestão'], destaque: false }];
 
 const schemaPasso1 = z
   .object({
-    responsavelNome: z.string().min(2, 'Nome do responsável obrigatório'),
     email: z.string().email('E-mail inválido'),
-    senha: z.string().min(8, 'Senha deve ter ao menos 8 caracteres'),
-    confirmacaoSenha: z.string(),
-  })
-  .refine((d) => d.senha === d.confirmacaoSenha, { message: 'As senhas não coincidem', path: ['confirmacaoSenha'] });
+    senha: z.string().min(8, 'Senha deve ter ao menos 8 caracteres').max(72, 'Use no máximo 72 caracteres'),
+  });
 
 const schemaPasso2 = z.object({
   empresaNome: z.string().min(2, 'Nome da empresa obrigatório'),
-  cnpj: z.string().refine((v) => validarCnpj(soDigitos(v)), 'CNPJ inválido'),
-  telefone: z.string().min(14, 'Telefone inválido'),
   segmento: z.string().min(2, 'Segmento obrigatório'),
-  cidade: z.string().min(2, 'Cidade obrigatória'),
 });
 const schemaPasso3 = z.object({ plano: z.string().min(1, 'Selecione um plano') });
+const schemaPerfil = z.object({
+  responsavelNome: z.string().min(2, 'Informe seu nome'),
+  cnpj: z.string().refine(v => validarCnpj(soDigitos(v)), 'CNPJ inválido'),
+  telefone: z.string().min(14, 'Telefone inválido'),
+  cidade: z.string().min(2, 'Informe a cidade'),
+});
 
 type Passo1 = z.infer<typeof schemaPasso1>;
 type Passo2 = z.infer<typeof schemaPasso2>;
 type Passo3 = z.infer<typeof schemaPasso3>;
 
-interface FormData extends Passo1, Passo2, Passo3 {}
+interface FormData extends Passo1, Passo2, Passo3, z.infer<typeof schemaPerfil> {}
 
 function StepIndicator({ passoAtual }: { passoAtual: number }) {
-  const labels = ['Dados', 'Negócio', 'Acesso', 'Revisão'];
+  const labels = ['Conta', 'Negócio', 'Recursos', 'Plano', 'Perfil'];
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between">
@@ -78,10 +79,21 @@ export default function CadastroPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [form, setForm] = useState<Partial<FormData>>({});
+  const [preset, setPreset] = useState('salao');
+  const [modulos, setModulos] = useState<ModuleId[]>(normalizeModules(PRESETS.find(p => p.id === 'salao')!.modulos));
 
   const form1 = useForm<Passo1>({ resolver: zodResolver(schemaPasso1), mode: 'onBlur' });
   const form2 = useForm<Passo2>({ resolver: zodResolver(schemaPasso2), mode: 'onBlur' });
   const form3 = useForm<Passo3>({ resolver: zodResolver(schemaPasso3), mode: 'onBlur', defaultValues: { plano: 'FREE' } });
+  const perfil = useForm<z.infer<typeof schemaPerfil>>({ resolver: zodResolver(schemaPerfil), mode: 'onBlur' });
+
+  const segmento = form2.watch('segmento');
+  useEffect(() => {
+    if (!segmento) return;
+    const mapping: Record<string, string> = { salao: 'salao', barbearia: 'salao', estetica: 'estetica', spa: 'estetica', veterinaria: 'veterinaria', psicologia: 'psicologia', petshop: 'petshop', outro: 'personalizado' };
+    const modelo = PRESETS.find(p => p.id === mapping[segmento]);
+    if (modelo) { setPreset(modelo.id); setModulos(normalizeModules(modelo.modulos)); }
+  }, [segmento]);
 
   const avancar = async (): Promise<void> => {
     setError(null);
@@ -89,7 +101,8 @@ export default function CadastroPage() {
     let dados: Partial<FormData> = {};
     if (passo === 1) { valid = await form1.trigger(); if (valid) dados = form1.getValues(); }
     else if (passo === 2) { valid = await form2.trigger(); if (valid) dados = form2.getValues(); }
-    else if (passo === 3) { valid = await form3.trigger(); if (valid) dados = form3.getValues(); }
+    else if (passo === 3) { valid = modulos.length > 0; if (!valid) setError('Escolha pelo menos um recurso.'); }
+    else if (passo === 4) { valid = await form3.trigger(); if (valid) dados = form3.getValues(); }
     if (!valid) return;
     setForm((prev) => ({ ...prev, ...dados }));
     setPasso((p) => Math.min(p + 1, PASSO_COUNT));
@@ -100,18 +113,21 @@ export default function CadastroPage() {
   const finalizar = async (): Promise<void> => {
     if (isSubmitting) return;
     if (!aceitouTermos) { setError('Aceite os Termos de Uso e a Política de Privacidade para continuar.'); return; }
+    if (!await perfil.trigger()) return;
+    const dadosPerfil = perfil.getValues();
     setError(null);
     setIsSubmitting(true);
     try {
       const payload = {
         empresaNome: form.empresaNome,
-        cnpj: soDigitos(form.cnpj ?? ''),
-        responsavelNome: form.responsavelNome,
+        cnpj: soDigitos(dadosPerfil.cnpj),
+        responsavelNome: dadosPerfil.responsavelNome,
         email: form.email,
         senha: form.senha,
-        telefone: soDigitos(form.telefone ?? ''),
+        telefone: soDigitos(dadosPerfil.telefone),
         segmento: form.segmento,
-        cidade: form.cidade,
+        cidade: dadosPerfil.cidade,
+        preset, modulos,
         plano: 'FREE',
         aceitouTermos: true,
       };
@@ -132,7 +148,6 @@ export default function CadastroPage() {
       case 1:
         return (
           <div className="space-y-4">
-            <AuthInput label="Nome do responsável" placeholder="Seu nome" error={form1.formState.errors.responsavelNome?.message} {...form1.register('responsavelNome')} defaultValue={form.responsavelNome} />
             <AuthInput label="E-mail" type="email" placeholder="voce@empresa.com" error={form1.formState.errors.email?.message} {...form1.register('email')} defaultValue={form.email} />
             <AuthInput label="Senha" type={showPassword ? 'text' : 'password'} placeholder="Mínimo 8 caracteres" error={form1.formState.errors.senha?.message} defaultValue={form.senha} {...form1.register('senha')} right={
               <button type="button" onClick={() => setShowPassword((v) => !v)} className="text-[#71717A] transition-colors hover:text-[#A1A1AA]" aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>
@@ -143,27 +158,28 @@ export default function CadastroPage() {
                 )}
               </button>
             } />
-            <AuthInput label="Confirmar senha" type="password" error={form1.formState.errors.confirmacaoSenha?.message} {...form1.register('confirmacaoSenha')} defaultValue={form.confirmacaoSenha} />
           </div>
         );
       case 2:
         return (
           <div className="space-y-4">
             <AuthInput label="Nome da empresa" placeholder="Salão Beleza Total" error={form2.formState.errors.empresaNome?.message} {...form2.register('empresaNome')} defaultValue={form.empresaNome} />
-            <AuthInput label="CNPJ" placeholder="00.000.000/0000-00" error={form2.formState.errors.cnpj?.message} defaultValue={form.cnpj} onChange={(e) => form2.setValue('cnpj', maskCnpj(e.target.value))} />
-            <AuthInput label="Telefone do negócio" placeholder="(00) 00000-0000" error={form2.formState.errors.telefone?.message} defaultValue={form.telefone} onChange={(e) => form2.setValue('telefone', maskTelefone(e.target.value))} />
             <Select label="Segmento" error={form2.formState.errors.segmento?.message} defaultValue={form.segmento} {...form2.register('segmento')}>
               <option value="">Selecione o segmento</option>
               <option value="salao">Salão de beleza</option>
               <option value="barbearia">Barbearia</option>
               <option value="estetica">Clínica de estética</option>
               <option value="spa">Spa / Bem-estar</option>
+              <option value="veterinaria">Veterinária</option>
+              <option value="psicologia">Psicologia</option>
+              <option value="petshop">Petshop</option>
               <option value="outro">Outro</option>
             </Select>
-            <AuthInput label="Cidade" placeholder="São Paulo, SP" error={form2.formState.errors.cidade?.message} {...form2.register('cidade')} defaultValue={form.cidade} />
           </div>
         );
       case 3:
+        return <ModulePicker preset={preset} modulos={modulos} onChange={(p, ids) => { setPreset(p); setModulos(ids); }} />;
+      case 4:
         return (
           <div className="space-y-3">
             {planos.map((plano) => {
@@ -188,13 +204,17 @@ export default function CadastroPage() {
             {form3.formState.errors.plano?.message && <span className="text-xs text-red-400">{form3.formState.errors.plano.message}</span>}
           </div>
         );
-      case 4:
+      case 5:
         return (
           <div className="space-y-5">
+            <AuthInput label="Nome do responsável" placeholder="Seu nome" error={perfil.formState.errors.responsavelNome?.message} {...perfil.register('responsavelNome')} />
+            <AuthInput label="CNPJ" placeholder="00.000.000/0000-00" error={perfil.formState.errors.cnpj?.message} value={perfil.watch('cnpj') || ''} onChange={e => perfil.setValue('cnpj', maskCnpj(e.target.value))} />
+            <AuthInput label="Telefone do negócio" placeholder="(00) 00000-0000" error={perfil.formState.errors.telefone?.message} value={perfil.watch('telefone') || ''} onChange={e => perfil.setValue('telefone', maskTelefone(e.target.value))} />
+            <AuthInput label="Cidade" placeholder="São Paulo, SP" error={perfil.formState.errors.cidade?.message} {...perfil.register('cidade')} />
             <div className="rounded-xl border border-white/10 bg-[#18181F] p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-[#A1A1AA]">Confira seu cadastro</p>
               <dl className="mt-4 space-y-3 text-sm">
-                {[['Empresa', form.empresaNome], ['Responsável', form.responsavelNome], ['E-mail', form.email], ['Cidade', form.cidade], ['Acesso', 'Gratuito']].map(([label, value]) => (
+                {[['Empresa', form.empresaNome], ['E-mail', form.email], ['Recursos', `${modulos.length} selecionados`], ['Acesso', 'Gratuito']].map(([label, value]) => (
                   <div key={label} className="flex flex-wrap justify-between gap-2"><dt className="text-[#A1A1AA]">{label}</dt><dd className="break-all text-right text-[#FAFAFA]">{value}</dd></div>
                 ))}
               </dl>
@@ -211,14 +231,14 @@ export default function CadastroPage() {
   };
 
   return (
-    <div className="rounded-2xl border px-6 py-8 shadow-2xl sm:p-10" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+    <div data-onboarding-modules={passo === 3 ? 'true' : undefined} className="rounded-2xl border px-6 py-8 shadow-2xl sm:p-10" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
       <div className="flex justify-center">
         <div className="flex h-12 w-12 items-center justify-center">
           <Image src="/logo.svg" alt="Nexly" width={40} height={40} className="h-10 w-10 object-contain" />
         </div>
       </div>
-      <h1 className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>{['Boas-vindas ao Nexly', 'Configure seu negócio', 'O Nexly se adapta ao seu negócio.', 'Complete seu perfil'][passo - 1]}</h1>
-      <p className="mt-2 text-center text-[14px]" style={{ color: '#A1A1AA' }}>{passo === 4 ? 'Confira seus dados antes de criar a conta' : 'Gerencie seu negócio de forma inteligente'}</p>
+      <h1 className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>{['Boas-vindas ao Nexly', 'Configure seu negócio', 'O Nexly se adapta ao seu negócio.', 'Seu Nexly está quase pronto.', 'Complete seu perfil'][passo - 1]}</h1>
+      <p className="mt-2 text-center text-[14px]" style={{ color: '#A1A1AA' }}>{passo === 3 ? 'Escolha os recursos que você precisa e crie uma experiência sob medida.' : passo === 5 ? 'Confira seus dados antes de criar a conta' : 'Gerencie seu negócio de forma inteligente'}</p>
       <div className="mt-8 flex rounded-xl border p-1" style={{ borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#0C0C10' }}>
         <Link href="/login" className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ color: '#A1A1AA' }}>Entrar</Link>
         <Link href="/cadastro" className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}>Criar Conta</Link>

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Icon } from '@/components/ui/Icon';
 import { LandingFooter } from '@/components/LandingFooter';
+import { PublicRecommendations } from '@/components/PublicRecommendations';
 import { LandingHeader } from '@/components/LandingHeader';
 
 const segmentos = [
@@ -27,12 +28,6 @@ const passos = [
   { n: '1', icon: 'user-plus', title: 'Crie sua conta', desc: 'Cadastro rápido em menos de 2 minutos, sem cartão de crédito.' },
   { n: '2', icon: 'gear', title: 'Configure seu negócio', desc: 'Cadastre serviços, profissionais, produtos e preços do seu jeito.' },
   { n: '3', icon: 'rocket', title: 'Comece a vender', desc: 'Gerencie a agenda, controle o estoque e acompanhe os resultados.' },
-];
-
-const depoimentos = [
-  { nome: 'Mariana Souza', cargo: 'Dona de salão de beleza', texto: 'Antes eu perdia dinheiro com produtos que sumiam do estoque. Com o Nexly, tudo é debitado sozinho quando o atendimento termina.' },
-  { nome: 'Carlos Lima', cargo: 'Clínica de estética', texto: 'A agenda com lembretes por WhatsApp reduziu as faltas em mais da metade. O painel financeiro me dá clareza total do lucro.' },
-  { nome: 'Ana Beatriz', cargo: 'Petshop & banho e tosa', texto: 'Consigo vender produtos e agendar banhos no mesmo lugar. O PDV é rápido e o estoque fica sempre em dia.' },
 ];
 
 export default function HomePage() {
@@ -163,22 +158,9 @@ export default function HomePage() {
           <div className="mx-auto max-w-6xl">
             <div className="text-center">
               <h2 className="text-3xl font-bold md:text-4xl" style={{ color: '#FAFAFA' }}>Quem usa recomenda</h2>
-              <p className="mt-3 text-[15px]" style={{ color: '#A1A1AA' }}>Pequenos negócios que transformaram a gestão com o Nexly.</p>
+              <p className="mt-3 text-[15px]" style={{ color: '#A1A1AA' }}>Experiências compartilhadas por quem utiliza o Nexly.</p>
             </div>
-            <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
-              {depoimentos.map((d) => (
-                <figure key={d.nome} className="rounded-2xl border p-7" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.08)' }}>
-                  <div className="flex gap-1">
-                    {[0, 1, 2, 3, 4].map((i) => <Icon key={i} name="star" size="sm" color="#EAB308" />)}
-                  </div>
-                  <blockquote className="mt-4 text-[14px] leading-relaxed" style={{ color: '#A1A1AA' }}>“{d.texto}”</blockquote>
-                  <figcaption className="mt-5">
-                    <div className="text-[14px] font-semibold" style={{ color: '#FAFAFA' }}>{d.nome}</div>
-                    <div className="text-[12px]" style={{ color: '#71717A' }}>{d.cargo}</div>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
+            <PublicRecommendations />
           </div>
         </section>
         {/* CTA final */}

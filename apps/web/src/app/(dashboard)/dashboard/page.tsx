@@ -1,4 +1,6 @@
 'use client';
+import { useWorkspace } from '@/lib/workspace';
+import { WorkspaceWelcome } from '@/components/WorkspaceWelcome';
 
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
@@ -70,6 +72,10 @@ function statusColor(status: string) {
 }
 
 export default function DashboardPage() {
+  const { profile } = useWorkspace();
+  const agendaAtiva = profile.modulos.includes('agenda');
+  const estoqueAtivo = profile.modulos.includes('estoque');
+  const financeiroAtivo = profile.modulos.includes('relatorios') || profile.modulos.includes('vendas');
   const [dados, setDados] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -86,11 +92,12 @@ export default function DashboardPage() {
   }, [reload]);
 
   useEffect(() => {
+    if (!estoqueAtivo) return;
     api
       .get<unknown[]>('/export/produtos/vencendo', { params: { dias: 30 } })
       .then((r) => setProdutosVencendo(Array.isArray(r.data) ? r.data.length : 0))
       .catch(() => undefined);
-  }, []);
+  }, [estoqueAtivo]);
 
 
   if (error) return <ErrorState onRetry={() => setReload(value => value + 1)} />;
@@ -121,6 +128,7 @@ export default function DashboardPage() {
 
   const kpis = [
     {
+      visible: financeiroAtivo,
       label: 'FATURAMENTO HOJE',
       valor: formatarMoeda(dados.faturamentoHoje),
       trend: `${variacaoPositiva ? '+' : ''}${variacao.toFixed(1)}% no mês vs anterior`,
@@ -131,6 +139,7 @@ export default function DashboardPage() {
       iconBg: 'rgba(34,197,94,0.12)',
     },
     {
+      visible: agendaAtiva,
       label: 'ATENDIMENTOS HOJE',
       valor: String(dados.agendamentosHoje.total),
       trend: `${dados.agendamentosHoje.CONFIRMADO} confirmados`,
@@ -141,6 +150,7 @@ export default function DashboardPage() {
       iconBg: 'rgba(99,102,241,0.12)',
     },
     {
+      visible: financeiroAtivo,
       label: 'TICKET MÉDIO',
       valor: formatarMoeda(dados.ticketMedio),
       trend: 'Média das vendas do mês',
@@ -151,6 +161,7 @@ export default function DashboardPage() {
       iconBg: 'rgba(248,113,113,0.12)',
     },
     {
+      visible: agendaAtiva,
       label: 'TAXA DE OCUPAÇÃO',
       valor: `${dados.taxaOcupacao}%`,
       trend: 'Estimativa de horários ocupados',
@@ -164,8 +175,9 @@ export default function DashboardPage() {
 
   return (
     <div>
+      <WorkspaceWelcome />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((kpi) => (
+        {kpis.filter(kpi => kpi.visible).map((kpi) => (
           <div key={kpi.label} className="rounded-xl border p-5" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
             <div className="flex items-start justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#71717A' }}>{kpi.label}</span>
@@ -184,7 +196,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {produtosVencendo > 0 && (
+      {estoqueAtivo && produtosVencendo > 0 && (
         <Link
           href="/produtos"
           className="mt-4 flex items-center justify-between rounded-xl border p-5 transition-colors hover:bg-white/[0.02]"
@@ -210,6 +222,7 @@ export default function DashboardPage() {
         </Link>
       )}
 
+      {financeiroAtivo && <>
       <div className="mt-6 rounded-xl border p-5" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
         <div className="flex items-center justify-between">
           <div>
@@ -240,8 +253,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-xl border p-5 lg:col-span-2" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+      </>}
+      <div className={`mt-6 grid grid-cols-1 gap-6 ${agendaAtiva && estoqueAtivo ? 'lg:grid-cols-3' : 'lg:grid-cols-1'}`}>
+        <div hidden={!agendaAtiva} className={`rounded-xl border p-5 ${estoqueAtivo ? 'lg:col-span-2' : ''}`} style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>Próximos Compromissos</h3>
@@ -279,7 +293,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border p-5" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div hidden={!estoqueAtivo} className="rounded-xl border p-5" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>Alertas Operacionais</h3>
