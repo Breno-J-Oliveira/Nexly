@@ -1,3 +1,4 @@
+import { dateRange } from '../common/validation/date-range';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { csvCell } from './csv';
@@ -10,8 +11,9 @@ export class ExportService {
     const where: { createdAt?: { gte?: Date; lte?: Date } } = {};
     if (dataInicio || dataFim) {
       where.createdAt = {};
-      if (dataInicio) where.createdAt.gte = new Date(dataInicio);
-      if (dataFim) where.createdAt.lte = new Date(dataFim);
+      if (dataInicio) where.createdAt.gte = dateRange(dataInicio, dataInicio).inicio;
+      if (dataFim) where.createdAt.lte = dateRange(dataFim, dataFim).fim;
+      if (dataInicio && dataFim) dateRange(dataInicio, dataFim);
     }
     const vendas = await this.prisma.client.venda.findMany({
       where,

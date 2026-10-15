@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
+import { dateRange } from '../common/validation/date-range';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
@@ -11,41 +13,34 @@ export class FinanceiroService {
 
   /* DRE simplificado (Demonstracao do Resultado do Exercicio) */
   async dre(empresaId: string, dataInicio: string, dataFim: string) {
-    const cacheKey = 'dre:' + empresaId + ':' + dataInicio + ':' + dataFim;
+    const { inicio, fim } = dateRange(dataInicio, dataFim);
+    const cacheKey = 'dre:' + empresaId + ':v2:' + dataInicio + ':' + dataFim;
     const cached = await this.redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
-    const inicio = new Date(dataInicio);
-    inicio.setHours(0, 0, 0, 0);
-    const fim = new Date(dataFim);
-    fim.setHours(23, 59, 59, 999);
-
     const vendas = await this.prisma.client.venda.aggregate({
-      where: { createdAt: { gte: inicio, lte: fim } },
+      where: { empresaId, createdAt: { gte: inicio, lte: fim } },
       _sum: { total: true, desconto: true },
+      _count: { _all: true },
     });
 
-    const receitaBruta = Number(vendas._sum.total ?? 0);
+    // Venda.total ja e liquido: subtrair desconto novamente altera a receita real.
+    const receitaLiquida = Number(vendas._sum.total ?? 0);
     const descontos = Number(vendas._sum.desconto ?? 0);
-    const receitaLiquida = receitaBruta - descontos;
-
-    // CMV (Custo das Mercadorias Vendidas): soma dos precos dos produtos vendidos
-    const itensVendidos = await this.prisma.client.itemVenda.findMany({
-      where: { venda: { createdAt: { gte: inicio, lte: fim } } },
-      select: { quantidade: true, precoUnitario: true, produto: { select: { nome: true } } },
-    });
-    const cmv = itensVendidos.reduce((acc, i) => acc + Number(i.precoUnitario) * i.quantidade, 0);
-    const margemBruta = receitaLiquida - cmv;
-    const margemPercentual = receitaLiquida === 0 ? 0 : (margemBruta / receitaLiquida) * 100;
-    const qtdVendas = Number(vendas);
+    const receitaBruta = receitaLiquida + descontos;
+    const qtdVendas = vendas._count._all;
     const ticketMedio = qtdVendas === 0 ? 0 : receitaLiquida / qtdVendas;
-
+    // O schema nao guarda custo historico de aquisicao; preco de venda nao e CMV.
+    const cmv = null,
+      margemBruta = null,
+      margemPercentual = null;
     const resultado = {
       periodo: { dataInicio, dataFim },
       receitaBruta,
       descontos,
       receitaLiquida,
       cmv,
+      custosDisponiveis: false,
       margemBruta,
       margemPercentual,
       qtdVendas,
@@ -58,13 +53,10 @@ export class FinanceiroService {
 
   /* Fluxo de caixa diario */
   async fluxoCaixa(empresaId: string, dataInicio: string, dataFim: string) {
-    const inicio = new Date(dataInicio);
-    inicio.setHours(0, 0, 0, 0);
-    const fim = new Date(dataFim);
-    fim.setHours(23, 59, 59, 999);
+    const { inicio, fim } = dateRange(dataInicio, dataFim);
 
     const vendas = await this.prisma.client.venda.findMany({
-      where: { createdAt: { gte: inicio, lte: fim } },
+      where: { empresaId, createdAt: { gte: inicio, lte: fim } },
       select: { total: true, createdAt: true },
       orderBy: { createdAt: 'asc' },
     });
@@ -91,13 +83,12 @@ export class FinanceiroService {
 
   /* Top produtos por faturamento */
   async topProdutos(empresaId: string, dataInicio: string, dataFim: string, limit = 10) {
-    const inicio = new Date(dataInicio);
-    inicio.setHours(0, 0, 0, 0);
-    const fim = new Date(dataFim);
-    fim.setHours(23, 59, 59, 999);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+      throw new BadRequestException('Limite deve estar entre 1 e 100');
+    const { inicio, fim } = dateRange(dataInicio, dataFim);
 
     const itens = await this.prisma.client.itemVenda.findMany({
-      where: { venda: { createdAt: { gte: inicio, lte: fim } } },
+      where: { venda: { empresaId, createdAt: { gte: inicio, lte: fim } } },
       select: {
         quantidade: true,
         precoUnitario: true,

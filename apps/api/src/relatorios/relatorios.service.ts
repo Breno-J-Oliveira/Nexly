@@ -1,3 +1,4 @@
+import { dateRange } from '../common/validation/date-range';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
@@ -6,8 +7,7 @@ export class RelatoriosService {
   constructor(private readonly prisma: PrismaService) {}
 
   async insumosPorServico(dataInicio: string, dataFim: string) {
-    const inicio = new Date(dataInicio);
-    const fim = new Date(dataFim);
+    const { inicio, fim } = dateRange(dataInicio, dataFim);
     const servicos = await this.prisma.client.servico.findMany({
       where: { ativo: true },
       include: { insumos: { include: { produto: true } } },
@@ -62,28 +62,12 @@ export class RelatoriosService {
   }
 
   async faturamento(dataInicio: string, dataFim: string) {
-    const inicio = new Date(dataInicio);
-    inicio.setHours(0, 0, 0, 0);
-    const fim = new Date(dataFim);
-    fim.setHours(23, 59, 59, 999);
-    const [vendas, custos] = await Promise.all([
-      this.prisma.client.venda.findMany({
-        where: { createdAt: { gte: inicio, lte: fim } },
-        select: { total: true, createdAt: true },
-      }),
-      this.prisma.client.movimentacaoEstoque.findMany({
-        where: {
-          tipo: 'SAIDA',
-          agendamentoId: { not: null },
-          createdAt: { gte: inicio, lte: fim },
-        },
-        include: { produto: { select: { preco: true } } },
-      }),
-    ]);
-    let ft = 0,
-      ct = 0;
-    for (const v of vendas) ft += Number(v.total);
-    for (const m of custos) ct += Number(m.produto.preco) * m.quantidade;
+    const { inicio, fim } = dateRange(dataInicio, dataFim);
+    const vendas = await this.prisma.client.venda.findMany({
+      where: { createdAt: { gte: inicio, lte: fim } },
+      select: { total: true, createdAt: true },
+    });
+    const ft = vendas.reduce((sum, v) => sum + Number(v.total), 0);
     const porDia = new Map<string, number>();
     for (const v of vendas) {
       const d = v.createdAt.toISOString().slice(0, 10);
@@ -94,9 +78,10 @@ export class RelatoriosService {
       .sort((a, b) => a.data.localeCompare(b.data));
     return {
       faturamentoTotal: ft,
-      custoTotal: ct,
-      margemBruta: ft - ct,
-      margemPercentual: ft === 0 ? 0 : ((ft - ct) / ft) * 100,
+      custoTotal: null,
+      margemBruta: null,
+      margemPercentual: null,
+      custosDisponiveis: false,
       totalVendas: vendas.length,
       ticketMedio: vendas.length === 0 ? 0 : ft / vendas.length,
       porDia: dias,
@@ -105,13 +90,14 @@ export class RelatoriosService {
 
   /* Novo: resumo geral do periodo */
   async resumoGeral(dataInicio: string, dataFim: string) {
+    const { inicio, fim } = dateRange(dataInicio, dataFim);
     const [fat, clientes, ags, produtos] = await Promise.all([
       this.faturamento(dataInicio, dataFim),
       this.prisma.client.cliente.count({
-        where: { createdAt: { gte: new Date(dataInicio), lte: new Date(dataFim) } },
+        where: { createdAt: { gte: inicio, lte: fim } },
       }),
       this.prisma.client.agendamento.count({
-        where: { dataHora: { gte: new Date(dataInicio), lte: new Date(dataFim) } },
+        where: { dataHora: { gte: inicio, lte: fim } },
       }),
       this.prisma.client.produto.count({ where: { ativo: true } }),
     ]);
@@ -125,10 +111,7 @@ export class RelatoriosService {
 
   /* Relatório de agenda: taxas, heatmap (7 dias x 12h) e ranking de profissionais */
   async relatorioAgenda(dataInicio: string, dataFim: string) {
-    const inicio = new Date(dataInicio);
-    inicio.setHours(0, 0, 0, 0);
-    const fim = new Date(dataFim);
-    fim.setHours(23, 59, 59, 999);
+    const { inicio, fim } = dateRange(dataInicio, dataFim);
 
     const ags = await this.prisma.client.agendamento.findMany({
       where: { dataHora: { gte: inicio, lte: fim } },
@@ -177,10 +160,7 @@ export class RelatoriosService {
 
   /* Relatório por profissional: agendamentos, receita, comissão e avaliação */
   async relatorioProfissionais(dataInicio: string, dataFim: string) {
-    const inicio = new Date(dataInicio);
-    inicio.setHours(0, 0, 0, 0);
-    const fim = new Date(dataFim);
-    fim.setHours(23, 59, 59, 999);
+    const { inicio, fim } = dateRange(dataInicio, dataFim);
 
     const profissionais = await this.prisma.client.profissional.findMany({
       where: { ativo: true },
@@ -224,10 +204,7 @@ export class RelatoriosService {
 
   /* Relatório de estoque: produtos mais consumidos + alertas de reposição */
   async relatorioEstoque(dataInicio: string, dataFim: string) {
-    const inicio = new Date(dataInicio);
-    inicio.setHours(0, 0, 0, 0);
-    const fim = new Date(dataFim);
-    fim.setHours(23, 59, 59, 999);
+    const { inicio, fim } = dateRange(dataInicio, dataFim);
 
     const [saidas, produtos, movimentacoes] = await Promise.all([
       this.prisma.client.movimentacaoEstoque.findMany({

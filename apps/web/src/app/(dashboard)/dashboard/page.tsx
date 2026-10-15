@@ -20,6 +20,7 @@ import { formatarMoeda } from '@/lib/format';
 import { ErrorState } from '@/components/ui/ErrorState';
 
 interface DashboardData {
+  permissoes:{financeiro:boolean;agenda:boolean;estoque:boolean};
   agendamentosHoje: { total: number; AGENDADO: number; CONFIRMADO: number; CONCLUIDO: number; CANCELADO: number };
   receitaMes: { atual: number; anterior: number; variacaoPercentual: number };
   ticketMedio: number;
@@ -39,6 +40,8 @@ interface DashboardData {
     status: string;
   }[];
 }
+
+const EMPTY_DASHBOARD:DashboardData={permissoes:{financeiro:false,agenda:false,estoque:false},agendamentosHoje:{total:0,AGENDADO:0,CONFIRMADO:0,CONCLUIDO:0,CANCELADO:0},receitaMes:{atual:0,anterior:0,variacaoPercentual:0},ticketMedio:0,faturamentoHoje:0,taxaOcupacao:0,evolucaoVendasSemanal:[],topServicos:[],topProdutos:[],alertasEstoque:[],proximosCompromissos:[]};
 
 const tooltipStyle = {
   background: '#18181F',
@@ -73,31 +76,31 @@ function statusColor(status: string) {
 
 export default function DashboardPage() {
   const { profile } = useWorkspace();
-  const agendaAtiva = profile.modulos.includes('agenda');
-  const estoqueAtivo = profile.modulos.includes('estoque');
-  const financeiroAtivo = profile.modulos.includes('relatorios') || profile.modulos.includes('vendas');
   const [dados, setDados] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reload, setReload] = useState(0);
   const [produtosVencendo, setProdutosVencendo] = useState(0);
+  const agendaAtiva=profile.modulos.includes('agenda') && Boolean(dados?.permissoes.agenda);
+  const estoqueAtivo=profile.modulos.includes('estoque') && Boolean(dados?.permissoes.estoque);
+  const financeiroAtivo=(profile.modulos.includes('relatorios') || profile.modulos.includes('vendas')) && Boolean(dados?.permissoes.financeiro);
 
   useEffect(() => {
     setLoading(true);
     setError(false);
     api.get<DashboardData>('/dashboard')
-      .then((r) => setDados(r.data))
+      .then((r) => setDados({...EMPTY_DASHBOARD,...r.data}))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [reload]);
 
   useEffect(() => {
-    if (!estoqueAtivo) return;
+    if (!estoqueAtivo || !dados?.permissoes.financeiro) return;
     api
       .get<unknown[]>('/export/produtos/vencendo', { params: { dias: 30 } })
       .then((r) => setProdutosVencendo(Array.isArray(r.data) ? r.data.length : 0))
       .catch(() => undefined);
-  }, [estoqueAtivo]);
+  }, [estoqueAtivo,dados?.permissoes.financeiro]);
 
 
   if (error) return <ErrorState onRetry={() => setReload(value => value + 1)} />;
@@ -180,7 +183,7 @@ export default function DashboardPage() {
         {kpis.filter(kpi => kpi.visible).map((kpi) => (
           <div key={kpi.label} className="rounded-xl border p-5" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
             <div className="flex items-start justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#71717A' }}>{kpi.label}</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#A1A1AA' }}>{kpi.label}</span>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: kpi.iconBg }}>{kpi.icon}</div>
             </div>
             <div className="mt-4 text-[32px] font-bold tracking-tight" style={{ color: '#FAFAFA' }}>{kpi.valor}</div>
@@ -227,7 +230,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>Evolução de Vendas Semanal</h3>
-            <p className="text-[13px]" style={{ color: '#71717A' }}>Receita acumulada dos últimos 7 dias</p>
+            <p className="text-[13px]" style={{ color: '#A1A1AA' }}>Receita acumulada dos últimos 7 dias</p>
           </div>
           <div className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[12px]" style={{ borderColor: 'rgba(255,255,255,0.08)', color: '#A1A1AA' }}>
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#6366F1' }} />
@@ -244,8 +247,8 @@ export default function DashboardPage() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="dia" tick={{ fontSize: 12, fill: '#71717A' }} axisLine={false} tickLine={false} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#71717A' }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="dia" tick={{ fontSize: 12, fill: '#A1A1AA' }} axisLine={false} tickLine={false} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#A1A1AA' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`R$ ${value}`, 'Faturamento']} />
               <Area type="monotone" dataKey="total" stroke="#6366F1" strokeWidth={2} fill="url(#gradVendas)" dot={{ r: 4, fill: '#6366F1', stroke: '#fff', strokeWidth: 2 }} />
             </AreaChart>
@@ -259,7 +262,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>Próximos Compromissos</h3>
-              <p className="text-[13px]" style={{ color: '#71717A' }}>{dados.proximosCompromissos.length} agendamentos hoje</p>
+              <p className="text-[13px]" style={{ color: '#A1A1AA' }}>{dados.proximosCompromissos.length} agendamentos hoje</p>
             </div>
             <Link href="/agenda" className="rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors hover:bg-white/5" style={{ borderColor: 'rgba(255,255,255,0.08)', color: '#A1A1AA' }}>
               Ver agenda
@@ -268,7 +271,7 @@ export default function DashboardPage() {
 
           <div className="mt-4 space-y-3">
             {dados.proximosCompromissos.length === 0 ? (
-              <p className="text-[13px]" style={{ color: '#71717A' }}>Nenhum compromisso para hoje.</p>
+              <p className="text-[13px]" style={{ color: '#A1A1AA' }}>Nenhum compromisso para hoje.</p>
             ) : (
               dados.proximosCompromissos.map((c) => {
                 const st = statusColor(c.status);
@@ -280,7 +283,7 @@ export default function DashboardPage() {
                       </div>
                       <div>
                         <div className="text-[14px] font-medium" style={{ color: '#FAFAFA' }}>{c.cliente}</div>
-                        <div className="text-[12px]" style={{ color: '#71717A' }}>{c.servico} · {c.profissional}</div>
+                        <div className="text-[12px]" style={{ color: '#A1A1AA' }}>{c.servico} · {c.profissional}</div>
                       </div>
                     </div>
                     <div className="rounded-md px-2.5 py-1 text-[11px] font-semibold" style={{ color: st.text, backgroundColor: st.bg }}>
@@ -297,7 +300,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-[16px] font-semibold" style={{ color: '#FAFAFA' }}>Alertas Operacionais</h3>
-              <p className="text-[13px]" style={{ color: '#71717A' }}>{dados.alertasEstoque.length} itens requerem atenção</p>
+              <p className="text-[13px]" style={{ color: '#A1A1AA' }}>{dados.alertasEstoque.length} itens requerem atenção</p>
             </div>
             {dados.alertasEstoque.length > 0 && (
               <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold" style={{ backgroundColor: '#EF4444', color: '#fff' }}>
@@ -308,7 +311,7 @@ export default function DashboardPage() {
 
           <div className="mt-4 space-y-3">
             {dados.alertasEstoque.length === 0 ? (
-              <p className="text-[13px]" style={{ color: '#71717A' }}>Nenhum alerta no momento. 🎉</p>
+              <p className="text-[13px]" style={{ color: '#A1A1AA' }}>Nenhum alerta no momento. 🎉</p>
             ) : (
               dados.alertasEstoque.slice(0, 4).map((p) => (
                 <div key={p.id} className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4">

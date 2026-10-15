@@ -1,4 +1,5 @@
 'use client';
+import { baixarBlob } from '@/lib/download';
 
 import { PageToolbar } from '@/components/ui/PageToolbar';
 
@@ -122,16 +123,6 @@ function acaoBadge(acao: string) {
   );
 }
 
-function baixarBlob(blob: Blob, nome: string): void {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = nome;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-}
 
 export default function ConfiguracoesPage() {
   const [secao, setSecao] = useState<Secao>('perfil');

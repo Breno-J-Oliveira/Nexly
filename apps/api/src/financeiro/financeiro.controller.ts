@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { FinanceiroService } from './financeiro.service';
-import { getTenantContext } from '../database/tenant-context';
+import { getTenantIdOrFail } from '../database/tenant-context';
 
 @Controller('financeiro')
 export class FinanceiroController {
@@ -8,14 +8,14 @@ export class FinanceiroController {
 
   @Get('dre')
   async dre(@Query('dataInicio') di: string, @Query('dataFim') df: string) {
-    const ctx = getTenantContext();
-    return this.service.dre(ctx?.tenantId ?? '', di, df);
+    const empresaId = getTenantIdOrFail();
+    return this.service.dre(empresaId, di, df);
   }
 
   @Get('fluxo-caixa')
   async fluxoCaixa(@Query('dataInicio') di: string, @Query('dataFim') df: string) {
-    const ctx = getTenantContext();
-    return this.service.fluxoCaixa(ctx?.tenantId ?? '', di, df);
+    const empresaId = getTenantIdOrFail();
+    return this.service.fluxoCaixa(empresaId, di, df);
   }
 
   @Get('top-produtos')
@@ -24,7 +24,7 @@ export class FinanceiroController {
     @Query('dataFim') df: string,
     @Query('limit') limit?: string,
   ) {
-    const ctx = getTenantContext();
-    return this.service.topProdutos(ctx?.tenantId ?? '', di, df, Number(limit || 10));
+    const empresaId = getTenantIdOrFail();
+    return this.service.topProdutos(empresaId, di, df, Number(limit || 10));
   }
 }
