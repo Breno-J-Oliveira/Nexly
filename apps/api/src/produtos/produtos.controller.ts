@@ -1,43 +1,27 @@
-import {
-  Body,
-  Controller,
-  DefaultValuePipe,
-  Delete,
-  Get,
-  Param,
-  ParseIntPipe,
-  Post,
-  Put,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { AtualizarProdutoDto } from './dto/atualizar-produto.dto';
 import { CriarProdutoDto } from './dto/criar-produto.dto';
 import { ProdutosService } from './produtos.service';
+import { ListarProdutosDto } from './dto/listar-produtos.dto';
+import { PaginacaoDto } from '../common/dto/paginacao.dto';
 
 @Controller('produtos')
 export class ProdutosController {
   constructor(private readonly produtosService: ProdutosService) {}
 
   @Get()
-  listar(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
-    @Query('categoria') categoria?: string,
-    @Query('search') search?: string,
-    @Query('estoqueAbaixoDe') estoqueAbaixoDe?: string,
-    @Query('vencendoEm') vencendoEm?: string,
-  ) {
-    return this.produtosService.listar(page, limit, {
-      categoria,
-      search,
-      estoqueAbaixoDe: estoqueAbaixoDe ? Number(estoqueAbaixoDe) : undefined,
-      vencendoEm: vencendoEm ? Number(vencendoEm) : undefined,
-    });
+  listar(@Query() query: ListarProdutosDto) {
+    return this.produtosService.listar(query.page ?? 1, query.limit ?? 20, query);
   }
 
   @Get('alerta')
-  listarEmAlerta(@Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number) {
-    return this.produtosService.listarEmAlerta(limit);
+  listarEmAlerta(@Query() query: PaginacaoDto) {
+    return this.produtosService.listarEmAlerta(query.limit ?? 20);
+  }
+
+  @Get('categorias')
+  categorias() {
+    return this.produtosService.categorias();
   }
 
   @Get(':id')

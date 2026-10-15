@@ -8,7 +8,13 @@ import { MetricGrid } from '@/components/ui/MetricGrid';
 import { formatarMoeda } from '@/lib/format';
 import { PageToolbar } from '@/components/ui/PageToolbar';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useApi } from '@/lib/useApi';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
+import { Pagination } from '@/components/ui/Pagination';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Modal } from '@/components/ui/Modal';
+import { toastSuccess } from '@/components/ui/Toaster';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { VencimentoAlert } from '@/components/ui/VencimentoAlert';
@@ -25,15 +31,9 @@ interface Produto {
 }
 interface Resumo {
   totalProdutos: number;
+  produtosZerados: number;
   produtosAbaixoDoMinimo: number;
   valorTotalEstoque: number;
-}
-interface AlertaItem {
-  id: string;
-  nome: string;
-  sku: string;
-  estoqueAtual: number;
-  estoqueMinimo: number;
 }
 
 export default function EstoquePage() {
@@ -43,30 +43,49 @@ export default function EstoquePage() {
   const [categoria, setCategoria] = useState('');
   const [erroEntrada, setErroEntrada] = useState('');
   const [salvando, setSalvando] = useState(false);
-  const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [resumo, setResumo] = useState<Resumo | null>(null);
-  const [alertas, setAlertas] = useState<AlertaItem[]>([]);
+  const [pagina, setPagina] = useState(1);
+  const [inline, setInline] = useState(false);
+  const [entradaAberta, setEntradaAberta] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1280px)');
+    const update = () => setInline(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
   const [entradaProduto, setEntradaProduto] = useState<Produto | null>(null);
   const [quantidade, setQuantidade] = useState('');
   const [motivo, setMotivo] = useState('');
 
-  const carregar = useCallback(async (): Promise<void> => {
-    const [p, r, a] = await Promise.all([
-      api.get<{ data: Produto[] }>('/produtos', { params: { limit: 100 } }),
-      api.get<Resumo>('/estoque/resumo'),
-      api.get<{ data: AlertaItem[] }>('/produtos/alerta', { params: { limit: 5 } }),
-    ]);
-    setProdutos(p.data.data);
-    setResumo(r.data);
-    setAlertas(a.data.data);
-  }, []);
-
+  const search = useDebouncedValue(busca.trim());
+  const catalogo = useApi<{ data: Produto[]; total: number }>('/produtos', {
+    params: { page: pagina, limit: 25, search, categoria: categoria || undefined },
+  });
+  const metrics = useApi<Resumo>('/estoque/resumo');
+  const alerts = useApi<{ data: Produto[]; total: number }>('/produtos/alerta', {
+    params: { limit: 5 },
+  });
+  const categories = useApi<{ categoria: string }[]>('/produtos/categorias');
+  const produtos = catalogo.data?.data ?? [];
+  const resumo = metrics.data;
+  const alertas = alerts.data?.data ?? [];
+  const abrirEntrada = (produto: Produto) => {
+    setEntradaProduto(produto);
+    setQuantidade('');
+    setMotivo('');
+    setErroEntrada('');
+    setEntradaAberta(true);
+  };
+  const carregar = async () => {
+    await Promise.all([catalogo.refetch(), metrics.refetch(), alerts.refetch()]);
+  };
   useEffect(() => {
-    void carregar();
-  }, [carregar]);
+    const last = Math.max(1, Math.ceil((catalogo.data?.total ?? 0) / 25));
+    if (!catalogo.loading && catalogo.data && pagina > last) setPagina(last);
+  }, [catalogo.data, catalogo.loading, pagina]);
 
   const darEntrada = async (): Promise<void> => {
-    if (!entradaProduto) return;
+    if (!entradaProduto || salvando) return;
     setSalvando(true);
     setErroEntrada('');
     try {
@@ -77,6 +96,9 @@ export default function EstoquePage() {
       });
       setQuantidade('');
       setMotivo('');
+      setEntradaProduto(null);
+      setEntradaAberta(false);
+      toastSuccess('Entrada registrada');
       await carregar();
     } catch {
       setErroEntrada('Não foi possível registrar a entrada. Confira os dados.');
@@ -92,6 +114,83 @@ export default function EstoquePage() {
     return { label: 'OK', color: 'bg-green-500/10 text-green-400' };
   };
 
+  const entradaForm = (
+    <form
+      className="mt-6 space-y-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void darEntrada();
+      }}
+    >
+      <label className="block text-sm text-[#A1A1AA]">
+        Produto
+        <select
+          aria-label="Produto da entrada"
+          value={entradaProduto?.id || ''}
+          onChange={(e) => {
+            setEntradaProduto(produtos.find((p) => p.id === e.target.value) || null);
+            setErroEntrada('');
+          }}
+          className="mt-2 w-full rounded-lg border border-white/10 bg-[#18181F] px-3 py-2 text-sm text-white"
+        >
+          <option value="">Selecione um produto</option>
+          {entradaProduto && !produtos.some((p) => p.id === entradaProduto.id) && (
+            <option value={entradaProduto.id}>{entradaProduto.nome}</option>
+          )}
+          {produtos.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.nome}
+            </option>
+          ))}
+        </select>
+      </label>
+      <Input
+        label="Quantidade"
+        required
+        type="number"
+        min="1"
+        step="1"
+        value={quantidade}
+        onChange={(e) => setQuantidade(e.target.value)}
+      />
+      <Input
+        label="Observações / motivo"
+        value={motivo}
+        onChange={(e) => setMotivo(e.target.value)}
+        placeholder="Ex: compra fornecedor"
+      />
+      {erroEntrada && (
+        <p role="alert" className="text-sm text-red-400">
+          {erroEntrada}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-3 pt-4">
+        <Button
+          type="button"
+          disabled={salvando}
+          variant="secondary"
+          onClick={() => {
+            setEntradaAberta(false);
+            setEntradaProduto(null);
+            setQuantidade('');
+            setMotivo('');
+          }}
+        >
+          Cancelar
+        </Button>
+        <Button
+          type="submit"
+          loading={salvando}
+          disabled={
+            !entradaProduto || !Number.isSafeInteger(Number(quantidade)) || Number(quantidade) <= 0
+          }
+        >
+          Registrar Entrada
+        </Button>
+      </div>
+    </form>
+  );
+
   return (
     <div>
       <PageToolbar>
@@ -106,7 +205,10 @@ export default function EstoquePage() {
                 aria-label="Buscar produto"
                 placeholder="Buscar produto..."
                 value={busca}
-                onChange={(e) => setBusca(e.target.value)}
+                onChange={(e) => {
+                  setBusca(e.target.value);
+                  setPagina(1);
+                }}
               />
             </div>
             {podeCriar && (
@@ -126,32 +228,52 @@ export default function EstoquePage() {
         <div className="min-w-0">
           <MetricGrid
             items={[
-              { label: 'Total de Produtos', value: resumo?.totalProdutos || 0 },
-              { label: 'Valor em Estoque', value: formatarMoeda(resumo?.valorTotalEstoque || 0) },
-              { label: 'Estoque Baixo', value: resumo?.produtosAbaixoDoMinimo || 0 },
+              { label: 'Total de Produtos', value: resumo ? resumo.totalProdutos : '—' },
+              {
+                label: 'Valor em Estoque',
+                value: resumo ? formatarMoeda(resumo.valorTotalEstoque) : '—',
+              },
+              { label: 'Estoque Baixo', value: resumo ? resumo.produtosAbaixoDoMinimo : '—' },
               {
                 label: 'Sem Estoque',
-                value: produtos.filter((p) => p.estoqueAtual === 0).length,
-                note: 'Na lista atual',
+                value: resumo ? resumo.produtosZerados : '—',
               },
             ]}
           />
           <div className="mb-6 flex flex-wrap gap-2">
-            {[
-              '',
-              ...Array.from(
-                new Set(produtos.map((p) => p.categoria).filter((c): c is string => !!c)),
-              ),
-            ].map((c) => (
+            {['', ...(categories.data ?? []).map((item) => item.categoria)].map((c) => (
               <button
+                type="button"
                 key={c}
-                onClick={() => setCategoria(c)}
+                aria-pressed={categoria === c}
+                onClick={() => {
+                  setCategoria(c);
+                  setPagina(1);
+                }}
                 className={`rounded-full border border-white/10 px-3 py-1 text-xs ${categoria === c ? 'bg-[#6366F1] text-white' : 'bg-[#18181F] text-[#A1A1AA]'}`}
               >
                 {c || 'Todos'}
               </button>
             ))}
           </div>
+          {categories.error && (
+            <ErrorState
+              message="Não foi possível carregar as categorias"
+              onRetry={() => void categories.refetch()}
+            />
+          )}
+          {metrics.error && (
+            <ErrorState
+              message="Não foi possível carregar o resumo"
+              onRetry={() => void metrics.refetch()}
+            />
+          )}
+          {alerts.error && (
+            <ErrorState
+              message="Não foi possível verificar reposições"
+              onRetry={() => void alerts.refetch()}
+            />
+          )}
           <VencimentoAlert />
 
           {/* Banner de produtos em alerta */}
@@ -164,8 +286,9 @@ export default function EstoquePage() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-red-300">
-                    {alertas.length}{' '}
-                    {alertas.length === 1 ? 'produto precisa' : 'produtos precisam'} de reposição
+                    {alerts.data?.total ?? alertas.length}{' '}
+                    {alerts.data?.total === 1 ? 'produto precisa' : 'produtos precisam'} de
+                    reposição
                   </p>
                   <p className="mt-1 text-xs text-red-400/80">
                     Estoque atual abaixo do mínimo configurado.
@@ -177,25 +300,24 @@ export default function EstoquePage() {
                   <li key={a.id} className="flex items-center justify-between py-2 text-sm">
                     <div>
                       <p className="font-medium text-[#FAFAFA]">{a.nome}</p>
-                      <p className="text-xs text-[#71717A]">{a.sku}</p>
+                      <p className="text-xs text-[#A1A1AA]">{a.sku}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-red-300">
                         {a.estoqueAtual}{' '}
-                        <span className="text-xs font-normal text-[#71717A]">
+                        <span className="text-xs font-normal text-[#A1A1AA]">
                           / mín. {a.estoqueMinimo}
                         </span>
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const full = produtos.find((p) => p.id === a.id);
-                          if (full) setEntradaProduto(full);
-                        }}
-                        className="mt-1 text-xs text-red-400 hover:text-red-300 hover:underline"
-                      >
-                        Dar entrada
-                      </button>
+                      {podeCriar && (
+                        <button
+                          type="button"
+                          onClick={() => abrirEntrada(a)}
+                          className="mt-1 text-xs text-red-300 hover:underline"
+                        >
+                          Dar entrada
+                        </button>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -203,6 +325,9 @@ export default function EstoquePage() {
             </div>
           )}
 
+          {catalogo.error && (
+            <ErrorState message={catalogo.error} onRetry={() => void catalogo.refetch()} />
+          )}
           <div className="mt-6 overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116]">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-[rgba(255,255,255,0.08)] bg-[#18181F]/50">
@@ -216,13 +341,23 @@ export default function EstoquePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[rgba(255,255,255,0.08)]">
-                {produtos
-                  .filter(
-                    (p) =>
-                      p.nome.toLowerCase().includes(busca.toLowerCase()) &&
-                      (!categoria || p.categoria === categoria),
-                  )
-                  .map((p) => {
+                {catalogo.loading && (
+                  <tr>
+                    <td colSpan={6} className="p-6 text-center text-[#A1A1AA]">
+                      Carregando…
+                    </td>
+                  </tr>
+                )}
+                {!catalogo.loading && !catalogo.error && produtos.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-6 text-center text-[#A1A1AA]">
+                      Nenhum produto encontrado.
+                    </td>
+                  </tr>
+                )}
+                {!catalogo.loading &&
+                  !catalogo.error &&
+                  produtos.map((p) => {
                     const s = status(p);
                     return (
                       <tr key={p.id}>
@@ -239,7 +374,7 @@ export default function EstoquePage() {
                         </td>
                         <td className="px-4 py-3">
                           {podeCriar && (
-                            <Button variant="secondary" onClick={() => setEntradaProduto(p)}>
+                            <Button variant="secondary" onClick={() => abrirEntrada(p)}>
                               Dar entrada
                             </Button>
                           )}
@@ -250,75 +385,31 @@ export default function EstoquePage() {
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={pagina}
+            total={catalogo.data?.total ?? 0}
+            limit={25}
+            loading={catalogo.loading}
+            onChange={setPagina}
+          />
         </div>
-        {podeCriar && (
-          <aside className="detail-panel self-start">
-            <h3 className="text-lg font-semibold">Registrar Entrada</h3>
-            <div className="mt-6 space-y-4">
-              <label className="block text-sm text-[#A1A1AA]">
-                Produto
-                <select
-                  aria-label="Produto da entrada"
-                  value={entradaProduto?.id || ''}
-                  onChange={(e) => {
-                    setEntradaProduto(produtos.find((p) => p.id === e.target.value) || null);
-                    setErroEntrada('');
-                  }}
-                  className="mt-2 w-full rounded-lg border border-white/10 bg-[#18181F] px-3 py-2 text-sm text-white"
-                >
-                  <option value="">Selecione um produto</option>
-                  {produtos.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Input
-                label="Quantidade"
-                type="number"
-                min="1"
-                step="1"
-                value={quantidade}
-                onChange={(e) => setQuantidade(e.target.value)}
-              />
-              <Input
-                label="Observações / motivo"
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                placeholder="Ex: compra fornecedor"
-              />
-              {erroEntrada && (
-                <p role="alert" className="text-sm text-red-400">
-                  {erroEntrada}
-                </p>
-              )}
-              <div className="flex flex-wrap gap-3 pt-4">
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setEntradaProduto(null);
-                    setQuantidade('');
-                    setMotivo('');
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={() => void darEntrada()}
-                  loading={salvando}
-                  disabled={
-                    !entradaProduto ||
-                    !Number.isSafeInteger(Number(quantidade)) ||
-                    Number(quantidade) <= 0
-                  }
-                >
-                  Registrar Entrada
-                </Button>
-              </div>
-            </div>
-          </aside>
-        )}
+        {podeCriar &&
+          (inline ? (
+            <aside className="detail-panel self-start">
+              <h3 className="text-lg font-semibold">Registrar Entrada</h3>
+              {entradaForm}
+            </aside>
+          ) : (
+            <Modal
+              open={entradaAberta}
+              title="Registrar entrada"
+              onClose={() => {
+                if (!salvando) setEntradaAberta(false);
+              }}
+            >
+              {entradaForm}
+            </Modal>
+          ))}
       </div>
     </div>
   );

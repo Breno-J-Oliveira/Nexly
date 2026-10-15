@@ -52,4 +52,26 @@ describe('ExportService', () => {
     const result = await service.produtosVencendo();
     expect(Array.isArray(result)).toBe(true);
   });
+  it.each([-1, 1.5, NaN, Infinity, 3651])(
+    'recusa horizonte de validade inválido %s',
+    async (dias) => {
+      await expect(service.produtosVencendo(dias)).rejects.toThrow('Dias deve ser');
+    },
+  );
+  it('inclui vencidos e todo o último dia sem depender do fuso do servidor', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-15T03:00:00Z'));
+    try {
+      await service.produtosVencendo(0);
+      expect(mockPrisma.client.produto.findMany).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          where: {
+            ativo: true,
+            dataVencimento: { not: null, lte: new Date('2026-10-15T23:59:59.999Z') },
+          },
+        }),
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });

@@ -2,22 +2,24 @@ import { Test } from '@nestjs/testing';
 import { PrismaService } from '../database/prisma.service';
 import { ProdutosService } from './produtos.service';
 
-interface ProdutoMock {
-  id: string;
-  nome: string;
-  estoqueAtual: number;
-  estoqueMinimo: number;
-  ativo: boolean;
-}
-
 describe('ProdutosService', () => {
   let service: ProdutosService;
   let prisma: {
-    client: { produto: { findMany: jest.Mock } };
+    client: {
+      produto: { findMany: jest.Mock; count: jest.Mock; fields: { estoqueMinimo: string } };
+    };
   };
 
   beforeEach(async () => {
-    prisma = { client: { produto: { findMany: jest.fn() } } };
+    prisma = {
+      client: {
+        produto: {
+          findMany: jest.fn(),
+          count: jest.fn().mockResolvedValue(7),
+          fields: { estoqueMinimo: 'field-ref' },
+        },
+      },
+    };
 
     const moduleRef = await Test.createTestingModule({
       providers: [ProdutosService, { provide: PrismaService, useValue: prisma }],
@@ -27,18 +29,22 @@ describe('ProdutosService', () => {
   });
 
   describe('listarEmAlerta', () => {
-    it('filtra só produtos com estoqueAtual < estoqueMinimo', async () => {
-      const produtos: ProdutoMock[] = [
-        { id: 'p1', nome: 'Crítico', estoqueAtual: 1, estoqueMinimo: 10, ativo: true },
-        { id: 'p2', nome: 'OK', estoqueAtual: 50, estoqueMinimo: 10, ativo: true },
-        { id: 'p3', nome: 'Quase', estoqueAtual: 5, estoqueMinimo: 10, ativo: true },
-      ];
-      prisma.client.produto.findMany.mockResolvedValue(produtos);
-
-      const result = await service.listarEmAlerta();
-
-      expect(result.total).toBe(2);
-      expect(result.data.map((p) => p.id)).toEqual(['p1', 'p3']);
+    it('filtra abaixo do mínimo no banco antes de limitar e conta todos os alertas', async () => {
+      prisma.client.produto.findMany.mockResolvedValue([
+        { id: 'critical', estoqueAtual: 50, estoqueMinimo: 100 },
+      ]);
+      const result = await service.listarEmAlerta(1);
+      expect(result.total).toBe(7);
+      expect(result.data).toHaveLength(1);
+      expect(prisma.client.produto.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ estoqueAtual: { lt: 'field-ref' } }),
+          take: 1,
+        }),
+      );
+      expect(prisma.client.produto.count).toHaveBeenCalledWith({
+        where: expect.objectContaining({ estoqueAtual: { lt: 'field-ref' } }),
+      });
     });
 
     it('respeita o `limit` passado', async () => {
@@ -62,15 +68,14 @@ describe('ProdutosService', () => {
             ativo: true,
             estoqueMinimo: { gt: 0 },
           }),
-          orderBy: { estoqueAtual: 'asc' },
+          orderBy: [{ estoqueAtual: 'asc' }, { id: 'asc' }],
         }),
       );
     });
 
     it('retorna lista vazia quando nenhum produto está em alerta', async () => {
-      prisma.client.produto.findMany.mockResolvedValue([
-        { id: 'p1', nome: 'OK', estoqueAtual: 100, estoqueMinimo: 10, ativo: true },
-      ]);
+      prisma.client.produto.findMany.mockResolvedValue([]);
+      prisma.client.produto.count.mockResolvedValue(0);
 
       const result = await service.listarEmAlerta();
 

@@ -50,6 +50,8 @@ const ACAO_POR_METODO: Record<string, string> = {
  * `PermissionsGuard` exige uma exceção explícita ou nega por padrão.
  */
 export function permissaoDoRequest(path: string, method: string): string | null {
+  if (path.replace(/\/$/, '') === '/api/export/produtos/vencendo' && method === 'GET')
+    return 'estoque:read';
   if (path.replace(/\/$/, '') === '/api/cupons/validar' && method === 'POST') return 'cupons:read';
   const semPrefixo = path.replace(/^\/api\//, '');
   const segmento = semPrefixo.split('/').filter(Boolean)[0] ?? '';

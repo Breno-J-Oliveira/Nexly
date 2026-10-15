@@ -1,10 +1,13 @@
+import { TrimText } from '../../common/validation/trim-text';
 import { IsDateString, IsInt, IsNumber, IsOptional, IsString, Length, Min } from 'class-validator';
 
 export class CriarProdutoDto {
+  @TrimText()
   @IsString()
   @Length(2, 120)
   nome!: string;
 
+  @TrimText()
   @IsString()
   @Length(2, 60)
   sku!: string;
@@ -24,16 +27,19 @@ export class CriarProdutoDto {
   estoqueMinimo?: number;
 
   @IsOptional()
+  @TrimText({ nullable: true })
   @IsString()
   @Length(2, 60)
-  categoria?: string;
+  categoria?: string | null;
 
   @IsOptional()
-  @IsDateString()
-  dataVencimento?: string;
+  @TrimText({ nullable: true })
+  @IsDateString({ strict: true })
+  dataVencimento?: string | null;
 
   @IsOptional()
+  @TrimText({ nullable: true })
   @IsString()
   @Length(1, 60)
-  lote?: string;
+  lote?: string | null;
 }

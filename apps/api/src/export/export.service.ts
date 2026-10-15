@@ -1,5 +1,5 @@
 import { dateRange } from '../common/validation/date-range';
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { csvCell } from './csv';
 
@@ -39,10 +39,13 @@ export class ExportService {
   }
 
   async produtosVencendo(dias = 30) {
+    if (!Number.isInteger(dias) || dias < 0 || dias > 3650)
+      throw new BadRequestException('Dias deve ser um inteiro entre 0 e 3650');
     const limite = new Date();
-    limite.setDate(limite.getDate() + dias);
+    limite.setUTCDate(limite.getUTCDate() + dias);
+    limite.setUTCHours(23, 59, 59, 999);
     return this.prisma.client.produto.findMany({
-      where: { ativo: true, dataVencimento: { not: null, lte: limite, gte: new Date() } },
+      where: { ativo: true, dataVencimento: { not: null, lte: limite } },
       select: {
         id: true,
         nome: true,

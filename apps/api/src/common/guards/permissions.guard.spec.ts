@@ -27,4 +27,8 @@ describe('PermissionsGuard', () => {
     reflector.getAllAndOverride.mockReturnValueOnce(false).mockReturnValueOnce(['ADMIN']);
     expect(guard.canActivate(context('/api/usuarios', 'GET', 'CAIXA'))).toBe(false);
   });
+  it('caixa consulta validades sem ganhar acesso ao CSV de vendas', () => {
+    expect(guard.canActivate(context('/api/export/produtos/vencendo', 'GET', 'CAIXA'))).toBe(true);
+    expect(guard.canActivate(context('/api/export/vendas/csv', 'GET', 'CAIXA'))).toBe(false);
+  });
 });

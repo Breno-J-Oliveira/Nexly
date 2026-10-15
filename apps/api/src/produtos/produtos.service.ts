@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { dateRange } from '../common/validation/date-range';
 import { AtualizarProdutoDto } from './dto/atualizar-produto.dto';
 import { CriarProdutoDto } from './dto/criar-produto.dto';
 
@@ -23,7 +24,10 @@ export class ProdutosService {
         ? {
             dataVencimento: {
               not: null,
-              lte: new Date(Date.now() + filtros.vencendoEm * 86_400_000),
+              lte: dateRange(
+                new Date(Date.now() + filtros.vencendoEm * 86_400_000).toISOString().slice(0, 10),
+                new Date(Date.now() + filtros.vencendoEm * 86_400_000).toISOString().slice(0, 10),
+              ).fim,
             },
           }
         : {}),
@@ -42,7 +46,10 @@ export class ProdutosService {
         where,
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { nome: 'asc' },
+        orderBy:
+          filtros.vencendoEm !== undefined
+            ? [{ dataVencimento: 'asc' }, { id: 'asc' }]
+            : [{ nome: 'asc' }, { id: 'asc' }],
       }),
       this.prisma.client.produto.count({ where }),
     ]);
@@ -63,6 +70,15 @@ export class ProdutosService {
     return produto;
   }
 
+  async categorias() {
+    return this.prisma.client.produto.findMany({
+      where: { ativo: true, categoria: { not: null } },
+      distinct: ['categoria'],
+      select: { categoria: true },
+      orderBy: { categoria: 'asc' },
+    });
+  }
+
   async criar(dto: CriarProdutoDto) {
     try {
       return await this.prisma.client.produto.create({
@@ -73,7 +89,9 @@ export class ProdutosService {
           estoqueAtual: dto.estoqueAtual ?? 0,
           estoqueMinimo: dto.estoqueMinimo ?? 5,
           categoria: dto.categoria,
-          dataVencimento: dto.dataVencimento ? new Date(dto.dataVencimento) : null,
+          dataVencimento: dto.dataVencimento
+            ? dateRange(dto.dataVencimento.slice(0, 10), dto.dataVencimento.slice(0, 10)).inicio
+            : null,
           lote: dto.lote ?? null,
         } as Prisma.ProdutoUncheckedCreateInput,
       });
@@ -95,7 +113,11 @@ export class ProdutosService {
         estoqueMinimo: dto.estoqueMinimo,
         categoria: dto.categoria,
         ...(dto.dataVencimento !== undefined
-          ? { dataVencimento: dto.dataVencimento ? new Date(dto.dataVencimento) : null }
+          ? {
+              dataVencimento: dto.dataVencimento
+                ? dateRange(dto.dataVencimento.slice(0, 10), dto.dataVencimento.slice(0, 10)).inicio
+                : null,
+            }
           : {}),
         ...(dto.lote !== undefined ? { lote: dto.lote ?? null } : {}),
       },
@@ -128,15 +150,19 @@ export class ProdutosService {
    * a `limit` itens — útil para o dashboard exibir "Top N em risco".
    */
   async listarEmAlerta(limit = 20) {
-    const data = await this.prisma.client.produto.findMany({
-      where: {
-        ativo: true,
-        estoqueMinimo: { gt: 0 },
-      },
-      orderBy: { estoqueAtual: 'asc' },
-      take: limit,
-    });
-    const emAlerta = data.filter((p) => p.estoqueAtual < p.estoqueMinimo);
-    return { data: emAlerta, total: emAlerta.length };
+    const where: Prisma.ProdutoWhereInput = {
+      ativo: true,
+      estoqueMinimo: { gt: 0 },
+      estoqueAtual: { lt: this.prisma.client.produto.fields.estoqueMinimo },
+    };
+    const [data, total] = await Promise.all([
+      this.prisma.client.produto.findMany({
+        where,
+        orderBy: [{ estoqueAtual: 'asc' }, { id: 'asc' }],
+        take: limit,
+      }),
+      this.prisma.client.produto.count({ where }),
+    ]);
+    return { data, total };
   }
 }

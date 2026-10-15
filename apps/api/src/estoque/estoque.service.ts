@@ -163,7 +163,7 @@ export class EstoqueService {
     const produtosCriticos = produtos
       .filter((p) => p.estoqueAtual > 0 && p.estoqueAtual < p.estoqueMinimo)
       .map((p) => ({ id: p.id, nome: p.nome, estoqueAtual: p.estoqueAtual }));
-    const produtosAbaixoDoMinimo = produtosCriticos.length + produtosZerados;
+    const produtosAbaixoDoMinimo = produtos.filter((p) => p.estoqueAtual < p.estoqueMinimo).length;
     const valorTotalEstoque = produtos.reduce(
       (acc, p) => acc + p.estoqueAtual * Number(p.preco),
       0,
