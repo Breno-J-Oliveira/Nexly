@@ -1,5 +1,8 @@
 'use client';
 
+import { hasPermission } from '@nexly/shared';
+import { useAuth } from '@/lib/auth';
+
 import { PageToolbar } from '@/components/ui/PageToolbar';
 
 import { useCallback, useEffect, useState } from 'react';
@@ -56,7 +59,9 @@ const vazio: FormState = {
   lote: '',
 };
 
-function vencimentoInfo(p: Produto): { label: string; tone: 'warning' | 'danger' | 'vencido' } | null {
+function vencimentoInfo(
+  p: Produto,
+): { label: string; tone: 'warning' | 'danger' | 'vencido' } | null {
   if (!p.dataVencimento) return null;
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
@@ -79,6 +84,10 @@ const moeda = (v: number): string =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
 export default function ProdutosPage() {
+  const { user } = useAuth();
+  const podeCriar = hasPermission(user?.role, 'estoque:create');
+  const podeEditar = hasPermission(user?.role, 'estoque:update');
+  const podeExcluir = hasPermission(user?.role, 'estoque:delete');
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [busca, setBusca] = useState('');
   const [carregando, setCarregando] = useState(true);
@@ -182,7 +191,7 @@ export default function ProdutosPage() {
         });
       }
       setModalAberto(false);
-    toastSuccess(editandoId ? 'Produto atualizado!' : 'Produto criado!');
+      toastSuccess(editandoId ? 'Produto atualizado!' : 'Produto criado!');
       await carregar(busca || undefined);
     } catch (e) {
       const err = e as { response?: { data?: { message?: string } } };
@@ -200,16 +209,18 @@ export default function ProdutosPage() {
 
   return (
     <div>
-      <PageToolbar><div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-[#FAFAFA]">Produtos</h2>
-          <p className="mt-1 text-sm text-[#A1A1AA]">
-            Controle de produtos e estoque · {totalProdutos}{' '}
-            {totalProdutos === 1 ? 'cadastrado' : 'cadastrados'}
-          </p>
+      <PageToolbar>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-[#FAFAFA]">Produtos</h2>
+            <p className="mt-1 text-sm text-[#A1A1AA]">
+              Controle de produtos e estoque · {totalProdutos}{' '}
+              {totalProdutos === 1 ? 'cadastrado' : 'cadastrados'}
+            </p>
+          </div>
+          {podeCriar && <Button onClick={abrirNovo}>+ Novo produto</Button>}
         </div>
-        <Button onClick={abrirNovo}>+ Novo produto</Button>
-      </div></PageToolbar>
+      </PageToolbar>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <div className="max-w-md flex-1">
@@ -290,19 +301,31 @@ export default function ProdutosPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button variant="ghost" className="mr-1 text-xs" onClick={() => void abrirHistorico(p)}>
-                      Histórico
-                    </Button>
-                    <Button variant="ghost" className="mr-1 text-xs" onClick={() => abrirEdicao(p)}>
-                      Editar
-                    </Button>
                     <Button
                       variant="ghost"
-                      className="text-xs text-red-400"
-                      onClick={() => void excluir(p)}
+                      className="mr-1 text-xs"
+                      onClick={() => void abrirHistorico(p)}
                     >
-                      Excluir
+                      Histórico
                     </Button>
+                    {podeEditar && (
+                      <Button
+                        variant="ghost"
+                        className="mr-1 text-xs"
+                        onClick={() => abrirEdicao(p)}
+                      >
+                        Editar
+                      </Button>
+                    )}
+                    {podeExcluir && (
+                      <Button
+                        variant="ghost"
+                        className="text-xs text-red-400"
+                        onClick={() => void excluir(p)}
+                      >
+                        Excluir
+                      </Button>
+                    )}
                   </td>
                 </tr>
               );

@@ -62,6 +62,11 @@ describe('ServicosService', () => {
       await expect(service.obter('x')).rejects.toThrow(NotFoundException);
     });
 
+    it('consulta básica não carrega o estoque dos insumos', async () => {
+      servico.findFirst.mockResolvedValue({ id: 's1' });
+      await service.obter('s1', false);
+      expect(servico.findFirst.mock.calls[0][0]).not.toHaveProperty('include');
+    });
     it('retorna serviço com insumos e produtos incluídos', async () => {
       servico.findFirst.mockResolvedValue({ id: 's1', insumos: [] });
       await service.obter('s1');

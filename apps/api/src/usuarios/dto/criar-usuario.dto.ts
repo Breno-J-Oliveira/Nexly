@@ -1,12 +1,16 @@
-import { IsEmail, IsEnum, IsOptional, IsString, Length } from 'class-validator';
+import { TrimText } from '../../common/validation/trim-text';
+import { IsEmail, IsEnum, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 import { Role } from '@nexly/shared';
 
 export class CriarUsuarioDto {
   @IsString()
   @Length(2, 120)
+  @TrimText()
   nome!: string;
 
   @IsEmail()
+  @TrimText({ lowercase: true })
+  @MaxLength(254)
   email!: string;
 
   @IsString()

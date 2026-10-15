@@ -1,5 +1,9 @@
 'use client';
 
+import { hasPermission } from '@nexly/shared';
+import { useAuth } from '@/lib/auth';
+import { toastSuccess, toastError } from '@/components/ui/Toaster';
+
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
@@ -43,7 +47,20 @@ const brl = (v: number): string =>
 function formatarData(d: string): string {
   const dt = new Date(d);
   if (Number.isNaN(dt.getTime())) return '—';
-  const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const meses = [
+    'jan',
+    'fev',
+    'mar',
+    'abr',
+    'mai',
+    'jun',
+    'jul',
+    'ago',
+    'set',
+    'out',
+    'nov',
+    'dez',
+  ];
   const dia = String(dt.getDate()).padStart(2, '0');
   const hora = String(dt.getHours()).padStart(2, '0');
   const min = String(dt.getMinutes()).padStart(2, '0');
@@ -54,7 +71,20 @@ function formatarDesde(d: string | undefined): string {
   if (!d) return '—';
   const dt = new Date(d);
   if (Number.isNaN(dt.getTime())) return '—';
-  const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const meses = [
+    'jan',
+    'fev',
+    'mar',
+    'abr',
+    'mai',
+    'jun',
+    'jul',
+    'ago',
+    'set',
+    'out',
+    'nov',
+    'dez',
+  ];
   return `${meses[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
@@ -67,6 +97,12 @@ function iniciais(nome: string): string {
 }
 
 export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }: Props) {
+  const { user } = useAuth();
+  const podeEditar = hasPermission(user?.role, 'clientes:update');
+  const podeAgendar = hasPermission(user?.role, 'agenda:create');
+  const [erroMetricas, setErroMetricas] = useState(false);
+  const [erroHistorico, setErroHistorico] = useState(false);
+  const [tentativaDados, setTentativaDados] = useState(0);
   const [aba, setAba] = useState<'historico' | 'observacoes'>('historico');
   const [metricas, setMetricas] = useState<Metricas | null>(null);
   const [historico, setHistorico] = useState<HistoricoItem[]>([]);
@@ -87,29 +123,51 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }:
     setAba('historico');
 
     setCarregandoMetricas(true);
+    setMetricas(null);
+    setErroMetricas(false);
     setCarregandoHistorico(true);
+    setHistorico([]);
+    setErroHistorico(false);
     api
       .get<Metricas>(`/clientes/${id}/metricas`)
-      .then((r) => { if (active) setMetricas(r.data); })
-      .catch(() => undefined)
-      .finally(() => { if (active) setCarregandoMetricas(false); });
+      .then((r) => {
+        if (active) setMetricas(r.data);
+      })
+      .catch(() => {
+        if (active) setErroMetricas(true);
+      })
+      .finally(() => {
+        if (active) setCarregandoMetricas(false);
+      });
     api
       .get<HistoricoItem[]>(`/clientes/${id}/historico`)
-      .then((r) => { if (active) setHistorico(r.data); })
-      .catch(() => undefined)
-      .finally(() => { if (active) setCarregandoHistorico(false); });
-    return () => { active = false; };
-  }, [aberto, id, cliente?.observacoes]);
+      .then((r) => {
+        if (active) setHistorico(r.data);
+      })
+      .catch(() => {
+        if (active) setErroHistorico(true);
+      })
+      .finally(() => {
+        if (active) setCarregandoHistorico(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [aberto, id, cliente?.observacoes, tentativaDados]);
 
   useEffect(() => {
     if (!aberto) setMetricas(null);
   }, [aberto]);
 
   const salvarObservacao = async (): Promise<void> => {
-    if (!id) return;
+    if (!id || !podeEditar || salvandoObs) return;
     setSalvandoObs(true);
     try {
       await api.put(`/clientes/${id}`, { observacoes });
+      toastSuccess('Observações salvas');
+      onAtualizar?.();
+    } catch {
+      toastError('Não foi possível salvar as observações. Tente novamente.');
     } finally {
       setSalvandoObs(false);
     }
@@ -136,7 +194,11 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }:
 
       {/* Drawer */}
       <div
-        className={inline ? 'flex h-[calc(100dvh-136px)] min-h-[620px] min-w-0 flex-col overflow-hidden rounded-xl bg-[#111116]' : 'fixed right-0 top-0 flex h-screen w-[min(400px,100vw)] flex-col bg-[#111116] transition-transform duration-200 ease-out'}
+        className={
+          inline
+            ? 'flex h-[calc(100dvh-136px)] min-h-[620px] min-w-0 flex-col overflow-hidden rounded-xl bg-[#111116]'
+            : 'fixed right-0 top-0 flex h-screen w-[min(400px,100vw)] flex-col bg-[#111116] transition-transform duration-200 ease-out'
+        }
         style={{
           borderLeft: '1px solid rgba(255,255,255,0.06)',
           zIndex: 40,
@@ -147,7 +209,10 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }:
         {cliente && (
           <>
             {/* Header */}
-            <div className={`flex items-center gap-3 border-b px-5 py-5 ${inline ? 'flex-col text-center' : ''}`} style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+            <div
+              className={`flex items-center gap-3 border-b px-5 py-5 ${inline ? 'flex-col text-center' : ''}`}
+              style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+            >
               <div
                 className={`flex shrink-0 items-center justify-center rounded-full font-semibold ${inline ? 'h-20 w-20 border-2 border-[#818CF8] text-xl' : 'h-10 w-10 text-sm'}`}
                 style={{ backgroundColor: '#6366F1', color: '#FFFFFF' }}
@@ -158,63 +223,106 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }:
                 <p className="truncate text-base font-semibold" style={{ color: '#FAFAFA' }}>
                   {cliente.nome}
                 </p>
-                <p className="text-xs" style={{ color: '#71717A' }}>
+                <p className="text-xs" style={{ color: '#A1A1AA' }}>
                   Cliente desde {formatarDesde(cliente.createdAt)}
                 </p>
               </div>
-              {!inline && <button
-                onClick={onClose}
-                aria-label="Fechar"
-                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-white/5"
-                style={{ color: '#A1A1AA' }}
-              >
-                ✕
-              </button>}
+              {!inline && (
+                <button
+                  onClick={onClose}
+                  aria-label="Fechar"
+                  className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-white/5"
+                  style={{ color: '#A1A1AA' }}
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
             {/* Conteúdo */}
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-              {inline && <div className="mb-5 space-y-2 text-[13px] text-[#A1A1AA]"><p className="mb-3 text-xs font-medium text-[#71717A]">INFORMAÇÕES DE CONTATO</p><p className="break-all">Email: {cliente.email || 'Não informado'}</p><p>Telefone: {cliente.telefone || 'Não informado'}</p><p>Total Gasto: {brl(metricas?.totalGasto ?? 0)}</p></div>}
+              {inline && (
+                <div className="mb-5 space-y-2 text-[13px] text-[#A1A1AA]">
+                  <p className="mb-3 text-xs font-medium text-[#71717A]">INFORMAÇÕES DE CONTATO</p>
+                  <p className="break-all">Email: {cliente.email || 'Não informado'}</p>
+                  <p>Telefone: {cliente.telefone || 'Não informado'}</p>
+                  <p>Total Gasto: {metricas ? brl(metricas.totalGasto) : '—'}</p>
+                </div>
+              )}
               {/* Stat boxes */}
               <div className={inline ? 'hidden' : 'grid grid-cols-2 gap-3'}>
-                <div className="rounded-xl p-4" style={{ backgroundColor: '#0C0C10', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <p className="text-xs" style={{ color: '#71717A' }}>Total de visitas</p>
+                <div
+                  className="rounded-xl p-4"
+                  style={{ backgroundColor: '#0C0C10', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <p className="text-xs" style={{ color: '#A1A1AA' }}>
+                    Total de visitas
+                  </p>
                   <p className="mt-1 text-2xl font-semibold" style={{ color: '#FAFAFA' }}>
-                    {carregandoMetricas ? '…' : metricas?.totalVisitas ?? 0}
+                    {carregandoMetricas ? '…' : (metricas?.totalVisitas ?? '—')}
                   </p>
                 </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: '#0C0C10', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <p className="text-xs" style={{ color: '#71717A' }}>Total gasto</p>
+                <div
+                  className="rounded-xl p-4"
+                  style={{ backgroundColor: '#0C0C10', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <p className="text-xs" style={{ color: '#A1A1AA' }}>
+                    Total gasto
+                  </p>
                   <p className="mt-1 text-2xl font-semibold" style={{ color: '#FAFAFA' }}>
-                    {carregandoMetricas ? '…' : brl(metricas?.totalGasto ?? 0)}
+                    {carregandoMetricas ? '…' : metricas ? brl(metricas.totalGasto) : '—'}
                   </p>
                 </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: '#0C0C10', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <p className="text-xs" style={{ color: '#71717A' }}>Ticket médio</p>
+                <div
+                  className="rounded-xl p-4"
+                  style={{ backgroundColor: '#0C0C10', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <p className="text-xs" style={{ color: '#A1A1AA' }}>
+                    Ticket médio
+                  </p>
                   <p className="mt-1 text-2xl font-semibold" style={{ color: '#FAFAFA' }}>
-                    {carregandoMetricas ? '…' : brl(metricas?.ticketMedio ?? 0)}
+                    {carregandoMetricas ? '…' : metricas ? brl(metricas.ticketMedio) : '—'}
                   </p>
                 </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: '#0C0C10', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <p className="text-xs" style={{ color: '#71717A' }}>Frequência</p>
+                <div
+                  className="rounded-xl p-4"
+                  style={{ backgroundColor: '#0C0C10', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <p className="text-xs" style={{ color: '#A1A1AA' }}>
+                    Frequência
+                  </p>
                   <p className="mt-1 text-2xl font-semibold" style={{ color: '#FAFAFA' }}>
                     {carregandoMetricas ? '…' : frequenciaTexto}
                   </p>
                 </div>
               </div>
-              {/* Serviço favorito */}
-              {!carregandoMetricas && metricas && metricas.totalVisitas > 0 && metricas.servicoFavorito && (
-                <div
-                  className="mt-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm"
-                  style={{ backgroundColor: '#0C0C10', border: '1px solid rgba(255,255,255,0.06)' }}
-                >
-                  <span className="text-base">⭐</span>
-                  <span style={{ color: '#71717A' }}>Serviço favorito:</span>
-                  <span className="font-semibold" style={{ color: '#FAFAFA' }}>
-                    {metricas.servicoFavorito.nome}
-                  </span>
+              {(erroMetricas || erroHistorico) && (
+                <div role="alert" className="mt-4 text-sm text-red-300">
+                  Algumas informações não puderam ser carregadas.{' '}
+                  <Button variant="ghost" onClick={() => setTentativaDados((v) => v + 1)}>
+                    Tentar novamente
+                  </Button>
                 </div>
               )}
+              {/* Serviço favorito */}
+              {!carregandoMetricas &&
+                metricas &&
+                metricas.totalVisitas > 0 &&
+                metricas.servicoFavorito && (
+                  <div
+                    className="mt-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm"
+                    style={{
+                      backgroundColor: '#0C0C10',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }}
+                  >
+                    <span className="text-base">⭐</span>
+                    <span style={{ color: '#A1A1AA' }}>Serviço favorito:</span>
+                    <span className="font-semibold" style={{ color: '#FAFAFA' }}>
+                      {metricas.servicoFavorito.nome}
+                    </span>
+                  </div>
+                )}
 
               {/* Abas */}
               <div className="mt-5 flex border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
@@ -228,7 +336,7 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }:
                       style={
                         ativa
                           ? { color: '#818CF8', borderBottom: '2px solid #6366F1' }
-                          : { color: '#71717A', borderBottom: '2px solid transparent' }
+                          : { color: '#A1A1AA', borderBottom: '2px solid transparent' }
                       }
                     >
                       {t === 'historico' ? 'Histórico' : 'Observações'}
@@ -246,8 +354,10 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }:
                           <div key={i} className="h-16 rounded-xl skeleton-shimmer" />
                         ))}
                       </>
+                    ) : erroHistorico ? (
+                      <p className="text-sm text-[#A1A1AA]">Histórico indisponível.</p>
                     ) : historico.length === 0 ? (
-                      <p className="py-6 text-center text-sm" style={{ color: '#71717A' }}>
+                      <p className="py-6 text-center text-sm" style={{ color: '#A1A1AA' }}>
                         Nenhum atendimento registrado ainda.
                       </p>
                     ) : (
@@ -255,10 +365,13 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }:
                         <div
                           key={h.id}
                           className="rounded-xl p-4"
-                          style={{ backgroundColor: '#0C0C10', border: '1px solid rgba(255,255,255,0.06)' }}
+                          style={{
+                            backgroundColor: '#0C0C10',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                          }}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-xs" style={{ color: '#71717A' }}>
+                            <span className="text-xs" style={{ color: '#A1A1AA' }}>
                               {formatarData(h.dataHora)}
                             </span>
                             <span
@@ -272,11 +385,14 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }:
                               {h.status === 'CONCLUIDO' ? 'Concluído' : 'Cancelado'}
                             </span>
                           </div>
-                          <p className="mt-1.5 text-[13px] font-semibold" style={{ color: '#FAFAFA' }}>
+                          <p
+                            className="mt-1.5 text-[13px] font-semibold"
+                            style={{ color: '#FAFAFA' }}
+                          >
                             {h.servico.nome}
                           </p>
                           <div className="mt-0.5 flex items-center justify-between">
-                            <span className="text-xs" style={{ color: '#71717A' }}>
+                            <span className="text-xs" style={{ color: '#A1A1AA' }}>
                               {h.profissional.nome}
                             </span>
                             <span className="text-[13px] font-medium" style={{ color: '#FAFAFA' }}>
@@ -290,6 +406,9 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }:
                 ) : (
                   <div className="space-y-3">
                     <textarea
+                      aria-label="Observações do cliente"
+                      readOnly={!podeEditar}
+                      maxLength={2000}
                       value={observacoes}
                       onChange={(e) => setObservacoes(e.target.value)}
                       placeholder="Anotações sobre o cliente (preferências, alergias, observações importantes)..."
@@ -301,30 +420,37 @@ export function ClienteDrawer({ cliente, onClose, onAtualizar, inline = false }:
                         color: '#FAFAFA',
                       }}
                     />
-                    <Button
-                      onClick={() => void salvarObservacao()}
-                      loading={salvandoObs}
-                      disabled={observacoes === (cliente.observacoes ?? '')}
-                    >
-                      Salvar observação
-                    </Button>
+                    {podeEditar && (
+                      <Button
+                        onClick={() => void salvarObservacao()}
+                        loading={salvandoObs}
+                        disabled={observacoes === (cliente.observacoes ?? '')}
+                      >
+                        Salvar observação
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
             </div>
 
             {/* Rodapé fixo */}
-            <div className="border-t p-4" style={{ borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#111116' }}>
-              <Button
-                className="w-full"
-                variant="primary"
-                onClick={() => {
-                  setAgendandoPara(cliente);
-                  onClose();
-                }}
-              >
-                + Novo agendamento para este cliente
-              </Button>
+            <div
+              className="border-t p-4"
+              style={{ borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#111116' }}
+            >
+              {podeAgendar && (
+                <Button
+                  className="w-full"
+                  variant="primary"
+                  onClick={() => {
+                    setAgendandoPara(cliente);
+                    onClose();
+                  }}
+                >
+                  + Novo agendamento para este cliente
+                </Button>
+              )}
             </div>
           </>
         )}

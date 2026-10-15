@@ -1,9 +1,10 @@
 'use client';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
-import { MODULE_IDS, ModuleId, routeModule } from '@nexly/shared';
+import { MODULE_IDS, ModuleId, routeModule, canAccessWorkspaceRoute } from '@nexly/shared';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { api } from './api';
+import { useAuth } from './auth';
 import { ErrorState } from '@/components/ui/ErrorState';
 
 export interface Recommendation {
@@ -95,6 +96,23 @@ export const useWorkspace = () => useContext(Context);
 export function WorkspaceGate({ children }: { children: ReactNode }) {
   const path = usePathname();
   const { enabled } = useWorkspace();
+  const { user } = useAuth();
+  if (!canAccessWorkspaceRoute(path, user?.role ?? ''))
+    return (
+      <section className="rounded-2xl border border-white/10 bg-[#111116] p-6 sm:p-8">
+        <h2 className="text-xl font-semibold">Seu perfil não tem acesso a esta área</h2>
+        <p className="mt-3 max-w-xl text-sm text-[#A1A1AA]">
+          Peça ao administrador do seu negócio para revisar sua função se precisar trabalhar com
+          este recurso.
+        </p>
+        <Link
+          href="/dashboard"
+          className="mt-5 inline-block rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-white"
+        >
+          Voltar ao painel
+        </Link>
+      </section>
+    );
   return enabled(path) ? (
     children
   ) : (

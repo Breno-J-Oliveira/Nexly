@@ -4,3 +4,4 @@ export * from './dto';
 export * from './auth';
 export * from './utils';
 export * from './workspace';
+export * from './permissions';

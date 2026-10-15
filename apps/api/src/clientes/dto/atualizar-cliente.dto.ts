@@ -1,19 +1,24 @@
-import { IsEmail, IsOptional, IsString, Length } from 'class-validator';
+import { TrimText } from '../../common/validation/trim-text';
+import { IsEmail, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 
 export class AtualizarClienteDto {
   @IsOptional()
   @IsString()
   @Length(2, 120)
+  @TrimText()
   nome?: string;
 
   @IsOptional()
   @IsString()
   @Length(8, 20)
-  telefone?: string;
+  @TrimText({ nullable: true })
+  telefone?: string | null;
 
   @IsOptional()
   @IsEmail()
-  email?: string;
+  @MaxLength(254)
+  @TrimText({ nullable: true, lowercase: true })
+  email?: string | null;
 
   @IsOptional()
   @IsString()

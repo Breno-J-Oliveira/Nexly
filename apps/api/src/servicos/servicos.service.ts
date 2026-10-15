@@ -16,12 +16,10 @@ export class ServicosService {
     });
   }
 
-  async obter(id: string) {
+  async obter(id: string, incluirInsumos = true) {
     const servico = await this.prisma.client.servico.findFirst({
       where: { id, ativo: true },
-      include: {
-        insumos: { include: { produto: true } },
-      },
+      ...(incluirInsumos ? { include: { insumos: { include: { produto: true } } } } : {}),
     });
     if (!servico) {
       throw new NotFoundException('Serviço não encontrado');
