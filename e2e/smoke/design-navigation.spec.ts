@@ -16,6 +16,7 @@ const protectedRoutes = [
   'comissao',
   'fidelidade',
   'estoque/pedidos',
+  'meu-nexly',
 ];
 const publicRoutes = [
   '',
@@ -52,6 +53,11 @@ for (const width of [1440, 390]) {
     for (const route of [...protectedRoutes, ...publicRoutes]) {
       const response = await page.goto(`/${route}`);
       expect(response?.status(), route).toBeLessThan(400);
+      if (protectedRoutes.includes(route)) {
+        await expect(
+          page.getByRole('navigation', { name: 'Menu principal', exact: true }),
+        ).toBeAttached();
+      }
       await expect(page.locator('body')).not.toBeEmpty();
       await page.evaluate(() => document.fonts.ready);
       // Wait for hydration/route-owned controls, then check document-level overflow.

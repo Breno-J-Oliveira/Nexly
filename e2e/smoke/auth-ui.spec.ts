@@ -29,20 +29,26 @@ test('login tem campos associados e navegação acessível no mobile', async ({ 
 test('cadastro chega à revisão sem pedir cartão e exige aceite', async ({ page }) => {
   await page.goto('/cadastro');
   await expect(page.getByRole('button', { name: 'Continuar', exact: true })).toBeEnabled();
-  await page.getByLabel('Nome do responsável', { exact: true }).fill('Pessoa de teste');
   await page.getByLabel('E-mail', { exact: true }).fill('teste@example.test');
   await page.getByLabel('Senha', { exact: true }).fill('SenhaSegura123!');
-  await page.getByLabel('Confirmar senha', { exact: true }).fill('SenhaSegura123!');
   await page.getByRole('button', { name: 'Continuar', exact: true }).click();
   await page.getByLabel('Nome da empresa', { exact: true }).fill('Empresa de teste');
-  await page.getByLabel('CNPJ', { exact: true }).fill('11.222.333/0001-81');
-  await page.getByLabel('Telefone do negócio').fill('(11) 99999-9999');
-  await page.getByLabel('Segmento').selectOption('salao');
-  await page.getByLabel('Cidade').fill('São Paulo');
+  await page.getByLabel('Segmento').selectOption('psicologia');
+  await page.getByRole('button', { name: 'Continuar', exact: true }).click();
+  await expect(page.getByLabel('Modelo do negócio')).toHaveValue('psicologia');
+  await expect(page.getByRole('button', { name: /^PDV/ })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('button', { name: /^Agenda/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await page.getByRole('button', { name: 'Continuar', exact: true }).click();
   await expect(page.getByText('Acesso gratuito', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Continuar', exact: true }).click();
   await expect(page.getByText('Confira seu cadastro')).toBeVisible();
+  await page.getByLabel('Nome do responsável', { exact: true }).fill('Pessoa de teste');
+  await page.getByLabel('CNPJ', { exact: true }).fill('11.222.333/0001-81');
+  await page.getByLabel('Telefone do negócio').fill('(11) 99999-9999');
+  await page.getByLabel('Cidade', { exact: true }).fill('São Paulo');
   await expect(page.getByLabel('Número do cartão')).toHaveCount(0);
   await expect(page.getByLabel('CVV')).toHaveCount(0);
   await page.getByRole('button', { name: 'Criar conta e acessar' }).click();
