@@ -114,7 +114,7 @@ test('six operational modules persist and complete their workflows', async ({ pa
     });
     await page.evaluate(() => {
       window.print = () => {
-        void (window as Window & { recordPrint: () => Promise<void> }).recordPrint();
+        void (window as Window & { recordPrint?: () => Promise<void> }).recordPrint?.();
       };
     });
     await dialog.getByRole('button', { name: 'Imprimir / Salvar PDF', exact: true }).click();

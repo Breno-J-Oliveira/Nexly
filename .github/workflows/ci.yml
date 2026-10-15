@@ -64,6 +64,7 @@ jobs:
       - run: npm run build --workspace @nexly/shared
       - run: npx prisma generate --schema apps/api/prisma/schema.prisma
       - run: cd apps/api && npx tsc --noEmit
+      - run: npm run typecheck:e2e
 
   typecheck-web:
     name: Typecheck Web

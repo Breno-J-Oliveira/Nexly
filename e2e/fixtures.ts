@@ -22,3 +22,4 @@ export const test = base.extend<{ humanRequestPacing: void }>({
 });
 
 export { expect };
+export type { Page } from '@playwright/test';
