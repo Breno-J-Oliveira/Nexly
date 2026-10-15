@@ -107,6 +107,7 @@ CREATED_DB=1
 echo "[restore] restaurando (pg_restore)"
 pg_restore \
   --dbname="${TEST_URL}" \
+  --clean --if-exists \
   --no-owner \
   --no-acl \
   --exit-on-error \
