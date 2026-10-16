@@ -26,13 +26,16 @@ jobs:
         if: matrix.app == 'api'
         run: |
           test "$(docker image inspect nexly-api:test --format '{{.Config.User}}')" = node
-          docker run --rm --workdir /app/apps/api --entrypoint node nexly-api:test -e "require('@nestjs/core'); require('@nexly/shared'); require('@prisma/client'); console.log('Módulos do backend disponíveis')"
+          docker run --rm --workdir /app/apps/api --entrypoint node \
+            -e NODE_ENV=test -e DATABASE_URL=postgresql://unit:unit@localhost/nexly_test \
+            -e REDIS_URL=redis://localhost:6379 nexly-api:test \
+            -e "require('./dist/src/app.module.js'); console.log('Todos os módulos da API disponíveis na imagem de produção')"
           docker run --rm --entrypoint npm nexly-api:test exec --offline --workspace @nexly/api -- prisma --version
       - name: Confere usuário e arquivos do frontend
         if: matrix.app == 'web'
         run: |
           test "$(docker image inspect nexly-web:test --format '{{.Config.User}}')" = node
-          docker run --rm --workdir /app/apps/web --entrypoint node nexly-web:test -e "const fs=require('fs'); require('next'); if(!fs.existsSync('next.config.mjs')||!fs.existsSync('content/blog'))process.exit(1); console.log('Frontend disponível')"
+          docker run --rm --workdir /app/apps/web --entrypoint node nexly-web:test -e "const fs=require('fs'); require('next'); require('framer-motion'); require('sonner'); if(!fs.existsSync('next.config.mjs')||!fs.existsSync('content/blog'))process.exit(1); console.log('Frontend disponível')"
   typecheck-api:
     name: Typecheck API
     runs-on: ubuntu-latest
@@ -217,7 +220,7 @@ jobs:
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    timeout-minutes: 25
     needs: [typecheck-api, typecheck-web, lint, test-api]
     services:
       postgres:
@@ -249,6 +252,7 @@ jobs:
       BASE_URL: http://localhost:3000
       CORS_ORIGIN: http://localhost:3000
       NEXT_PUBLIC_API_URL: http://localhost:3001
+      WHATSAPP_PROVIDER: disabled
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
