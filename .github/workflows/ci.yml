@@ -31,6 +31,15 @@ jobs:
             -e REDIS_URL=redis://localhost:6379 nexly-api:test \
             -e "require('./dist/src/app.module.js'); console.log('Todos os módulos da API disponíveis na imagem de produção')"
           docker run --rm --entrypoint npm nexly-api:test exec --offline --workspace @nexly/api -- prisma --version
+          python - <<'PY'
+          import json, pathlib, shlex, subprocess
+          config = json.loads(pathlib.Path('railway.json').read_text())
+          command = shlex.split(config['deploy']['startCommand'])
+          docker_cmd = json.loads([line[4:] for line in pathlib.Path('apps/api/Dockerfile').read_text().splitlines() if line.startswith('CMD ')][-1])
+          assert config['build']['builder'] == 'DOCKERFILE'
+          assert command[0] == '/bin/sh' and command[1:] == docker_cmd[1:]
+          subprocess.run(['docker', 'run', '--rm', '--entrypoint', command[0], 'nexly-api:test', '-n', '-c', command[2]], check=True)
+          PY
       - name: Confere usuário e arquivos do frontend
         if: matrix.app == 'web'
         run: |
