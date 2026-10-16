@@ -4,7 +4,7 @@ import { PageToolbar } from '@/components/ui/PageToolbar';
 
 import { StatusAgendamento, type PendenciaEstoque } from '@nexly/shared';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
@@ -53,7 +53,6 @@ export default function AgendaPage() {
 }
 
 function AgendaContent() {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -99,7 +98,8 @@ function AgendaContent() {
     profissionalId?: string;
     status?: StatusAgendamento | '';
   }): void => {
-    const params = new URLSearchParams(searchParams.toString());
+    // A URL muda sincronamente, mesmo com duas alterações antes do próximo render.
+    const params = new URLSearchParams(window.location.search);
     if (patch.profissionalId !== undefined) {
       if (patch.profissionalId) params.set('profissionalId', patch.profissionalId);
       else params.delete('profissionalId');
@@ -109,7 +109,11 @@ function AgendaContent() {
       else params.delete('status');
     }
     const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname);
+    window.history.replaceState(
+      null,
+      '',
+      (query ? `${pathname}?${query}` : pathname) + window.location.hash,
+    );
   };
 
   const carregar = useCallback(async () => {

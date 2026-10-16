@@ -107,8 +107,22 @@ test('calendar filters, late appointments, mobile creation and cancellation work
     await expect(page.locator('[data-appointment-id]')).toHaveCount(1);
     await page.getByRole('button', { name: 'Concluído', exact: true }).click();
     await expect(page.locator('[data-appointment-id]')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Todos', exact: true }).click();
-    await page.getByLabel('Filtrar por profissional').selectOption('');
+    // Mesma rodada do navegador: reproduz duas mudanças antes da navegação/render anterior.
+    await page.evaluate(() => {
+      const todos = Array.from(document.querySelectorAll('button')).find(
+        (button) => button.textContent?.trim() === 'Todos',
+      );
+      const profissional = document.querySelector<HTMLSelectElement>(
+        'select[aria-label="Filtrar por profissional"]',
+      );
+      if (!todos || !profissional) throw new Error('Controles de filtro não encontrados');
+      todos.click();
+      profissional.value = '';
+      profissional.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await expect(page).toHaveURL(
+      (url) => !url.searchParams.has('status') && !url.searchParams.has('profissionalId'),
+    );
     await expect(page.locator('[data-appointment-id]')).toHaveCount(3);
     await expect(page.locator(`[data-appointment-id="${n.id}"]`)).toBeAttached();
     const boxA = await page.locator(`[data-appointment-id="${a.id}"]`).boundingBox();
