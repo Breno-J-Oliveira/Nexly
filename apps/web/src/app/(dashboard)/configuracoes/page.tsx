@@ -119,6 +119,9 @@ function acaoBadge(acao: string) {
 
 export default function ConfiguracoesPage() {
   const [secao, setSecao] = useState<Secao>('perfil');
+  const [carregandoConfiguracoes, setCarregandoConfiguracoes] = useState(true);
+  const [erroConfiguracoes, setErroConfiguracoes] = useState(false);
+  const [tentativaConfiguracoes, setTentativaConfiguracoes] = useState(0);
 
   const [empresa, setEmpresa] = useState({
     nome: '',
@@ -191,9 +194,11 @@ export default function ConfiguracoesPage() {
   const [privacidadeSalvando, setPrivacidadeSalvando] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
     api
-      .get('/configuracoes')
+      .get('/configuracoes', { signal: controller.signal })
       .then((r) => {
+        if (controller.signal.aborted) return;
         const d = r.data ?? {};
         const fusoSalvo: unknown = d.fusoHorario;
         setFusoHorario(typeof fusoSalvo === 'string' ? fusoSalvo : 'America/Sao_Paulo');
@@ -215,12 +220,22 @@ export default function ConfiguracoesPage() {
         if (d.horarios) setHorarios(d.horarios as Record<string, { abre: string; fecha: string; aberto: boolean }>);
         if (d.notificacoes) setNotificacoes(d.notificacoes as Record<string, { ativo?: boolean; template?: string }>);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!controller.signal.aborted) setErroConfiguracoes(true);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCarregandoConfiguracoes(false);
+      });
     api
-      .get<NonNullable<typeof whatsappStatus>>('/whatsapp/status')
-      .then((r) => setWhatsappStatus(r.data ?? null))
-      .catch(() => setWhatsappStatus({ provider: 'unknown', enabled: false, mode: 'unavailable' }));
-  }, []);
+      .get<NonNullable<typeof whatsappStatus>>('/whatsapp/status', { signal: controller.signal })
+      .then((r) => {
+        if (!controller.signal.aborted) setWhatsappStatus(r.data ?? null);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setWhatsappStatus({ provider: 'unknown', enabled: false, mode: 'unavailable' });
+      });
+    return () => controller.abort();
+  }, [tentativaConfiguracoes]);
 
   const setEmp = (k: keyof typeof empresa, v: string) =>
     setEmpresa((prev) => ({ ...prev, [k]: v }));
@@ -586,6 +601,19 @@ return (
 
       {/* Conteúdo */}
       <div className="min-w-0 flex-1">
+        {carregandoConfiguracoes ? (
+          <p role="status" className="rounded-xl border border-white/10 bg-[#111116] p-6 text-sm text-[#A1A1AA]">Carregando configurações…</p>
+        ) : erroConfiguracoes ? (
+          <div role="alert" className="space-y-4 rounded-xl border border-white/10 bg-[#111116] p-6">
+            <p className="text-sm text-[#A1A1AA]">Não foi possível carregar as configurações. Tente novamente para editar seus dados.</p>
+            <Button onClick={() => {
+              setErroConfiguracoes(false);
+              setCarregandoConfiguracoes(true);
+              setTentativaConfiguracoes((tentativa) => tentativa + 1);
+            }}>Tentar novamente</Button>
+          </div>
+        ) : (
+          <>
 {secao === 'perfil' && (
           <div>
             <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>
@@ -1568,6 +1596,8 @@ return (
               </div>
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
 
