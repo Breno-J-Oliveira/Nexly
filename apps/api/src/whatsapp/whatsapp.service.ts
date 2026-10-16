@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
 import { EvolutionProvider } from './providers/evolution.provider';
 import { normalizarTelefoneWhatsapp } from './whatsapp-phone';
+import { diaNoFuso, instanteSolicitado, periodoNoFuso } from '../booking/booking-time';
 
 /* ------------------------------------------------------------------ */
 /*  WhatsApp Service — envia lembretes de agendamento e campanhas      */
@@ -20,6 +21,16 @@ interface SendMessageParams {
   phone: string;
   message: string;
 }
+
+interface AppointmentReminderParams {
+  phone: string;
+  clientName: string;
+  professionalName: string;
+  serviceName: string;
+  dateTime: string;
+}
+
+const REMINDER_BATCH_SIZE = 100;
 
 const TEMPLATE_PADRAO =
   'Olá {{nome}}! Lembrando do seu agendamento amanhã às {{hora}} com {{profissional}} para {{servico}}. Qualquer dúvida, entre em contato.';
@@ -82,17 +93,25 @@ export class WhatsAppService {
   }
 
   /* ── Send appointment reminder ── */
-  async sendAppointmentReminder(params: {
-    phone: string;
-    clientName: string;
-    professionalName: string;
-    serviceName: string;
-    dateTime: string;
-  }): Promise<boolean> {
-    const date = new Date(params.dateTime);
+  async sendAppointmentReminderForCompany(
+    params: AppointmentReminderParams,
+    empresaId: string,
+  ): Promise<boolean> {
+    const empresa = await this.prisma.client.empresa.findUniqueOrThrow({
+      where: { id: empresaId },
+      select: { fusoHorario: true },
+    });
+    return this.sendAppointmentReminder(params, empresa.fusoHorario);
+  }
+
+  async sendAppointmentReminder(
+    params: AppointmentReminderParams,
+    timeZone: string,
+  ): Promise<boolean> {
+    const date = instanteSolicitado(params.dateTime, timeZone);
     const formatted = `
-\u{1F4C5} *${date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}*
-\u{23F0} \u00E0s ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+\u{1F4C5} *${date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone })}*
+\u{23F0} \u00E0s ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone })}
 \u{1F487} ${params.professionalName}
 \u{2728} ${params.serviceName}`;
 
@@ -150,57 +169,80 @@ Qualquer d\u00FAvida, responda esta mensagem. At\u00E9 l\u00E1! \u{1F60A}`;
   }
 
   /* ── Schedule daily reminders (called via cron) ── */
-  async sendDailyReminders(): Promise<{ sent: number; failed: number }> {
+  async sendDailyReminders(agora = new Date()): Promise<{ sent: number; failed: number }> {
     if (!this.isEnabled()) return { sent: 0, failed: 0 };
-    const amanha = new Date();
-    amanha.setDate(amanha.getDate() + 1);
-    const inicio = new Date(amanha);
-    inicio.setHours(0, 0, 0, 0);
-    const fim = new Date(amanha);
-    fim.setHours(23, 59, 59, 999);
-
-    // Roda fora de request → sem tenant context → consulta todas as empresas.
-    const agendamentos = await this.prisma.client.agendamento.findMany({
-      where: {
-        dataHora: { gte: inicio, lte: fim },
-        status: { in: ['AGENDADO', 'CONFIRMADO'] },
-      },
-      include: {
-        cliente: { select: { nome: true, telefone: true } },
-        profissional: { select: { nome: true } },
-        servico: { select: { nome: true } },
-      },
-    });
-
-    const empresas = await this.prisma.client.empresa.findMany({
-      where: { lembretesAtivos: true },
-      select: { id: true, templateLembrete: true },
-    });
-    const empresasMap = new Map(empresas.map((e) => [e.id, e.templateLembrete]));
-
     let sent = 0;
     let failed = 0;
-    for (const a of agendamentos) {
-      const template = empresasMap.get(a.empresaId);
-      if (template === undefined) continue; // lembretes desativados para esta empresa
-      if (!a.cliente.telefone) {
-        failed++;
-        continue;
+    let empresaCursor: string | undefined;
+    // Job sem request: escopo explícito de empresa e consultas limitadas.
+    for (;;) {
+      const empresas = await this.prisma.client.empresa.findMany({
+        where: { lembretesAtivos: true },
+        select: { id: true, templateLembrete: true, fusoHorario: true },
+        orderBy: { id: 'asc' },
+        take: REMINDER_BATCH_SIZE,
+        ...(empresaCursor ? { cursor: { id: empresaCursor }, skip: 1 } : {}),
+      });
+      for (const empresa of empresas) {
+        const hoje = diaNoFuso(agora, empresa.fusoHorario);
+        const amanha = new Date(`${hoje}T12:00:00Z`);
+        amanha.setUTCDate(amanha.getUTCDate() + 1);
+        const { inicio, fimExclusivo } = periodoNoFuso(
+          amanha.toISOString().slice(0, 10),
+          empresa.fusoHorario,
+        );
+        let agendamentoCursor: string | undefined;
+        for (;;) {
+          const agendamentos = await this.prisma.client.agendamento.findMany({
+            where: {
+              empresaId: empresa.id,
+              dataHora: { gte: inicio, lt: fimExclusivo },
+              status: { in: ['AGENDADO', 'CONFIRMADO'] },
+            },
+            select: {
+              id: true,
+              dataHora: true,
+              cliente: { select: { nome: true, telefone: true } },
+              profissional: { select: { nome: true } },
+              servico: { select: { nome: true } },
+            },
+            orderBy: { id: 'asc' },
+            take: REMINDER_BATCH_SIZE,
+            ...(agendamentoCursor ? { cursor: { id: agendamentoCursor }, skip: 1 } : {}),
+          });
+          for (const a of agendamentos) {
+            if (!a.cliente.telefone) {
+              failed++;
+              continue;
+            }
+            const hora = a.dataHora.toLocaleTimeString('pt-BR', {
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: empresa.fusoHorario,
+            });
+            const values: Record<string, string> = {
+              nome: a.cliente.nome,
+              hora,
+              profissional: a.profissional.nome,
+              servico: a.servico.nome,
+            };
+            const message = (empresa.templateLembrete || TEMPLATE_PADRAO).replace(
+              /\{\{(nome|hora|profissional|servico)\}\}/g,
+              (_placeholder, key: string) => values[key]!,
+            );
+            const ok = await this.send({ phone: a.cliente.telefone, message });
+            if (ok) sent++;
+            else failed++;
+          }
+          if (agendamentos.length < REMINDER_BATCH_SIZE) break;
+          agendamentoCursor = agendamentos[agendamentos.length - 1]!.id;
+        }
       }
-
-      const hora = a.dataHora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      const message = (template || TEMPLATE_PADRAO)
-        .replace(/\{\{nome\}\}/g, a.cliente.nome)
-        .replace(/\{\{hora\}\}/g, hora)
-        .replace(/\{\{profissional\}\}/g, a.profissional.nome)
-        .replace(/\{\{servico\}\}/g, a.servico.nome);
-
-      const ok = await this.send({ phone: a.cliente.telefone, message });
-      if (ok) sent++;
-      else failed++;
+      if (empresas.length < REMINDER_BATCH_SIZE) break;
+      empresaCursor = empresas[empresas.length - 1]!.id;
     }
 
-    this.logger.log(`Lembretes diários: ${sent} enviados, ${failed} falhas`);
+    this.logger.log(`Lembretes diários: ${sent} aceitos pelo provedor, ${failed} falhas`);
     return { sent, failed };
   }
 }

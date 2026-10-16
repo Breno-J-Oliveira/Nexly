@@ -4,6 +4,8 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { EnviarLembreteDto } from './dto/enviar-lembrete.dto';
 import { EnviarMensagemDto } from './dto/enviar-mensagem.dto';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { AuthUser } from '@nexly/shared';
 
 @Controller('whatsapp')
 @UseGuards(RolesGuard)
@@ -27,8 +29,8 @@ export class WhatsAppController {
 
   @Post('reminder/test')
   @Roles('ADMIN')
-  async testReminder(@Body() dto: EnviarLembreteDto) {
-    const ok = await this.whatsapp.sendAppointmentReminder(dto);
+  async testReminder(@Body() dto: EnviarLembreteDto, @CurrentUser() user: AuthUser) {
+    const ok = await this.whatsapp.sendAppointmentReminderForCompany(dto, user.empresaId);
     return { sent: ok };
   }
 }
