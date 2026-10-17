@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { configs, Kind, Options, RecordData, statusLabels } from './config';
 import { MarketingConsent } from './MarketingConsent';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 const control =
   'w-full rounded-lg border border-white/10 bg-[#18181F] px-3 py-2 text-sm text-[#FAFAFA]';
@@ -39,6 +40,10 @@ export function OperationsPage({ kind }: { kind: Kind }) {
     [error, setError] = useState(''),
     [notice, setNotice] = useState('');
   const [options, setOptions] = useState<Options>(emptyOptions);
+  const [listError, setListError] = useState('');
+  const [optionsError, setOptionsError] = useState(false);
+  const [optionsLoading, setOptionsLoading] = useState(true);
+  const [optionsAttempt, setOptionsAttempt] = useState(0);
   const [editing, setEditing] = useState<RecordData | null>(null),
     [form, setForm] = useState<Record<string, string | boolean | number>>({ ...config.defaults }),
     [open, setOpen] = useState(false),
@@ -60,6 +65,7 @@ export function OperationsPage({ kind }: { kind: Kind }) {
     if (!allowed) return;
     const version = ++loadVersion.current;
     setLoading(true);
+    setListError('');
     try {
       const r = await api.get<{ data: RecordData[]; total: number } | RecordData[]>(
         `/operacoes/${config.path}`,
@@ -75,9 +81,8 @@ export function OperationsPage({ kind }: { kind: Kind }) {
       if (version !== loadVersion.current) return;
       setItems(Array.isArray(r.data) ? r.data : r.data.data);
       setTotal(Array.isArray(r.data) ? r.data.length : r.data.total);
-      setError('');
     } catch (e) {
-      if (version === loadVersion.current) setError(operationError(e));
+      if (version === loadVersion.current) setListError(operationError(e));
     } finally {
       if (version === loadVersion.current) setLoading(false);
     }
@@ -89,19 +94,23 @@ export function OperationsPage({ kind }: { kind: Kind }) {
   useEffect(() => {
     if (!allowed) return;
     let active = true;
+    setOptionsLoading(true);
+    setOptionsError(false);
     api
       .get<Options>('/operacoes/opcoes')
       .then((r) => {
         if (active) setOptions(r.data);
       })
       .catch(() => {
-        if (active)
-          setError('Não foi possível carregar os cadastros auxiliares. Recarregue a página.');
+        if (active) setOptionsError(true);
+      })
+      .finally(() => {
+        if (active) setOptionsLoading(false);
       });
     return () => {
       active = false;
     };
-  }, [allowed]);
+  }, [allowed, optionsAttempt]);
   async function searchClients() {
     try {
       const r = await api.get<Options>('/operacoes/opcoes', { params: { busca: clientSearch } });
@@ -214,8 +223,16 @@ export function OperationsPage({ kind }: { kind: Kind }) {
           <h2 className="text-xl font-semibold">{config.title}</h2>
           <p className="mt-2 text-sm leading-relaxed text-[#A1A1AA]">{config.description}</p>
         </div>
-        <Button onClick={() => void edit()}>Novo registro</Button>
+        <Button disabled={optionsLoading || optionsError} onClick={() => void edit()}>
+          Novo registro
+        </Button>
       </header>
+      {optionsError && (
+        <ErrorState
+          message="Não foi possível carregar os cadastros auxiliares."
+          onRetry={() => setOptionsAttempt((n) => n + 1)}
+        />
+      )}
       {error && (
         <p role="alert" className="rounded-lg border border-red-500/30 p-3 text-sm text-red-300">
           {error}
@@ -290,9 +307,13 @@ export function OperationsPage({ kind }: { kind: Kind }) {
           </label>
         </div>
       )}
-      {kind === 'marketing' && <MarketingConsent options={options} onError={setError} />}
+      {kind === 'marketing' && !optionsLoading && !optionsError && (
+        <MarketingConsent options={options} onError={setError} />
+      )}
       {loading ? (
         <p role="status">Carregando registros…</p>
+      ) : listError ? (
+        <ErrorState message={listError} onRetry={() => void load()} />
       ) : (
         <>
           <div className="grid gap-4 lg:grid-cols-2">
@@ -356,7 +377,7 @@ export function OperationsPage({ kind }: { kind: Kind }) {
                   <p className="mt-3 text-sm text-[#A1A1AA]">
                     A cada {String(item.intervaloDias)} dias · Próxima: {date(item.proximaExecucao)}
                     <br />
-                    ?ltima execução:{' '}
+                    Última execução:{' '}
                     {item.ultimaExecucao ? date(item.ultimaExecucao) : 'Ainda não executada'}
                   </p>
                 )}
@@ -379,7 +400,11 @@ export function OperationsPage({ kind }: { kind: Kind }) {
                 )}
                 <div className="mt-4 flex flex-wrap gap-2">
                   {kind !== 'recorrencias' && (
-                    <Button variant="secondary" onClick={() => void edit(item)}>
+                    <Button
+                      variant="secondary"
+                      disabled={optionsLoading || optionsError}
+                      onClick={() => void edit(item)}
+                    >
                       Editar
                     </Button>
                   )}

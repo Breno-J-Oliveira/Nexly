@@ -21,7 +21,9 @@ export class PedidosCompraService {
 
   listar(status?: string) {
     const where: Prisma.PedidoCompraWhereInput = {};
-    if (status) {
+    if (status !== undefined) {
+      if (!Object.values(StatusPedido).includes(status as StatusPedido))
+        throw new BadRequestException('Situação do pedido inválida');
       where.status = status as StatusPedido;
     }
     return this.prisma.client.pedidoCompra.findMany({
@@ -62,31 +64,34 @@ export class PedidosCompraService {
     }
     await this.validarReferencias(dto.fornecedorId, dto.itens);
 
-    if (dto.itens) {
-      await this.prisma.client.itemPedidoCompra.deleteMany({ where: { pedidoId: id } });
-      await this.prisma.client.pedidoCompra.update({
-        where: { id },
+    const empresaId = getTenantIdOrFail();
+    await this.prisma.client.$transaction(async (tx) => {
+      // O bloqueio da linha impede envio/cancelamento durante a troca dos itens.
+      const claimed = await tx.pedidoCompra.updateMany({
+        where: { id, empresaId, status: 'RASCUNHO' },
         data: {
+          status: 'RASCUNHO',
           ...(dto.fornecedorId !== undefined ? { fornecedorId: dto.fornecedorId } : {}),
           ...(dto.observacoes !== undefined ? { observacoes: dto.observacoes } : {}),
-          itens: {
-            create: dto.itens.map((i) => ({
-              produtoId: i.produtoId,
-              quantidade: i.quantidade,
-              precoEsperado: i.precoEsperado ?? null,
-            })),
+        },
+      });
+      if (claimed.count !== 1) throw new ConflictException('Pedido já alterado por outra operação');
+      if (dto.itens) {
+        await tx.itemPedidoCompra.deleteMany({ where: { pedidoId: id, pedido: { empresaId } } });
+        await tx.pedidoCompra.update({
+          where: { id, empresaId },
+          data: {
+            itens: {
+              create: dto.itens.map((i) => ({
+                produtoId: i.produtoId,
+                quantidade: i.quantidade,
+                precoEsperado: i.precoEsperado ?? null,
+              })),
+            },
           },
-        },
-      });
-    } else {
-      await this.prisma.client.pedidoCompra.update({
-        where: { id },
-        data: {
-          ...(dto.fornecedorId !== undefined ? { fornecedorId: dto.fornecedorId } : {}),
-          ...(dto.observacoes !== undefined ? { observacoes: dto.observacoes } : {}),
-        },
-      });
-    }
+        });
+      }
+    });
     return this.obter(id);
   }
 
@@ -95,10 +100,12 @@ export class PedidosCompraService {
     if (pedido.status !== 'RASCUNHO') {
       throw new UnprocessableEntityException('Somente rascunhos podem ser enviados');
     }
-    return this.prisma.client.pedidoCompra.update({
-      where: { id },
+    const result = await this.prisma.client.pedidoCompra.updateMany({
+      where: { id, empresaId: getTenantIdOrFail(), status: 'RASCUNHO' },
       data: { status: 'ENVIADO' },
     });
+    if (result.count !== 1) throw new ConflictException('Pedido já alterado por outra operação');
+    return this.obter(id);
   }
 
   async receber(id: string) {
@@ -130,10 +137,16 @@ export class PedidosCompraService {
     if (pedido.status === 'RECEBIDO') {
       throw new UnprocessableEntityException('Pedido já recebido não pode ser cancelado');
     }
-    return this.prisma.client.pedidoCompra.update({
-      where: { id },
+    const result = await this.prisma.client.pedidoCompra.updateMany({
+      where: {
+        id,
+        empresaId: getTenantIdOrFail(),
+        status: { in: ['RASCUNHO', 'ENVIADO', 'CANCELADO'] },
+      },
       data: { status: 'CANCELADO' },
     });
+    if (result.count !== 1) throw new ConflictException('Pedido já alterado por outra operação');
+    return this.obter(id);
   }
 
   async sugestao() {

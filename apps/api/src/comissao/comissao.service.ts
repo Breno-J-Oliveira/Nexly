@@ -1,11 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { dateRange } from '../common/validation/date-range';
+import { calendarRange } from '../common/validation/calendar-range';
+
+function commissionRange(inicio: string, fim: string) {
+  if (typeof inicio === 'string' && inicio.includes('T')) {
+    return calendarRange({ inicio, fim })!;
+  }
+  return dateRange(inicio, fim);
+}
 
 @Injectable()
 export class ComissaoService {
   constructor(private readonly prisma: PrismaService) {}
 
   async calcular(profissionalId: string, dataInicio: string, dataFim: string) {
+    const { inicio, fim } = commissionRange(dataInicio, dataFim);
     const profissional = await this.prisma.client.profissional.findFirst({
       where: { id: profissionalId },
       select: { nome: true, comissaoPercentual: true },
@@ -16,7 +26,7 @@ export class ComissaoService {
       where: {
         profissionalId,
         status: 'CONCLUIDO',
-        dataHora: { gte: new Date(dataInicio), lte: new Date(dataFim) },
+        dataHora: { gte: inicio, lte: fim },
       },
       include: { servico: true },
     });
@@ -35,6 +45,7 @@ export class ComissaoService {
   }
 
   async resumoGeral(dataInicio: string, dataFim: string) {
+    commissionRange(dataInicio, dataFim);
     const profissionais = await this.prisma.client.profissional.findMany({
       where: { ativo: true },
       select: { id: true, nome: true, comissaoPercentual: true },

@@ -17,6 +17,7 @@ const protectedRoutes = [
   'fidelidade',
   'estoque/pedidos',
   'meu-nexly',
+  'minha-conta',
 ];
 const publicRoutes = [
   '',
@@ -25,6 +26,11 @@ const publicRoutes = [
   'termos',
   'privacidade',
   'blog',
+  'blog/10-erros-gestao-estoque-saloes',
+  'blog/como-calcular-margem-servico-beleza',
+  'blog/como-reduzir-no-show-80-porcento',
+  'blog/gestao-comissoes-saloes-como-fazer-direito',
+  'blog/lgpd-clinicas-estetica-o-que-voce-precisa-saber',
   'cadastro',
   'login',
   'recuperar-senha',

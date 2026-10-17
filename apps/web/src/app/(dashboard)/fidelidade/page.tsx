@@ -4,6 +4,7 @@ import { PageToolbar } from '@/components/ui/PageToolbar';
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { formatarMoeda } from '@/lib/format';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -45,24 +46,37 @@ export default function FidelidadePage() {
   const [segmentos, setSegmentos] = useState<SegmentoCliente[]>([]);
   const [carregando, setCarregando] = useState(true);
 
+  const [erro, setErro] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
+
   useEffect(() => {
+    const controller = new AbortController();
     setCarregando(true);
+    setErro(false);
     Promise.all([
-      api.get<ClienteFiel[]>('/fidelidade/ranking'),
-      api.get<SegmentoCliente[]>('/fidelidade/segmentar'),
+      api.get<ClienteFiel[]>('/fidelidade/ranking', { signal: controller.signal }),
+      api.get<SegmentoCliente[]>('/fidelidade/segmentar', { signal: controller.signal }),
     ])
       .then(([r, s]) => {
+        if (controller.signal.aborted) return;
         setDados(r.data);
         setSegmentos(s.data);
       })
-      .catch(() => undefined)
-      .finally(() => setCarregando(false));
-  }, []);
+      .catch(() => {
+        if (!controller.signal.aborted) setErro(true);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCarregando(false);
+      });
+    return () => controller.abort();
+  }, [tentativa]);
 
   return (
     <div>
-      <PageToolbar><h2 className="text-xl font-semibold text-[#FAFAFA]">Fidelidade</h2>
-      <p className="mt-1 text-sm text-[#71717A]">Programa de pontos e segmentação de clientes</p></PageToolbar>
+      <PageToolbar>
+        <h2 className="text-xl font-semibold text-[#FAFAFA]">Fidelidade</h2>
+        <p className="mt-1 text-sm text-[#71717A]">Programa de pontos e segmentação de clientes</p>
+      </PageToolbar>
 
       <div className="mt-6 flex gap-3">
         {(['ranking', 'segmentos'] as Aba[]).map((t) => (
@@ -84,6 +98,11 @@ export default function FidelidadePage() {
         <div className="mt-6">
           <Skeleton variant="kpi" count={3} />
         </div>
+      ) : erro ? (
+        <ErrorState
+          message="Não foi possível carregar a fidelidade."
+          onRetry={() => setTentativa((n) => n + 1)}
+        />
       ) : (
         <>
           {aba === 'ranking' && (
@@ -116,7 +135,9 @@ export default function FidelidadePage() {
                         <td className="px-4 py-3 font-bold text-[#818CF8]">{c.pontosFidelidade}</td>
                         <td className="px-4 py-3 text-[#22C55E]">{formatarMoeda(c.totalGasto)}</td>
                         <td className="px-4 py-3 text-[#71717A]">
-                          {c.ultimaVisita ? new Date(c.ultimaVisita).toLocaleDateString('pt-BR') : '—'}
+                          {c.ultimaVisita
+                            ? new Date(c.ultimaVisita).toLocaleDateString('pt-BR')
+                            : '—'}
                         </td>
                         <td className="px-4 py-3">
                           <span
@@ -149,7 +170,9 @@ export default function FidelidadePage() {
                     </h3>
                     <div className="flex flex-wrap gap-2">
                       {items.length === 0 ? (
-                        <span className="text-[13px] text-[#71717A]">Nenhum cliente neste segmento</span>
+                        <span className="text-[13px] text-[#71717A]">
+                          Nenhum cliente neste segmento
+                        </span>
                       ) : (
                         items.map((c) => (
                           <div
