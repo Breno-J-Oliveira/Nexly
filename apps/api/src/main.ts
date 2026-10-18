@@ -1,8 +1,10 @@
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { validationMessages } from './common/validation/validation-messages';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import type { NextFunction, Request, Response } from 'express';
+import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { AppModule } from './app.module';
@@ -12,7 +14,7 @@ import { env } from './config/env';
 import { cookieOriginGuard } from './common/middleware/cookie-origin';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
   const server = app.getHttpAdapter().getInstance();
 
   // Confia nos proxies para extrair IP real (necessário para rate limit e logs).
@@ -98,7 +100,14 @@ async function bootstrap(): Promise<void> {
       max: 10,
       skip: (req) =>
         req.method !== 'POST' ||
-        !['/login', '/2fa/verify', '/2fa/enable', '/2fa/disable'].includes(req.path),
+        ![
+          '/login',
+          '/2fa/verify',
+          '/2fa/enable',
+          '/2fa/disable',
+          '/recuperacao/solicitar',
+          '/recuperacao/redefinir',
+        ].includes(req.path),
       skipSuccessfulRequests: true,
       standardHeaders: true,
       legacyHeaders: false,
@@ -139,6 +148,10 @@ async function bootstrap(): Promise<void> {
   );
 
   // Operações pesadas são limitadas pelo HeavyOperationGuard após validar a identidade.
+  // A importação recebe o teto do formulário; os demais JSONs mantêm 100 KB.
+  app.use('/api/gestao/importacao', json({ limit: '2mb' }));
+  app.use(json({ limit: '100kb' }));
+  app.use(urlencoded({ extended: true, limit: '100kb' }));
 
   app.setGlobalPrefix('api');
 
@@ -150,6 +163,7 @@ async function bootstrap(): Promise<void> {
       transformOptions: { enableImplicitConversion: true },
       errorHttpStatusCode: 400,
       stopAtFirstError: false,
+      exceptionFactory: (errors) => new BadRequestException(validationMessages(errors)),
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());

@@ -9,7 +9,7 @@ export class ExportService {
 
   async vendasCsv(dataInicio?: string, dataFim?: string): Promise<string> {
     const createdAt = saleDateFilter(dataInicio, dataFim);
-    const where = createdAt ? { createdAt } : {};
+    const where = { status: 'CONCLUIDA', ...(createdAt ? { createdAt } : {}) };
     const vendas = await this.prisma.client.venda.findMany({
       where,
       include: { cliente: true, itens: { include: { produto: true } } },

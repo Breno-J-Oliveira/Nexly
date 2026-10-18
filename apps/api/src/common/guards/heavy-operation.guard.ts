@@ -26,12 +26,14 @@ export class HeavyOperationGuard implements CanActivate {
     const privacyRequest =
       (request.method === 'POST' && path.startsWith('/api/lgpd/anonimizar/cliente/')) ||
       (request.method === 'DELETE' && path === '/api/lgpd/excluir-conta');
-    if (!exportRequest && !privacyRequest) return true;
+    const importRequest = request.method === 'POST' && path.startsWith('/api/gestao/importacao/');
+    if (!exportRequest && !privacyRequest && !importRequest) return true;
+    const cota = importRequest ? 20 : 3;
     const user = request.user;
     if (!user?.id || !user.empresaId) return false;
     const result = await this.redis.consumeLimit(
-      `heavy:${exportRequest ? 'export' : 'privacy'}:${user.empresaId}:${user.id}`,
-      3,
+      `heavy:${importRequest ? 'import' : exportRequest ? 'export' : 'privacy'}:${user.empresaId}:${user.id}`,
+      cota,
       3600,
     );
     if (!result)
@@ -39,7 +41,7 @@ export class HeavyOperationGuard implements CanActivate {
         'Não foi possível validar o limite desta operação. Tente novamente em alguns instantes.',
       );
     const response = http.getResponse<Response>();
-    response.setHeader('RateLimit-Limit', '3');
+    response.setHeader('RateLimit-Limit', String(cota));
     response.setHeader('RateLimit-Remaining', String(result.remaining));
     response.setHeader('RateLimit-Reset', String(result.retryAfter));
     if (!result.allowed) {

@@ -5,6 +5,11 @@ describe('DRE confiavel', () => {
   const create = (total: number, desconto: number, count: number) => {
     const prisma = {
       client: {
+        itemVenda: {
+          findMany: jest
+            .fn()
+            .mockResolvedValue(count ? [{ quantidade: 1, custoUnitario: null }] : []),
+        },
         venda: {
           aggregate: jest
             .fn()
@@ -40,7 +45,7 @@ describe('DRE confiavel', () => {
       expect.objectContaining({ where: expect.objectContaining({ empresaId: 'e1' }) }),
     );
     expect(redis.set).toHaveBeenCalledWith(
-      'dre:e1:v2:2026-10-01:2026-10-31',
+      'dre:e1:v3:2026-10-01:2026-10-31',
       expect.any(String),
       300,
     );

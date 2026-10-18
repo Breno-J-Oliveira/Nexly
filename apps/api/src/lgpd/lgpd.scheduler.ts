@@ -35,10 +35,7 @@ export class LgpdScheduler implements OnModuleInit, OnModuleDestroy {
     for (const exclusao of pendentes) {
       try {
         await this.excluirTenant(exclusao.empresaId);
-        await this.prisma.client.exclusaoConta.update({
-          where: { id: exclusao.id },
-          data: { executada: true },
-        });
+        // A exclusão da empresa remove a solicitação por cascade.
         this.logger.log(`Conta ${exclusao.empresaId} excluída (LGPD)`);
       } catch (err) {
         this.logger.error(
@@ -55,6 +52,8 @@ export class LgpdScheduler implements OnModuleInit, OnModuleDestroy {
    */
   private async excluirTenant(empresaId: string): Promise<void> {
     await this.prisma.client.$transaction(async (tx) => {
+      await tx.lancamentoFinanceiro.deleteMany({ where: { empresaId } });
+      await tx.saldoFilial.deleteMany({ where: { empresaId } });
       await tx.avaliacao.deleteMany({ where: { empresaId } });
       await tx.itemVenda.deleteMany({ where: { venda: { empresaId } } });
       await tx.itemPedidoCompra.deleteMany({ where: { pedido: { empresaId } } });

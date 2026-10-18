@@ -49,24 +49,26 @@ export class DashboardService {
         orderBy: { dataHora: 'asc' },
       }),
       this.prisma.client.venda.aggregate({
-        where: { createdAt: { gte: inicioDia, lt: fimDia } },
+        where: { status: 'CONCLUIDA', createdAt: { gte: inicioDia, lt: fimDia } },
         _sum: { total: true },
       }),
       this.prisma.client.venda.aggregate({
-        where: { createdAt: { gte: inicioMes } },
+        where: { status: 'CONCLUIDA', createdAt: { gte: inicioMes } },
         _sum: { total: true },
       }),
       this.prisma.client.venda.aggregate({
-        where: { createdAt: { gte: inicioMesAnterior, lt: inicioMes } },
+        where: { status: 'CONCLUIDA', createdAt: { gte: inicioMesAnterior, lt: inicioMes } },
         _sum: { total: true },
       }),
-      this.prisma.client.venda.count({ where: { createdAt: { gte: inicioMes } } }),
+      this.prisma.client.venda.count({
+        where: { status: 'CONCLUIDA', createdAt: { gte: inicioMes } },
+      }),
       this.prisma.client.agendamento.findMany({
         where: { status: 'CONCLUIDO', dataHora: { gte: ultimos30d } },
         include: { servico: true },
       }),
       this.prisma.client.venda.findMany({
-        where: { createdAt: { gte: inicioSemana, lt: fimDia } },
+        where: { status: 'CONCLUIDA', createdAt: { gte: inicioSemana, lt: fimDia } },
         select: { createdAt: true, total: true },
       }),
       this.prisma.client.profissional.count({ where: { ativo: true } }),

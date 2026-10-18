@@ -96,6 +96,13 @@ model Empresa {
   notificacoes   Json?   @map("notificacoes")
   lembretesAtivos Boolean  @default(false) @map("lembretes_ativos")
   templateLembrete String? @map("template_lembrete")
+  preferencias Json @default("{}")
+  primeiroAcessoDispensado Boolean @default(false) @map("primeiro_acesso_dispensado")
+  lancamentos LancamentoFinanceiro[]
+  jobs JobDuravel[]
+  importacoes Importacao[]
+  comprovacoes ComprovacaoOperacional[]
+  transferencias TransferenciaFilial[]
   createdAt DateTime @default(now()) @map("created_at")
 
   tarefas Tarefa[]
@@ -117,6 +124,7 @@ model Empresa {
 }
 
 model Usuario {
+  recuperacoes RecuperacaoSenha[]
   id         String   @id @default(uuid())
   empresaId  String   @map("empresa_id")
   nome       String
@@ -308,6 +316,7 @@ model Produto {
   nome          String
   sku           String
   preco         Decimal  @db.Decimal(10, 2)
+  custoAtual    Decimal? @db.Decimal(10, 2) @map("custo_atual")
   estoqueAtual  Int      @default(0) @map("estoque_atual")
   estoqueMinimo Int      @default(5) @map("estoque_minimo")
   categoria     String?
@@ -320,6 +329,7 @@ model Produto {
   itensVenda    ItemVenda[]
   insumos       InsumoServico[]
   itensPedidoCompra ItemPedidoCompra[]
+  saldosFilial SaldoFilial[]
 
   @@unique([empresaId, sku])
   @@index([empresaId, categoria])
@@ -329,6 +339,7 @@ model Produto {
 model MovimentacaoEstoque {
   id            String           @id @default(uuid())
   empresaId     String           @map("empresa_id")
+  filialId      String?          @map("filial_id")
   produtoId     String           @map("produto_id")
   tipo          TipoMovimentacao
   quantidade    Int
@@ -349,6 +360,13 @@ model Venda {
   clienteId     String?  @map("cliente_id")
   agendamentoId String?  @map("agendamento_id")
   cupomId       String?  @map("cupom_id")
+  filialId      String?  @map("filial_id")
+  status        String   @default("CONCLUIDA")
+  estornadaEm   DateTime? @map("estornada_em")
+  motivoEstorno String? @map("motivo_estorno")
+  chaveOperacao String? @map("chave_operacao")
+  requisicaoHash String? @map("requisicao_hash")
+  estornadaPor  String? @map("estornada_por")
   total         Decimal  @db.Decimal(10, 2)
   formaPagamento String? @default("DINHEIRO") @map("forma_pagamento")
   desconto       Decimal? @default(0) @db.Decimal(10, 2)
@@ -360,9 +378,12 @@ model Venda {
   agendamento Agendamento? @relation(fields: [agendamentoId], references: [id], onDelete: SetNull)
   cupom       Cupom?       @relation(fields: [cupomId], references: [id], onDelete: SetNull)
   itens       ItemVenda[]
+  filial      Filial? @relation(fields: [filialId], references: [id], onDelete: Restrict)
+  lancamento  LancamentoFinanceiro?
 
   @@index([empresaId, createdAt])
   @@index([empresaId, clienteId])
+  @@unique([empresaId, chaveOperacao])
   @@map("vendas")
 }
 
@@ -372,6 +393,7 @@ model ItemVenda {
   produtoId     String @map("produto_id")
   quantidade    Int
   precoUnitario Decimal @db.Decimal(10, 2) @map("preco_unitario")
+  custoUnitario Decimal? @db.Decimal(10, 2) @map("custo_unitario")
 
   venda   Venda   @relation(fields: [vendaId], references: [id], onDelete: Cascade)
   produto Produto @relation(fields: [produtoId], references: [id], onDelete: Restrict)
@@ -547,6 +569,9 @@ model Filial {
   createdAt DateTime @default(now()) @map("created_at")
   empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   tarefas   Tarefa[]
+  saldos SaldoFilial[]
+  vendas Venda[]
+  lancamentos LancamentoFinanceiro[]
 
   @@index([empresaId, nome])
   @@map("filiais")
@@ -650,4 +675,125 @@ model Recorrencia {
 
   @@index([empresaId, inicio])
   @@map("recorrencias")
+}
+model LancamentoFinanceiro {
+  id String @id @default(uuid())
+  empresaId String @map("empresa_id")
+  filialId String? @map("filial_id")
+  vendaId String? @unique @map("venda_id")
+  descricao String
+  tipo String
+  categoria String @default("GERAL")
+  valor Decimal @db.Decimal(12,2)
+  valorPago Decimal @default(0) @db.Decimal(12,2) @map("valor_pago")
+  status String @default("ABERTO")
+  vencimento DateTime
+  createdAt DateTime @default(now()) @map("created_at")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  filial Filial? @relation(fields: [filialId], references: [id], onDelete: Restrict)
+  venda Venda? @relation(fields: [vendaId], references: [id], onDelete: Restrict)
+  baixas BaixaFinanceira[]
+  @@index([empresaId, vencimento, status])
+  @@index([empresaId, filialId, vencimento])
+  @@map("lancamentos_financeiros")
+}
+
+model BaixaFinanceira {
+  id String @id @default(uuid())
+  lancamentoId String @map("lancamento_id")
+  chave String @unique
+  valor Decimal @db.Decimal(12,2)
+  data DateTime @default(now())
+  estornada Boolean @default(false)
+  estornadaEm DateTime? @map("estornada_em")
+  lancamento LancamentoFinanceiro @relation(fields: [lancamentoId], references: [id], onDelete: Cascade)
+  @@index([lancamentoId, data])
+  @@index([estornadaEm])
+  @@map("baixas_financeiras")
+}
+
+model SaldoFilial {
+  id String @id @default(uuid())
+  empresaId String @map("empresa_id")
+  filialId String @map("filial_id")
+  produtoId String @map("produto_id")
+  quantidade Int @default(0)
+  filial Filial @relation(fields: [filialId], references: [id], onDelete: Cascade)
+  produto Produto @relation(fields: [produtoId], references: [id], onDelete: Restrict)
+  @@unique([empresaId, filialId, produtoId])
+  @@index([empresaId, produtoId])
+  @@map("saldos_filiais")
+}
+
+model JobDuravel {
+  id String @id @default(uuid())
+  empresaId String @map("empresa_id")
+  chave String @unique
+  tipo String
+  payload Json
+  status String @default("PENDENTE")
+  tentativas Int @default(0)
+  executarEm DateTime @default(now()) @map("executar_em")
+  reservadoEm DateTime? @map("reservado_em")
+  reserva String?
+  erro String?
+  createdAt DateTime @default(now()) @map("created_at")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  @@index([status, executarEm])
+  @@index([empresaId, createdAt])
+  @@map("jobs_duraveis")
+}
+
+model Importacao {
+  id String @id @default(uuid())
+  empresaId String @map("empresa_id")
+  chave String
+  tipo String
+  resumo Json
+  createdAt DateTime @default(now()) @map("created_at")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  @@unique([empresaId, chave])
+  @@map("importacoes")
+}
+
+model ComprovacaoOperacional {
+  id String @id @default(uuid())
+  empresaId String @map("empresa_id")
+  tipo String
+  referencia String
+  verificadoEm DateTime @map("verificado_em")
+  observacoes String
+  usuarioId String @map("usuario_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  @@index([empresaId, tipo, verificadoEm])
+  @@map("comprovacoes_operacionais")
+}
+
+model RecuperacaoSenha {
+  id String @id @default(uuid())
+  usuarioId String @map("usuario_id")
+  tokenHash String @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  usadoEm DateTime? @map("usado_em")
+  createdAt DateTime @default(now()) @map("created_at")
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  @@index([usuarioId, expiresAt])
+  @@map("recuperacoes_senha")
+}
+
+model TransferenciaFilial {
+  id String @id @default(uuid())
+  empresaId String @map("empresa_id")
+  chave String
+  produtoId String @map("produto_id")
+  origemId String? @map("origem_id")
+  destinoId String? @map("destino_id")
+  quantidade Int
+  motivo String
+  createdAt DateTime @default(now()) @map("created_at")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  @@unique([empresaId, chave])
+  @@index([empresaId, createdAt])
+  @@map("transferencias_filiais")
 }

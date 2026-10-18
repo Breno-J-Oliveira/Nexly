@@ -61,7 +61,15 @@ export class AuditInterceptor implements NestInterceptor {
               recursoId,
               // A senha nunca é gravada: `sanitizar` troca por [REDACTED].
               dadosAntigos,
-              dadosNovos: acao === 'EXCLUIR' ? undefined : sanitizar(req.body),
+              dadosNovos:
+                acao === 'EXCLUIR'
+                  ? undefined
+                  : path.includes('/gestao/importacao/')
+                    ? {
+                        tipo: req.body?.tipo,
+                        quantidade: Array.isArray(req.body?.linhas) ? req.body.linhas.length : 0,
+                      }
+                    : sanitizar(req.body),
               ip,
               userAgent,
             });
@@ -91,7 +99,7 @@ function extrairRecurso(path: string): { recurso: string; recursoId?: string } {
     .replace(/^\/api\//, '')
     .split('/')
     .filter(Boolean);
-  if (segments[0] === 'operacoes') segments.shift();
+  if (segments[0] === 'operacoes' || segments[0] === 'gestao') segments.shift();
   const nome = segments[0] ?? 'desconhecido';
   const recurso = nome.charAt(0).toUpperCase() + nome.slice(1);
   const recursoId = segments[1];

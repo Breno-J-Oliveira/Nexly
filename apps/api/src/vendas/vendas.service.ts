@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto';
 import { saleDateFilter } from './sale-date-filter';
+import { entradaFilial, saidaFilial } from '../gestao/unidade-estoque';
 import { registrarCompraClienteTx } from '../clientes/cliente-activity';
 import {
   BadRequestException,
@@ -50,7 +52,14 @@ export class VendasService {
   async criar(
     clienteId: string | undefined,
     itens: ItemVendaDto[],
-    opcoes?: { formaPagamento?: string; desconto?: number; cupomCodigo?: string },
+    opcoes?: {
+      formaPagamento?: string;
+      desconto?: number;
+      cupomCodigo?: string;
+      filialId?: string;
+      recebido?: boolean;
+      chaveOperacao?: string;
+    },
   ) {
     if (itens.length === 0) {
       throw new BadRequestException('A venda deve ter ao menos um item');
@@ -62,10 +71,36 @@ export class VendasService {
         throw new BadRequestException('Quantidade deve ser um inteiro positivo');
       }
       const quantidade = (consolidated.get(item.produtoId)?.quantidade ?? 0) + item.quantidade;
-      if (!Number.isSafeInteger(quantidade)) throw new BadRequestException('Quantidade inválida');
+      if (!Number.isSafeInteger(quantidade) || quantidade > 1000000)
+        throw new BadRequestException(
+          'Quantidade inválida. Use até um milhão de unidades por produto',
+        );
       consolidated.set(item.produtoId, { produtoId: item.produtoId, quantidade });
     }
-    itens = [...consolidated.values()];
+    itens = [...consolidated.values()].sort((a, b) => a.produtoId.localeCompare(b.produtoId));
+    const requisicaoHash = createHash('sha256')
+      .update(
+        JSON.stringify({
+          clienteId: clienteId ?? null,
+          itens,
+          filialId: opcoes?.filialId ?? null,
+          recebido: opcoes?.recebido ?? false,
+          formaPagamento: opcoes?.formaPagamento ?? null,
+          desconto: opcoes?.desconto ?? 0,
+          cupomCodigo: opcoes?.cupomCodigo ?? null,
+        }),
+      )
+      .digest('hex');
+    if (opcoes?.chaveOperacao) {
+      const anterior = await this.prisma.client.venda.findFirst({
+        where: { empresaId, chaveOperacao: opcoes.chaveOperacao },
+      });
+      if (anterior) {
+        if (anterior.requisicaoHash !== requisicaoHash)
+          throw new ConflictException('A identificação da venda já foi utilizada com outros itens');
+        return this.obter(anterior.id);
+      }
+    }
     if (clienteId) {
       const cliente = await this.prisma.client.cliente.findFirst({
         where: { id: clienteId, empresaId, ativo: true },
@@ -116,7 +151,7 @@ export class VendasService {
       if (!produto) {
         throw new NotFoundException('Produto não encontrado');
       }
-      if (produto.estoqueAtual < item.quantidade) {
+      if (!opcoes?.filialId && produto.estoqueAtual < item.quantidade) {
         throw new ConflictException(`Saldo insuficiente para "${produto.nome}"`);
       }
     }
@@ -139,17 +174,36 @@ export class VendasService {
       totalBruto,
     ).toDecimalPlaces(2);
     const total = totalBruto.minus(descontoTotal).toDecimalPlaces(2);
+    if (total.greaterThan('99999999.99') || descontoTotal.greaterThan('99999999.99')) {
+      throw new BadRequestException('O valor da venda excede o limite permitido');
+    }
 
     // 4-8. Transação: cria venda + itens + baixa de estoque + incrementa cupom.
     const venda = await this.prisma.client.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM empresas WHERE id=${empresaId} FOR UPDATE`;
+      if (opcoes?.chaveOperacao) {
+        const anterior = await tx.venda.findFirst({
+          where: { empresaId, chaveOperacao: opcoes.chaveOperacao },
+        });
+        if (anterior) {
+          if (anterior.requisicaoHash !== requisicaoHash)
+            throw new ConflictException(
+              'A identificação da venda já foi utilizada com outros itens',
+            );
+          return anterior;
+        }
+      }
+
       const v = await tx.venda.create({
         data: {
           empresaId,
+          ...(opcoes?.chaveOperacao ? { chaveOperacao: opcoes.chaveOperacao, requisicaoHash } : {}),
           clienteId,
           cupomId: cupom?.id ?? null,
           total,
           formaPagamento: opcoes?.formaPagamento || undefined,
           desconto: descontoTotal,
+          ...(opcoes?.filialId ? { filialId: opcoes.filialId } : {}),
         },
       });
 
@@ -161,15 +215,45 @@ export class VendasService {
             produtoId: item.produtoId,
             quantidade: item.quantidade,
             precoUnitario: produto?.preco ?? 0,
+            custoUnitario: produto?.custoAtual ?? null,
           },
         });
-        await this.estoqueService.registrarSaidaTx(
-          tx as unknown as Tx,
-          item.produtoId,
-          item.quantidade,
-          `Venda #${v.id}`,
-        );
+        if (opcoes?.filialId)
+          await saidaFilial(
+            tx as unknown as Prisma.TransactionClient,
+            empresaId,
+            opcoes.filialId,
+            item.produtoId,
+            item.quantidade,
+            `Venda #${v.id}`,
+          );
+        else
+          await this.estoqueService.registrarSaidaTx(
+            tx as unknown as Tx,
+            item.produtoId,
+            item.quantidade,
+            `Venda #${v.id}`,
+          );
       }
+
+      const conta = await tx.lancamentoFinanceiro.create({
+        data: {
+          empresaId,
+          filialId: opcoes?.filialId,
+          vendaId: v.id,
+          tipo: 'RECEITA',
+          categoria: 'VENDAS',
+          descricao: `Venda #${v.id}`,
+          valor: total,
+          valorPago: opcoes?.recebido ? total : 0,
+          status: total.isZero() || opcoes?.recebido ? 'PAGO' : 'ABERTO',
+          vencimento: v.createdAt,
+        },
+      });
+      if (opcoes?.recebido && !total.isZero())
+        await tx.baixaFinanceira.create({
+          data: { lancamentoId: conta.id, chave: `venda:${v.id}`, valor: total },
+        });
 
       if (cupom) {
         const claimed = await tx.cupom.updateMany({
@@ -200,6 +284,112 @@ export class VendasService {
     return this.obter(venda.id);
   }
 
+  async estornar(id: string, motivo: string, usuarioId: string) {
+    const empresaId = getTenantIdOrFail();
+    return this.prisma.client.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM empresas WHERE id=${empresaId} FOR UPDATE`;
+      const venda = await tx.venda.findFirst({
+        where: { id, empresaId },
+        include: { itens: true },
+      });
+      if (!venda) throw new NotFoundException('Venda não encontrada');
+      if (venda.status === 'ESTORNADA') return venda;
+      await tx.venda.update({
+        where: { id },
+        data: {
+          status: 'ESTORNADA',
+          estornadaEm: new Date(),
+          motivoEstorno: motivo,
+          estornadaPor: usuarioId,
+        },
+      });
+      for (const item of [...venda.itens].sort((a, b) => a.produtoId.localeCompare(b.produtoId))) {
+        if (venda.filialId)
+          await entradaFilial(
+            tx as unknown as Prisma.TransactionClient,
+            empresaId,
+            venda.filialId,
+            item.produtoId,
+            item.quantidade,
+            `Estorno da venda ${id}`,
+          );
+        else {
+          const changed = await tx.produto.updateMany({
+            where: { id: item.produtoId, empresaId },
+            data: { estoqueAtual: { increment: item.quantidade } },
+          });
+          if (changed.count !== 1)
+            throw new ConflictException('Produto da venda indisponível para reposição');
+          await tx.movimentacaoEstoque.create({
+            data: {
+              empresaId,
+              produtoId: item.produtoId,
+              tipo: 'ENTRADA',
+              quantidade: item.quantidade,
+              motivo: `Estorno da venda ${id}`,
+            },
+          });
+        }
+      }
+      if (venda.cupomId)
+        await tx.cupom.updateMany({
+          where: { id: venda.cupomId, empresaId, usoAtual: { gt: 0 } },
+          data: { usoAtual: { decrement: 1 } },
+        });
+      const conta = await tx.lancamentoFinanceiro.findFirst({ where: { vendaId: id, empresaId } });
+      if (conta) {
+        await tx.lancamentoFinanceiro.update({
+          where: { id: conta.id },
+          data: { status: 'CANCELADO', valorPago: 0 },
+        });
+        await tx.baixaFinanceira.updateMany({
+          where: { lancamentoId: conta.id, estornada: false },
+          data: { estornada: true, estornadaEm: new Date() },
+        });
+      }
+      if (venda.clienteId) {
+        const [compras, ultimaVenda, ultimaVisita] = await Promise.all([
+          tx.venda.aggregate({
+            where: { empresaId, clienteId: venda.clienteId, status: 'CONCLUIDA' },
+            _sum: { total: true },
+          }),
+          tx.venda.findFirst({
+            where: { empresaId, clienteId: venda.clienteId, status: 'CONCLUIDA' },
+            orderBy: { createdAt: 'desc' },
+            select: { createdAt: true },
+          }),
+          tx.agendamento.findFirst({
+            where: { empresaId, clienteId: venda.clienteId, status: 'CONCLUIDO' },
+            orderBy: { dataHora: 'desc' },
+            select: { dataHora: true },
+          }),
+        ]);
+        const datas = [ultimaVenda?.createdAt, ultimaVisita?.dataHora].filter(Boolean) as Date[];
+        await tx.cliente.updateMany({
+          where: { id: venda.clienteId, empresaId },
+          data: {
+            totalGasto: compras._sum.total ?? 0,
+            ultimaVisita: datas.length
+              ? new Date(Math.max(...datas.map((d) => d.getTime())))
+              : null,
+          },
+        });
+      }
+      await tx.auditLog.create({
+        data: {
+          empresaId,
+          usuarioId,
+          acao: 'EDITAR',
+          recurso: 'Vendas',
+          recursoId: id,
+          dadosAntigos: { status: venda.status },
+          dadosNovos: { status: 'ESTORNADA', motivo },
+        },
+      });
+      return tx.venda.findFirst({ where: { id, empresaId }, include: { itens: true } });
+    });
+  }
+
   /**
    * Lista vendas com paginação e filtros opcionais.
    *
@@ -221,7 +411,7 @@ export class VendasService {
       ...(filtros.clienteId ? { clienteId: filtros.clienteId } : {}),
       ...(createdAt ? { createdAt } : {}),
     };
-    const [data, aggregate, items] = await Promise.all([
+    const [data, aggregate, items, receita] = await Promise.all([
       this.prisma.client.venda.findMany({
         where,
         include: {
@@ -234,8 +424,12 @@ export class VendasService {
       }),
       this.prisma.client.venda.aggregate({ where, _sum: { total: true }, _count: { _all: true } }),
       this.prisma.client.itemVenda.aggregate({
-        where: { venda: where },
+        where: { venda: { ...where, status: 'CONCLUIDA' } },
         _sum: { quantidade: true },
+      }),
+      this.prisma.client.venda.aggregate({
+        where: { ...where, status: 'CONCLUIDA' },
+        _sum: { total: true },
       }),
     ]);
     return {
@@ -244,7 +438,7 @@ export class VendasService {
       page,
       limit,
       resumo: {
-        totalVendido: Number(aggregate._sum.total ?? 0),
+        totalVendido: Number(receita._sum.total ?? 0),
         totalItens: items._sum.quantidade ?? 0,
       },
     };

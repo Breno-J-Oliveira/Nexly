@@ -150,6 +150,7 @@ async function req(method, path, token, body) {
   })
   .finally(async () => {
     for (const c of companies) {
+      await p.lancamentoFinanceiro.deleteMany({ where: { empresaId: c.id } });
       await p.venda.deleteMany({ where: { empresaId: c.id } });
       await p.empresa.delete({ where: { id: c.id } });
     }

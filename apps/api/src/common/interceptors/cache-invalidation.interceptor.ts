@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { Request } from 'express';
 import { mergeMap, Observable } from 'rxjs';
@@ -17,7 +18,10 @@ export class CacheInvalidationInterceptor implements NestInterceptor {
       return next.handle();
     return next.handle().pipe(
       mergeMap(async (result) => {
-        await this.redis.del(`dashboard:${empresaId}`);
+        await Promise.all([
+          this.redis.del(`dashboard:${empresaId}`),
+          this.redis.set(`financeiro:versao:${empresaId}`, randomUUID(), 600),
+        ]);
         return result;
       }),
     );

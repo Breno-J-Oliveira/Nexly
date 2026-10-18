@@ -50,6 +50,17 @@ describe('VendasService', () => {
       await expect(criar(undefined, [])).rejects.toThrow(/ao menos um item/);
     });
 
+    it('rejeita total que excede a capacidade monetária antes de baixar estoque', async () => {
+      prisma.client.produto.findMany.mockResolvedValue([
+        { id: 'p1', nome: 'Produto', preco: '99999999.99', estoqueAtual: 2 },
+      ]);
+      await expect(criar(undefined, [{ produtoId: 'p1', quantidade: 2 }])).rejects.toThrow(
+        /valor da venda excede/,
+      );
+      expect(prisma.client.$transaction).not.toHaveBeenCalled();
+      expect(estoque.registrarSaidaTx).not.toHaveBeenCalled();
+    });
+
     it('lança NotFoundException se algum produto não existe', async () => {
       prisma.client.produto.findMany.mockResolvedValue([
         { id: 'p1', nome: 'Shampoo', preco: 20, estoqueAtual: 100, ativo: true },
@@ -83,6 +94,9 @@ describe('VendasService', () => {
       let receivedData: { clienteId?: string; total: number; desconto?: number } | null = null;
       prisma.client.$transaction.mockImplementation((cb) => {
         const fakeTx = {
+          $queryRaw: jest.fn().mockResolvedValue([]),
+          lancamentoFinanceiro: { create: jest.fn().mockResolvedValue({ id: 'conta1' }) },
+
           venda: {
             create: jest.fn().mockImplementation(({ data }) => {
               receivedData = data;

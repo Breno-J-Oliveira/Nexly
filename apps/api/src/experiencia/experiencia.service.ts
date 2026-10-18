@@ -39,7 +39,7 @@ export class ExperienciaService {
       }),
       this.prisma.client.empresa.findFirstOrThrow({
         where: { id: empresaId },
-        select: { preset: true, modulos: true },
+        select: { preset: true, modulos: true, preferencias: true },
       }),
       this.prisma.client.depoimento.findFirst({
         where: { usuarioId: id, empresaId },
@@ -77,7 +77,7 @@ export class ExperienciaService {
     return this.prisma.client.empresa.update({
       where: { id: empresaId },
       data: { preset: dto.preset, modulos },
-      select: { preset: true, modulos: true },
+      select: { preset: true, modulos: true, preferencias: true },
     });
   }
 

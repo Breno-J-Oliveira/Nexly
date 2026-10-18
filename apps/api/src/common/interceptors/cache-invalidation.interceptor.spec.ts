@@ -3,7 +3,10 @@ import { RedisService } from '../../redis/redis.service';
 import { CacheInvalidationInterceptor } from './cache-invalidation.interceptor';
 
 describe('Cache por empresa após escrita', () => {
-  const redis = { del: jest.fn().mockResolvedValue(undefined) };
+  const redis = {
+    set: jest.fn().mockResolvedValue(undefined),
+    del: jest.fn().mockResolvedValue(undefined),
+  };
   const interceptor = new CacheInvalidationInterceptor(redis as unknown as RedisService);
   const context = (method: string, path = '/api/vendas') =>
     ({
@@ -25,6 +28,7 @@ describe('Cache por empresa após escrita', () => {
       lastValueFrom(interceptor.intercept(context('POST'), { handle: () => of({ id: 'v1' }) })),
     ).resolves.toEqual({ id: 'v1' });
     expect(redis.del).toHaveBeenCalledWith('dashboard:e1');
+    expect(redis.set).toHaveBeenCalledWith('financeiro:versao:e1', expect.any(String), 600);
   });
 
   it('preserva cache em leitura e em escrita que falhou', async () => {

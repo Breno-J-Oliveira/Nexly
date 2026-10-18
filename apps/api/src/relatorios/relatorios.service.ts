@@ -64,7 +64,7 @@ export class RelatoriosService {
   async faturamento(dataInicio: string, dataFim: string) {
     const { inicio, fim } = dateRange(dataInicio, dataFim);
     const vendas = await this.prisma.client.venda.findMany({
-      where: { createdAt: { gte: inicio, lte: fim } },
+      where: { status: 'CONCLUIDA', createdAt: { gte: inicio, lte: fim } },
       select: { total: true, createdAt: true },
     });
     const ft = vendas.reduce((sum, v) => sum + Number(v.total), 0);

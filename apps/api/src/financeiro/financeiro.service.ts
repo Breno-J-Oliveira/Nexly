@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { BadRequestException } from '@nestjs/common';
 import { dateRange } from '../common/validation/date-range';
 import { Injectable } from '@nestjs/common';
@@ -14,12 +15,13 @@ export class FinanceiroService {
   /* DRE simplificado (Demonstracao do Resultado do Exercicio) */
   async dre(empresaId: string, dataInicio: string, dataFim: string) {
     const { inicio, fim } = dateRange(dataInicio, dataFim);
-    const cacheKey = 'dre:' + empresaId + ':v2:' + dataInicio + ':' + dataFim;
+    const versao = (await this.redis.get(`financeiro:versao:${empresaId}`)) ?? 'v3';
+    const cacheKey = 'dre:' + empresaId + ':' + versao + ':' + dataInicio + ':' + dataFim;
     const cached = await this.redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
 
     const vendas = await this.prisma.client.venda.aggregate({
-      where: { empresaId, createdAt: { gte: inicio, lte: fim } },
+      where: { empresaId, status: 'CONCLUIDA', createdAt: { gte: inicio, lte: fim } },
       _sum: { total: true, desconto: true },
       _count: { _all: true },
     });
@@ -30,17 +32,28 @@ export class FinanceiroService {
     const receitaBruta = receitaLiquida + descontos;
     const qtdVendas = vendas._count._all;
     const ticketMedio = qtdVendas === 0 ? 0 : receitaLiquida / qtdVendas;
-    // O schema nao guarda custo historico de aquisicao; preco de venda nao e CMV.
-    const cmv = null,
-      margemBruta = null,
-      margemPercentual = null;
+    const itens = await this.prisma.client.itemVenda.findMany({
+      where: { venda: { empresaId, status: 'CONCLUIDA', createdAt: { gte: inicio, lte: fim } } },
+      select: { vendaId: true, quantidade: true, custoUnitario: true },
+    });
+    const custosDisponiveis =
+      new Set(itens.map((i) => i.vendaId)).size === qtdVendas &&
+      itens.every((i) => i.custoUnitario !== null);
+    const cmv = custosDisponiveis
+      ? itens
+          .reduce((sum, i) => sum.plus(i.custoUnitario!.times(i.quantidade)), new Prisma.Decimal(0))
+          .toNumber()
+      : null;
+    const margemBruta = cmv === null ? null : receitaLiquida - cmv;
+    const margemPercentual =
+      margemBruta === null || receitaLiquida === 0 ? null : (margemBruta / receitaLiquida) * 100;
     const resultado = {
       periodo: { dataInicio, dataFim },
       receitaBruta,
       descontos,
       receitaLiquida,
       cmv,
-      custosDisponiveis: false,
+      custosDisponiveis,
       margemBruta,
       margemPercentual,
       qtdVendas,
@@ -55,18 +68,35 @@ export class FinanceiroService {
   async fluxoCaixa(empresaId: string, dataInicio: string, dataFim: string) {
     const { inicio, fim } = dateRange(dataInicio, dataFim);
 
-    const vendas = await this.prisma.client.venda.findMany({
-      where: { empresaId, createdAt: { gte: inicio, lte: fim } },
-      select: { total: true, createdAt: true },
-      orderBy: { createdAt: 'asc' },
-    });
-
+    const [baixas, estornos] = await Promise.all([
+      this.prisma.client.baixaFinanceira.findMany({
+        where: { data: { gte: inicio, lte: fim }, lancamento: { empresaId } },
+        include: { lancamento: { select: { tipo: true } } },
+      }),
+      this.prisma.client.baixaFinanceira.findMany({
+        where: {
+          estornada: true,
+          estornadaEm: { gte: inicio, lte: fim },
+          lancamento: { empresaId },
+        },
+        include: { lancamento: { select: { tipo: true } } },
+      }),
+    ]);
     const porDia = new Map<string, { entradas: number; total: number }>();
-    for (const v of vendas) {
-      const dia = v.createdAt.toISOString().slice(0, 10);
-      const atual = porDia.get(dia) ?? { entradas: 0, total: 0 };
-      atual.entradas += 1;
-      atual.total += Number(v.total);
+    for (const b of [
+      ...baixas.map((b) => ({
+        data: b.data,
+        valor: Number(b.valor) * (b.lancamento.tipo === 'RECEITA' ? 1 : -1),
+      })),
+      ...estornos.map((b) => ({
+        data: b.estornadaEm!,
+        valor: Number(b.valor) * (b.lancamento.tipo === 'RECEITA' ? -1 : 1),
+      })),
+    ]) {
+      const dia = b.data.toISOString().slice(0, 10),
+        atual = porDia.get(dia) ?? { entradas: 0, total: 0 };
+      atual.entradas++;
+      atual.total += b.valor;
       porDia.set(dia, atual);
     }
 
@@ -88,7 +118,7 @@ export class FinanceiroService {
     const { inicio, fim } = dateRange(dataInicio, dataFim);
 
     const itens = await this.prisma.client.itemVenda.findMany({
-      where: { venda: { empresaId, createdAt: { gte: inicio, lte: fim } } },
+      where: { venda: { empresaId, status: 'CONCLUIDA', createdAt: { gte: inicio, lte: fim } } },
       select: {
         quantidade: true,
         precoUnitario: true,

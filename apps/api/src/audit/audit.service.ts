@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { isISO8601 } from 'class-validator';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { AuditAcao, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { RECURSO_PARA_MODELO, paraJson, sanitizar } from './audit-diff';
@@ -109,6 +110,22 @@ export class AuditService {
     pagina: number;
     limite: number;
   }) {
+    if (
+      !Number.isInteger(params.pagina) ||
+      params.pagina < 1 ||
+      params.pagina > 100000 ||
+      !Number.isInteger(params.limite) ||
+      params.limite < 1 ||
+      params.limite > 100
+    )
+      throw new BadRequestException('Paginação inválida');
+    if (params.acao && !Object.values(AuditAcao).includes(params.acao as AuditAcao))
+      throw new BadRequestException('Ação inválida');
+    for (const data of [params.inicio, params.fim])
+      if (data && !isISO8601(data, { strict: true }))
+        throw new BadRequestException('Período inválido');
+    if (params.inicio && params.fim && Date.parse(params.inicio) > Date.parse(params.fim))
+      throw new BadRequestException('O início deve ser anterior ao fim');
     const where: Prisma.AuditLogWhereInput = {
       empresaId: params.empresaId,
       ...(params.recurso ? { recurso: params.recurso } : {}),

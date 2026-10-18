@@ -168,8 +168,49 @@ Qualquer d\u00FAvida, responda esta mensagem. At\u00E9 l\u00E1! \u{1F60A}`;
     return true;
   }
 
+  async executarLembrete(empresaId: string, id: string, dataHora: string) {
+    if (!this.isEnabled()) throw new Error('Envio desativado');
+    const empresa = await this.prisma.client.empresa.findFirst({
+      where: { id: empresaId, lembretesAtivos: true },
+      select: { fusoHorario: true, templateLembrete: true },
+    });
+    if (!empresa) return;
+    const a = await this.prisma.client.agendamento.findFirst({
+      where: {
+        id,
+        empresaId,
+        dataHora: new Date(dataHora),
+        status: { in: ['AGENDADO', 'CONFIRMADO'] },
+      },
+      include: { cliente: true, servico: true, profissional: true },
+    });
+    if (!a || !a.cliente.telefone) return;
+    const amanha = new Date(`${diaNoFuso(new Date(), empresa.fusoHorario)}T12:00:00Z`);
+    amanha.setUTCDate(amanha.getUTCDate() + 1);
+    if (diaNoFuso(a.dataHora, empresa.fusoHorario) !== amanha.toISOString().slice(0, 10)) return;
+    const values: Record<string, string> = {
+      nome: a.cliente.nome,
+      hora: a.dataHora.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: empresa.fusoHorario,
+      }),
+      profissional: a.profissional.nome,
+      servico: a.servico.nome,
+    };
+    const message = (empresa.templateLembrete || TEMPLATE_PADRAO).replace(
+      /\{\{(nome|hora|profissional|servico)\}\}/g,
+      (_, key: string) => values[key]!,
+    );
+    if (!(await this.send({ phone: a.cliente.telefone, message })))
+      throw new Error('Envio não aceito');
+  }
+
   /* ── Schedule daily reminders (called via cron) ── */
-  async sendDailyReminders(agora = new Date()): Promise<{ sent: number; failed: number }> {
+  async sendDailyReminders(
+    agora = new Date(),
+    enfileirar?: (empresaId: string, id: string, dataHora: Date) => Promise<void>,
+  ): Promise<{ sent: number; failed: number }> {
     if (!this.isEnabled()) return { sent: 0, failed: 0 };
     let sent = 0;
     let failed = 0;
@@ -184,6 +225,17 @@ Qualquer d\u00FAvida, responda esta mensagem. At\u00E9 l\u00E1! \u{1F60A}`;
         ...(empresaCursor ? { cursor: { id: empresaCursor }, skip: 1 } : {}),
       });
       for (const empresa of empresas) {
+        if (
+          enfileirar &&
+          Number(
+            new Intl.DateTimeFormat('en-GB', {
+              hour: '2-digit',
+              hourCycle: 'h23',
+              timeZone: empresa.fusoHorario,
+            }).format(agora),
+          ) < 8
+        )
+          continue;
         const hoje = diaNoFuso(agora, empresa.fusoHorario);
         const amanha = new Date(`${hoje}T12:00:00Z`);
         amanha.setUTCDate(amanha.getUTCDate() + 1);
@@ -213,6 +265,10 @@ Qualquer d\u00FAvida, responda esta mensagem. At\u00E9 l\u00E1! \u{1F60A}`;
           for (const a of agendamentos) {
             if (!a.cliente.telefone) {
               failed++;
+              continue;
+            }
+            if (enfileirar) {
+              await enfileirar(empresa.id, a.id, a.dataHora);
               continue;
             }
             const hora = a.dataHora.toLocaleTimeString('pt-BR', {

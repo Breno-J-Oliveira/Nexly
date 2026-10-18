@@ -159,6 +159,7 @@ async function req(method, path, token, body) {
   .finally(async () => {
     if (empresa) {
       await p.movimentacaoEstoque.deleteMany({ where: { empresaId: empresa.id } });
+      await p.lancamentoFinanceiro.deleteMany({ where: { empresaId: empresa.id } });
       await p.venda.deleteMany({ where: { empresaId: empresa.id } });
       await p.agendamento.deleteMany({ where: { empresaId: empresa.id } });
       await p.servico.deleteMany({ where: { empresaId: empresa.id } });

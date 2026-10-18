@@ -1,7 +1,12 @@
 import { ValidationPipe } from '@nestjs/common';
 import { normalizeModules, toggleModule } from '@nexly/shared';
 import { AutomacaoDto, ConsentimentoDto, RecorrenciaDto, TarefaDto } from './operacoes.dto';
-import { datasRecorrentes, proximaExecucao, telefoneWhatsApp } from './operacoes.service';
+import {
+  OperacoesService,
+  datasRecorrentes,
+  proximaExecucao,
+  telefoneWhatsApp,
+} from './operacoes.service';
 
 describe('modulos operacionais', () => {
   const pipe = new ValidationPipe({
@@ -130,5 +135,43 @@ describe('modulos operacionais', () => {
         TarefaDto,
       ),
     ).rejects.toThrow();
+  });
+});
+
+describe('Retomada das automações na fila', () => {
+  it('reativa ocorrência ainda pendente após o módulo voltar a ser usado', async () => {
+    const prisma = {
+      client: {
+        automacao: {
+          findMany: jest
+            .fn()
+            .mockResolvedValue([{ id: 'a', empresaId: 'e', proximaExecucao: new Date() }]),
+        },
+        jobDuravel: { updateMany: jest.fn() },
+      },
+    };
+    const jobs = { adicionar: jest.fn().mockResolvedValue({ id: 'j', status: 'CONCLUIDO' }) };
+    const service = new OperacoesService(prisma as never, jobs as never);
+    await service.enfileirarAutomacoes();
+    expect(prisma.client.jobDuravel.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'j', empresaId: 'e', status: 'CONCLUIDO' },
+        data: expect.objectContaining({ status: 'PENDENTE', payload: { id: 'a' } }),
+      }),
+    );
+  });
+  it('trabalho ocupado pede retry à fila em vez de consumir a ocorrência sem executar', async () => {
+    let liberar!: (value: never[]) => void;
+    const consulta = new Promise<never[]>((resolve) => {
+      liberar = resolve;
+    });
+    const prisma = { client: { automacao: { findMany: jest.fn().mockReturnValue(consulta) } } };
+    const service = new OperacoesService(prisma as never, {} as never);
+    const primeira = service.processarAutomacoes('e');
+    await expect(service.processarAutomacoes('e', new Date(), 'a')).rejects.toThrow(
+      /fila tentará novamente/,
+    );
+    liberar([]);
+    await primeira;
   });
 });

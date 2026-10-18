@@ -1,3 +1,4 @@
+import { JobsService } from '../jobs/jobs.service';
 import { isUUID } from 'class-validator';
 import { bloquearAgenda } from '../database/agenda-lock';
 import {
@@ -43,10 +44,18 @@ export class OperacoesService implements OnModuleInit, OnModuleDestroy {
   private timer?: ReturnType<typeof setInterval>;
   private running = false;
   private readonly logger = new Logger(OperacoesService.name);
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jobs: JobsService,
+  ) {}
   onModuleInit() {
+    this.jobs.register('AUTOMACAO', async (payload, job) => {
+      const dados = payload as { id: string };
+      await this.processarAutomacoes(job.empresaId, new Date(), dados.id);
+    });
+    if (process.env.NODE_ENV === 'test') return;
     this.timer = setInterval(() => {
-      void this.processarAutomacoes().catch(() =>
+      void this.enfileirarAutomacoes().catch(() =>
         this.logger.error('Falha ao processar automacoes; nova tentativa no proximo ciclo'),
       );
     }, 60000);
@@ -308,13 +317,51 @@ export class OperacoesService implements OnModuleInit, OnModuleDestroy {
     if (!result.count) throw new NotFoundException('Automacao nao encontrada');
     return { ok: true };
   }
-  async processarAutomacoes(empresaId?: string, agora = new Date()) {
-    if (this.running) return { criadas: 0 };
+  async enfileirarAutomacoes() {
+    const lista = await this.prisma.client.automacao.findMany({
+      where: {
+        ativa: true,
+        proximaExecucao: { lte: new Date() },
+        empresa: { modulos: { has: 'automacao' } },
+      },
+      select: { id: true, empresaId: true, proximaExecucao: true },
+      orderBy: { proximaExecucao: 'asc' },
+      take: 100,
+    });
+    for (const a of lista) {
+      const job = await this.jobs.adicionar(
+        a.empresaId,
+        'AUTOMACAO',
+        `automacao:${a.empresaId}:${a.id}:${a.proximaExecucao.toISOString()}`,
+        { id: a.id },
+      );
+      // Uma rotina pode ter sido ignorada enquanto o módulo estava desativado.
+      // O handler revalida a ocorrência antes de criar a tarefa, inclusive em concorrência.
+      if (job.status === 'CONCLUIDO')
+        await this.prisma.client.jobDuravel.updateMany({
+          where: { id: job.id, empresaId: a.empresaId, status: 'CONCLUIDO' },
+          data: {
+            status: 'PENDENTE',
+            payload: { id: a.id },
+            tentativas: 0,
+            executarEm: new Date(),
+            erro: null,
+          },
+        });
+    }
+  }
+  async processarAutomacoes(empresaId?: string, agora = new Date(), automacaoId?: string) {
+    if (this.running) {
+      if (automacaoId)
+        throw new ConflictException('Outra rotina está em andamento. A fila tentará novamente.');
+      return { criadas: 0 };
+    }
     this.running = true;
     try {
       const automacoes = await this.prisma.client.automacao.findMany({
         where: {
           ...(empresaId ? { empresaId } : {}),
+          ...(automacaoId ? { id: automacaoId } : {}),
           ativa: true,
           proximaExecucao: { lte: agora },
         },

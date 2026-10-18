@@ -2,6 +2,8 @@ require('./local-api-env.cjs');
 const { PrismaClient } = require('@prisma/client');
 const assert = require('node:assert/strict');
 const p = new PrismaClient();
+const schema = require('node:fs').readFileSync(require('node:path').join(__dirname,'../apps/api/prisma/schema.prisma'),'utf8');
+const modelCount = (schema.match(/^model /gm)||[]).length;
 let company;
 let checks = 0;
 function ok(value, message) {
@@ -12,7 +14,7 @@ function ok(value, message) {
 (async () => {
   const rows =
     await p.$queryRaw`SELECT tablename,rowsecurity FROM pg_tables WHERE schemaname='public' AND tablename<>'_prisma_migrations'`;
-  ok(rows.length === 31 && rows.every((r) => r.rowsecurity), '31 tabelas da aplicacao com RLS');
+  ok(rows.length === modelCount && rows.every((r) => r.rowsecurity), `${modelCount} tabelas da aplicacao com RLS`);
   const grants =
     await p.$queryRaw`SELECT table_name FROM information_schema.table_privileges WHERE table_schema='public' AND table_name<>'_prisma_migrations' AND grantee IN ('anon','authenticated','PUBLIC')`;
   ok(grants.length === 0, 'sem grants diretos de navegador ou PUBLIC nas tabelas');

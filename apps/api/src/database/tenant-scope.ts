@@ -1,5 +1,11 @@
 /** Escopo de queries Prisma 5: filtros adicionais são aceitos em where único. */
 const DIRECT_MODELS = new Set([
+  'LancamentoFinanceiro',
+  'SaldoFilial',
+  'TransferenciaFilial',
+  'JobDuravel',
+  'Importacao',
+  'ComprovacaoOperacional',
   'Usuario',
   'Cliente',
   'Profissional',
@@ -27,6 +33,8 @@ const DIRECT_MODELS = new Set([
 ]);
 
 const PARENT_SCOPES: Record<string, string> = {
+  BaixaFinanceira: 'lancamento',
+  RecuperacaoSenha: 'usuario',
   InsumoServico: 'servico',
   ItemVenda: 'venda',
   ItemPedidoCompra: 'pedido',

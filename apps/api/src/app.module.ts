@@ -1,4 +1,6 @@
 import { OperacoesModule } from './operacoes/operacoes.controller';
+import { JobsModule } from './jobs/jobs.service';
+import { GestaoModule } from './gestao/gestao.controller';
 import { Module } from '@nestjs/common';
 import { HeavyOperationGuard } from './common/guards/heavy-operation.guard';
 import { ConfigModule } from '@nestjs/config';
@@ -47,6 +49,8 @@ import { ExperienciaModule } from './experiencia/experiencia.controller';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    JobsModule,
+    GestaoModule,
     RedisModule,
     ExperienciaModule,
     OperacoesModule,

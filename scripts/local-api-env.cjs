@@ -16,4 +16,5 @@ Object.assign(process.env, {
   CORS_ORIGIN: 'http://localhost:3002,http://127.0.0.1:3002',
   NEXUSAUTH_URL: '',
   WHATSAPP_PROVIDER: 'disabled',
+  EMAIL_PROVIDER:'disabled',
 });

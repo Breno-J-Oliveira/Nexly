@@ -165,6 +165,7 @@ main()
     // Limpeza exclusiva dos IDs criados por esta execução, preservando o seed/demo.
     for (const empresaId of fixtures) {
       await prisma.itemVenda.deleteMany({ where: { venda: { empresaId } } });
+      await prisma.lancamentoFinanceiro.deleteMany({ where: { empresaId } });
       await prisma.venda.deleteMany({ where: { empresaId } });
       await prisma.movimentacaoEstoque.deleteMany({ where: { empresaId } });
       await prisma.produto.deleteMany({ where: { empresaId } });

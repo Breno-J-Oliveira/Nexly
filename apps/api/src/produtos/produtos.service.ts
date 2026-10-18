@@ -86,6 +86,7 @@ export class ProdutosService {
           nome: dto.nome,
           sku: dto.sku,
           preco: dto.preco,
+          custoAtual: dto.custoAtual,
           estoqueAtual: dto.estoqueAtual ?? 0,
           estoqueMinimo: dto.estoqueMinimo ?? 5,
           categoria: dto.categoria,
@@ -110,6 +111,7 @@ export class ProdutosService {
       data: {
         nome: dto.nome,
         preco: dto.preco,
+        custoAtual: dto.custoAtual,
         estoqueMinimo: dto.estoqueMinimo,
         categoria: dto.categoria,
         ...(dto.dataVencimento !== undefined
