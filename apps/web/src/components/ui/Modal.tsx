@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, RefObject, useEffect, useRef } from 'react';
 
 interface ModalProps {
   open: boolean;
@@ -8,9 +8,17 @@ interface ModalProps {
   children: ReactNode;
   onClose: () => void;
   width?: string;
+  initialFocusRef?: RefObject<HTMLElement | null>;
 }
 
-export function Modal({ open, title, children, onClose, width = 'max-w-md' }: ModalProps) {
+export function Modal({
+  open,
+  title,
+  children,
+  onClose,
+  width = 'max-w-md',
+  initialFocusRef,
+}: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -20,25 +28,45 @@ export function Modal({ open, title, children, onClose, width = 'max-w-md' }: Mo
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const dialog = dialogRef.current;
-    const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]';
-    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>(selector) ?? []).filter(element => element.getClientRects().length > 0);
-    (focusable()[0] ?? dialog)?.focus();
+    const selector =
+      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]';
+    const focusable = () =>
+      Array.from(dialog?.querySelectorAll<HTMLElement>(selector) ?? []).filter(
+        (element) => element.tabIndex >= 0 && element.getClientRects().length > 0,
+      );
+    (initialFocusRef?.current ?? focusable()[0] ?? dialog)?.focus();
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { event.preventDefault(); closeRef.current(); }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeRef.current();
+      }
       if (event.key !== 'Tab') return;
       const elements = focusable();
       const first = elements[0];
       const last = elements[elements.length - 1];
-      if (!first) { event.preventDefault(); dialog?.focus(); return; }
-      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
-        event.preventDefault(); last?.focus();
+      if (!first) {
+        event.preventDefault();
+        dialog?.focus();
+        return;
+      }
+      if (
+        event.shiftKey &&
+        (document.activeElement === first || document.activeElement === dialog)
+      ) {
+        event.preventDefault();
+        last?.focus();
       } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault(); first.focus();
+        event.preventDefault();
+        first.focus();
       }
     };
     document.addEventListener('keydown', handleKey);
-    return () => { document.removeEventListener('keydown', handleKey); document.body.style.overflow = overflow; previous?.focus(); };
-  }, [open]);
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = overflow;
+      previous?.focus();
+    };
+  }, [open, initialFocusRef]);
   if (!open) return null;
 
   return (
@@ -53,15 +81,27 @@ export function Modal({ open, title, children, onClose, width = 'max-w-md' }: Mo
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className={'max-h-[calc(100dvh-2rem)] overflow-y-auto w-full ' + width + ' rounded-2xl p-5 sm:p-6 animate-slide-up'}
+        className={
+          'max-h-[calc(100dvh-2rem)] overflow-y-auto w-full ' +
+          width +
+          ' rounded-2xl p-5 sm:p-6 animate-slide-up'
+        }
         style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.10)' }}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold" style={{ color: '#FAFAFA' }}>{title}</h3>
-          <button type="button" aria-label="Fechar janela" onClick={onClose} className="rounded p-1 hover:bg-white/5" style={{ color: '#71717A' }}>
+          <h3 className="text-lg font-semibold" style={{ color: '#FAFAFA' }}>
+            {title}
+          </h3>
+          <button
+            type="button"
+            aria-label="Fechar janela"
+            onClick={onClose}
+            className="rounded p-1 hover:bg-white/5"
+            style={{ color: '#71717A' }}
+          >
             ✕
           </button>
         </div>

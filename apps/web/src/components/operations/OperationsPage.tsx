@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal';
 import { configs, Kind, Options, RecordData, statusLabels } from './config';
 import { MarketingConsent } from './MarketingConsent';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { EditorModal } from '@/components/ui/EditorModal';
 
 const control =
   'w-full rounded-lg border border-white/10 bg-[#18181F] px-3 py-2 text-sm text-[#FAFAFA]';
@@ -57,6 +58,8 @@ export function OperationsPage({ kind }: { kind: Kind }) {
     [contactPage, setContactPage] = useState(1),
     [contactTotal, setContactTotal] = useState(0);
   const [clientSearch, setClientSearch] = useState('');
+  const [originalForm, setOriginalForm] = useState('');
+  const mutationLock = useRef(false);
   const loadVersion = useRef(0);
   const cancelPendingLoads = useCallback(() => {
     loadVersion.current++;
@@ -79,6 +82,12 @@ export function OperationsPage({ kind }: { kind: Kind }) {
         },
       );
       if (version !== loadVersion.current) return;
+      const nextTotal = Array.isArray(r.data) ? r.data.length : r.data.total;
+      const lastPage = Math.max(1, Math.ceil(nextTotal / 50));
+      if (page > lastPage) {
+        setPage(lastPage);
+        return;
+      }
       setItems(Array.isArray(r.data) ? r.data : r.data.data);
       setTotal(Array.isArray(r.data) ? r.data.length : r.data.total);
     } catch (e) {
@@ -137,6 +146,7 @@ export function OperationsPage({ kind }: { kind: Kind }) {
               : (record[f.name] as string | number | boolean);
       }
       setForm(next);
+      setOriginalForm(JSON.stringify(next));
       setOpen(true);
     } catch (e) {
       setError(operationError(e));
@@ -144,7 +154,8 @@ export function OperationsPage({ kind }: { kind: Kind }) {
   }
   async function save(e: FormEvent) {
     e.preventDefault();
-    if (busy) return;
+    if (mutationLock.current) return;
+    mutationLock.current = true;
     setBusy(true);
     setError('');
     try {
@@ -171,11 +182,13 @@ export function OperationsPage({ kind }: { kind: Kind }) {
     } catch (e) {
       setError(operationError(e));
     } finally {
+      mutationLock.current = false;
       setBusy(false);
     }
   }
   async function confirmRemove() {
-    if (!remove) return;
+    if (!remove || mutationLock.current) return;
+    mutationLock.current = true;
     setBusy(true);
     try {
       if (kind === 'recorrencias') await api.post(`/operacoes/recorrencias/${remove.id}/cancelar`);
@@ -190,6 +203,7 @@ export function OperationsPage({ kind }: { kind: Kind }) {
     } catch (e) {
       setError(operationError(e));
     } finally {
+      mutationLock.current = false;
       setBusy(false);
     }
   }
@@ -452,135 +466,140 @@ export function OperationsPage({ kind }: { kind: Kind }) {
           </div>
         </>
       )}
-      <Modal
+      <EditorModal
         open={open}
         title={`${editing ? 'Editar' : 'Criar'} — ${config.title}`}
+        dirty={JSON.stringify(form) !== originalForm}
+        busy={busy}
         onClose={() => {
           if (!busy) setOpen(false);
         }}
-        width="max-w-2xl"
       >
-        <form
-          onSubmit={(e) => {
-            void save(e);
-          }}
-          className="space-y-4"
-        >
-          {kind === 'recorrencias' && (
-            <div>
-              <label htmlFor="client-search" className="text-sm">
-                Buscar cliente pelo nome
-              </label>
-              <div className="mt-2 flex gap-2">
-                <input
-                  id="client-search"
-                  className={control}
-                  value={clientSearch}
-                  onChange={(e) => setClientSearch(e.target.value)}
-                  maxLength={100}
-                />
-                <Button type="button" variant="secondary" onClick={() => void searchClients()}>
-                  Buscar
+        {(requestClose) => (
+          <form
+            onSubmit={(e) => {
+              void save(e);
+            }}
+            className="space-y-4"
+          >
+            <fieldset disabled={busy} className="space-y-4">
+              {kind === 'recorrencias' && (
+                <div>
+                  <label htmlFor="client-search" className="text-sm">
+                    Buscar cliente pelo nome
+                  </label>
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      id="client-search"
+                      className={control}
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                      maxLength={100}
+                    />
+                    <Button type="button" variant="secondary" onClick={() => void searchClients()}>
+                      Buscar
+                    </Button>
+                  </div>
+                  <p className="mt-1 text-xs text-[#71717A]">Até 100 clientes por busca.</p>
+                </div>
+              )}
+              {config.fields.map((f) => (
+                <div key={f.name} className="block text-sm text-[#A1A1AA]">
+                  <label htmlFor={`operation-${f.name}`}>{f.label}</label>
+                  {f.type === 'textarea' ? (
+                    <textarea
+                      id={`operation-${f.name}`}
+                      className={`${control} mt-2 min-h-32`}
+                      value={String(form[f.name] || '')}
+                      required={f.required}
+                      maxLength={f.maxLength}
+                      onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
+                    />
+                  ) : f.type === 'checkbox' ? (
+                    <input
+                      id={`operation-${f.name}`}
+                      className="ml-3 accent-[#6366F1]"
+                      type="checkbox"
+                      checked={Boolean(form[f.name])}
+                      onChange={(e) => setForm({ ...form, [f.name]: e.target.checked })}
+                    />
+                  ) : f.type === 'select' ? (
+                    <select
+                      id={`operation-${f.name}`}
+                      className={`${control} mt-2`}
+                      value={String(form[f.name] || '')}
+                      required={f.required}
+                      onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
+                    >
+                      {!f.required || f.source ? <option value="">Selecione</option> : null}
+                      {f.choices?.map((c) => (
+                        <option key={c} value={c}>
+                          {statusLabels[c] || c}
+                        </option>
+                      ))}
+                      {f.source &&
+                        form[f.name] &&
+                        !options[f.source].some((o) => o.id === form[f.name]) && (
+                          <option value={String(form[f.name])}>Vínculo anterior (inativo)</option>
+                        )}
+                      {f.source &&
+                        options[f.source].map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.nome}
+                          </option>
+                        ))}
+                    </select>
+                  ) : (
+                    <input
+                      id={`operation-${f.name}`}
+                      className={`${control} mt-2`}
+                      type={f.type || 'text'}
+                      value={String(form[f.name] ?? '')}
+                      required={f.required}
+                      min={f.min}
+                      max={f.max}
+                      minLength={f.type !== 'number' ? f.min : undefined}
+                      maxLength={f.maxLength}
+                      onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
+                    />
+                  )}
+                </div>
+              ))}
+              {kind === 'recorrencias' && form.inicio && (
+                <details open className="text-xs text-[#A1A1AA]">
+                  <summary>Conferir datas antes de criar</summary>
+                  <ol className="mt-2 space-y-1">
+                    {Array.from(
+                      { length: Math.max(0, Math.min(24, Number(form.quantidade) || 0)) },
+                      (_, i) => (
+                        <li key={i}>
+                          {new Date(
+                            new Date(String(form.inicio)).getTime() +
+                              i * Number(form.intervaloDias) * 86400000,
+                          ).toLocaleString('pt-BR')}
+                        </li>
+                      ),
+                    )}
+                  </ol>
+                </details>
+              )}
+              {error && (
+                <p role="alert" className="text-sm text-red-300">
+                  {error}
+                </p>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" disabled={busy} onClick={requestClose}>
+                  Voltar
+                </Button>
+                <Button loading={busy} type="submit">
+                  {kind === 'recorrencias' ? 'Criar todos os atendimentos' : 'Salvar'}
                 </Button>
               </div>
-              <p className="mt-1 text-xs text-[#71717A]">Até 100 clientes por busca.</p>
-            </div>
-          )}
-          {config.fields.map((f) => (
-            <div key={f.name} className="block text-sm text-[#A1A1AA]">
-              <label htmlFor={`operation-${f.name}`}>{f.label}</label>
-              {f.type === 'textarea' ? (
-                <textarea
-                  id={`operation-${f.name}`}
-                  className={`${control} mt-2 min-h-32`}
-                  value={String(form[f.name] || '')}
-                  required={f.required}
-                  maxLength={f.maxLength}
-                  onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
-                />
-              ) : f.type === 'checkbox' ? (
-                <input
-                  id={`operation-${f.name}`}
-                  className="ml-3 accent-[#6366F1]"
-                  type="checkbox"
-                  checked={Boolean(form[f.name])}
-                  onChange={(e) => setForm({ ...form, [f.name]: e.target.checked })}
-                />
-              ) : f.type === 'select' ? (
-                <select
-                  id={`operation-${f.name}`}
-                  className={`${control} mt-2`}
-                  value={String(form[f.name] || '')}
-                  required={f.required}
-                  onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
-                >
-                  {!f.required || f.source ? <option value="">Selecione</option> : null}
-                  {f.choices?.map((c) => (
-                    <option key={c} value={c}>
-                      {statusLabels[c] || c}
-                    </option>
-                  ))}
-                  {f.source &&
-                    form[f.name] &&
-                    !options[f.source].some((o) => o.id === form[f.name]) && (
-                      <option value={String(form[f.name])}>Vínculo anterior (inativo)</option>
-                    )}
-                  {f.source &&
-                    options[f.source].map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.nome}
-                      </option>
-                    ))}
-                </select>
-              ) : (
-                <input
-                  id={`operation-${f.name}`}
-                  className={`${control} mt-2`}
-                  type={f.type || 'text'}
-                  value={String(form[f.name] ?? '')}
-                  required={f.required}
-                  min={f.min}
-                  max={f.max}
-                  minLength={f.type !== 'number' ? f.min : undefined}
-                  maxLength={f.maxLength}
-                  onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
-                />
-              )}
-            </div>
-          ))}
-          {kind === 'recorrencias' && form.inicio && (
-            <details open className="text-xs text-[#A1A1AA]">
-              <summary>Conferir datas antes de criar</summary>
-              <ol className="mt-2 space-y-1">
-                {Array.from(
-                  { length: Math.max(0, Math.min(24, Number(form.quantidade) || 0)) },
-                  (_, i) => (
-                    <li key={i}>
-                      {new Date(
-                        new Date(String(form.inicio)).getTime() +
-                          i * Number(form.intervaloDias) * 86400000,
-                      ).toLocaleString('pt-BR')}
-                    </li>
-                  ),
-                )}
-              </ol>
-            </details>
-          )}
-          {error && (
-            <p role="alert" className="text-sm text-red-300">
-              {error}
-            </p>
-          )}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" disabled={busy} onClick={() => setOpen(false)}>
-              Voltar
-            </Button>
-            <Button loading={busy} type="submit">
-              {kind === 'recorrencias' ? 'Criar todos os atendimentos' : 'Salvar'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+            </fieldset>
+          </form>
+        )}
+      </EditorModal>
       <Modal
         open={!!remove}
         title={kind === 'recorrencias' ? 'Cancelar próximos atendimentos?' : 'Excluir registro?'}

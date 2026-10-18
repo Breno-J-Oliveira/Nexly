@@ -10,6 +10,8 @@ import { useWorkspace } from '@/lib/workspace';
 import { useNotifications } from '@/lib/notifications';
 import { formatarDataHora } from '@/lib/format';
 import { Icon } from '@/components/ui/Icon';
+import { CommandPalette } from '@/components/CommandPalette';
+import { ConnectionStatus } from '@/components/ConnectionStatus';
 
 /* --- Breadcrumb labels --- */
 const PAGE_LABELS: Record<string, string> = {
@@ -23,6 +25,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/servicos': 'Serviços',
   '/produtos': 'Produtos',
   '/estoque': 'Estoque',
+  '/estoque/pedidos': 'Pedidos de compra',
   '/pdv': 'Ponto de Venda',
   '/vendas': 'Vendas',
   '/relatorios': 'Relatórios',
@@ -71,6 +74,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
+      aria-current={active ? 'page' : undefined}
       className="group flex items-center gap-3 border rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150"
       style={{
         backgroundColor: active ? 'rgba(99,102,241,0.10)' : 'transparent',
@@ -92,25 +96,25 @@ export function Shell({ children }: { children: ReactNode }) {
   const [sidebarAberta, setSidebarAberta] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
   const [notifAberto, setNotifAberto] = useState(false);
-  const [busca, setBusca] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
   const pageLabel = PAGE_LABELS[pathname] ?? '';
   const nome = user?.nome ?? 'Usuário';
   const role = user?.role ?? '';
-  const resultados = NAV_GROUPS.flatMap(group => group.items).filter(item => hasAccess(item.href, role) && enabled(item.href) && item.label.toLocaleLowerCase('pt-BR').includes(busca.toLocaleLowerCase('pt-BR')));
+  const destinos = NAV_GROUPS.flatMap(group => group.items).filter(item => hasAccess(item.href, role) && enabled(item.href));
   const dataHoje = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
   const iniciais = nome.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 
-  useEffect(() => { setSidebarAberta(false); setBusca(''); }, [pathname]);
+  useEffect(() => { setSidebarAberta(false); setSearchOpen(false); }, [pathname]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuAberto(false);
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifAberto(false);
     };
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMenuAberto(false); setNotifAberto(false); setSidebarAberta(false); setBusca(''); } };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMenuAberto(false); setNotifAberto(false); setSidebarAberta(false); } };
     document.addEventListener('keydown', onKey);
     document.addEventListener('mousedown', onClick);
     return () => { document.removeEventListener('mousedown', onClick); document.removeEventListener('keydown', onKey); };
@@ -118,6 +122,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#060608' }}>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-[#6366F1] focus:px-4 focus:py-3 focus:text-white">Pular para o conteúdo</a>
       {/* Overlay mobile */}
       {sidebarAberta && (
         <div
@@ -145,6 +150,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
 
         <nav aria-label="Menu principal" className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+          <button type="button" aria-haspopup="dialog" onClick={() => { setSidebarAberta(false); setSearchOpen(true); }} className="flex min-h-11 items-center justify-between rounded-lg border border-white/10 px-3 text-sm text-[#D4D4D8]">Buscar páginas <kbd className="text-[10px] text-[#A1A1AA]">Ctrl K</kbd></button>
           {NAV_GROUPS.map((group, idx) => {
             const items = group.items.filter((item) => hasAccess(item.href, role) && enabled(item.href));
             if (items.length === 0) return null;
@@ -157,7 +163,7 @@ export function Shell({ children }: { children: ReactNode }) {
                 )}
                 <div className="flex flex-col gap-1">
                   {items.map((item) => (
-                    <NavLink key={item.href} item={item} active={pathname === item.href || pathname.startsWith(`${item.href}/`)} />
+                    <NavLink key={item.href} item={item} active={pathname === item.href} />
                   ))}
                 </div>
               </div>
@@ -187,11 +193,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
           <div id="page-toolbar" className="min-w-0 flex-1 empty:hidden" />
           <div className="shell-header-tools ml-auto flex items-center gap-2">
-            <div className="shell-global-search relative hidden lg:block">
-              <label className="sr-only" htmlFor="nav-search">Buscar página</label>
-              <input id="nav-search" value={busca} onChange={event => setBusca(event.target.value)} placeholder="Buscar página..." className="h-9 w-56 rounded-lg border border-white/10 bg-[#111116] px-3 text-[13px] text-[#FAFAFA] placeholder:text-[#71717A]" />
-              {busca.trim() && <div className="absolute right-0 top-11 z-50 max-h-80 w-64 overflow-y-auto rounded-xl border border-white/10 bg-[#18181F] p-2 shadow-2xl">{resultados.length ? resultados.map(item => <Link key={item.href} href={item.href} onClick={() => setBusca('')} className="block rounded-lg px-3 py-2 text-[13px] text-[#FAFAFA] hover:bg-white/5">{item.label}</Link>) : <p className="p-3 text-xs text-[#A1A1AA]">Nenhuma página encontrada</p>}</div>}
-            </div>
+            <button type="button" onClick={() => setSearchOpen(true)} aria-label="Buscar páginas" aria-haspopup="dialog" className="shell-global-search hidden min-h-11 items-center gap-4 rounded-lg border border-white/10 px-3 text-sm text-[#A1A1AA] lg:flex">Buscar página <kbd className="text-xs">Ctrl K</kbd></button>
             {/* Notificações */}
             <div className="relative" ref={notifRef}>
               <button
@@ -286,11 +288,13 @@ export function Shell({ children }: { children: ReactNode }) {
         </header>
 
         {/* Content */}
-        <main className="dashboard-content min-w-0 flex-1 px-4 pb-24 pt-6 md:px-8 md:py-8" style={{ color: '#E4E4E7' }}>
+        <main id="main-content" tabIndex={-1} className="dashboard-content min-w-0 flex-1 px-4 pb-24 pt-6 md:px-8 md:py-8" style={{ color: '#E4E4E7' }}>
+          <ConnectionStatus />
           {children}
         </main>
       </div>
       <nav aria-label="Navegação mobile" className="fixed inset-x-0 bottom-0 z-30 flex border-t border-white/10 bg-[#111116]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
+        <button type="button" onClick={() => setSearchOpen(true)} aria-label="Buscar páginas" aria-haspopup="dialog" className="flex min-h-16 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium text-[#A1A1AA]"><Icon name="magnifying-glass" size="lg" color="currentColor" />Buscar</button>
         {[
           { href: '/dashboard', label: 'Início', icon: 'gauge-high' },
           { href: '/agenda', label: 'Agenda', icon: 'calendar-days' },
@@ -305,6 +309,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <Icon name="bars" size="lg" color="currentColor" />Menu
         </button>
       </nav>
+      <CommandPalette open={searchOpen} setOpen={setSearchOpen} items={destinos} />
     </div>
   );
 }

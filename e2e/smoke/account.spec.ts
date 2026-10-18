@@ -36,9 +36,19 @@ test('staff can manage their own password and sessions on mobile', async ({ page
     await page.getByLabel('Senha', { exact: true }).fill('SenhaOriginal123!');
     await page.getByRole('button', { name: 'Entrar no painel', exact: true }).click();
     await page.waitForURL('**/dashboard');
+    await page
+      .getByRole('navigation', { name: 'Navegação mobile' })
+      .getByRole('button', { name: 'Buscar páginas' })
+      .click();
+    const search = page.getByRole('dialog', { name: 'Ir para uma página' });
+    await expect(search.getByRole('option', { name: /Painel Geral/ })).toBeVisible();
+    await expect(search.getByRole('option', { name: /Usuários|Configurações|PDV/ })).toHaveCount(0);
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Menu do usuário', exact: true }).click();
     await page.getByRole('link', { name: 'Minha conta', exact: true }).last().click();
-    await expect(page.getByRole('heading', { name: 'Minha conta', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Minha conta', exact: true, level: 2 }),
+    ).toBeVisible();
     await expect(page.getByText('Esta sessão', { exact: true })).toBeVisible();
     await page.getByLabel('Senha atual', { exact: true }).fill('SenhaOriginal123!');
     await page.getByLabel('Nova senha', { exact: true }).fill('SenhaNova123!');
