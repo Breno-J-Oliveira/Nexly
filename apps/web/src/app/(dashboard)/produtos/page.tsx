@@ -26,6 +26,7 @@ interface Produto {
   nome: string;
   sku: string;
   preco: number;
+  custoAtual:number|null;
   estoqueAtual: number;
   estoqueMinimo: number;
   categoria: string | null;
@@ -47,6 +48,7 @@ interface FormState {
   nome: string;
   sku: string;
   preco: string;
+  custoAtual:string;
   estoqueAtual: string;
   estoqueMinimo: string;
   categoria: string;
@@ -58,6 +60,7 @@ const vazio: FormState = {
   nome: '',
   sku: '',
   preco: '',
+  custoAtual:'',
   estoqueAtual: '0',
   estoqueMinimo: '5',
   categoria: '',
@@ -141,6 +144,7 @@ export default function ProdutosPage() {
       nome: p.nome,
       sku: p.sku,
       preco: String(p.preco),
+      custoAtual:p.custoAtual==null?'':String(p.custoAtual),
       estoqueAtual: String(p.estoqueAtual),
       estoqueMinimo: String(p.estoqueMinimo),
       categoria: p.categoria ?? '',
@@ -160,6 +164,7 @@ export default function ProdutosPage() {
         await api.put(`/produtos/${editandoId}`, {
           nome: form.nome,
           preco: Number(form.preco),
+          custoAtual:form.custoAtual.trim()?Number(form.custoAtual):null,
           estoqueMinimo: Number(form.estoqueMinimo),
           categoria: form.categoria.trim() || null,
           dataVencimento: form.dataVencimento || null,
@@ -170,6 +175,7 @@ export default function ProdutosPage() {
           nome: form.nome,
           sku: form.sku,
           preco: Number(form.preco),
+          custoAtual:form.custoAtual.trim()?Number(form.custoAtual):null,
           estoqueAtual: Number(form.estoqueAtual),
           estoqueMinimo: Number(form.estoqueMinimo),
           categoria: form.categoria.trim() || null,
@@ -415,6 +421,7 @@ export default function ProdutosPage() {
               onChange={(e) => setForm({ ...form, preco: e.target.value })}
               placeholder="0.00"
             />
+            <Input label="Custo de aquisição (opcional)" type="number" min="0" max="99999999.99" step="0.01" value={form.custoAtual} onChange={e=>setForm({...form,custoAtual:e.target.value})}/><p className="text-xs text-[#A1A1AA]">O custo é congelado em cada nova venda e permite calcular a margem. Deixe vazio quando não souber.</p>
             {!editandoId && (
               <Input
                 label="Estoque inicial"

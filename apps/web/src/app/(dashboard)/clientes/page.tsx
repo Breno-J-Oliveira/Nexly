@@ -1,4 +1,5 @@
 'use client';
+import { useWorkspace } from '@/lib/workspace';
 
 import { hasPermission } from '@nexly/shared';
 import { useAuth } from '@/lib/auth';
@@ -39,6 +40,7 @@ interface FormState {
 const vazio: FormState = { nome: '', telefone: '', email: '' };
 
 export default function ClientesPage() {
+  const {profile}=useWorkspace();
   const { user } = useAuth();
   const podeCriar = hasPermission(user?.role, 'clientes:create');
   const podeEditar = hasPermission(user?.role, 'clientes:update');
@@ -187,7 +189,7 @@ export default function ClientesPage() {
       <PageToolbar>
         <div className="page-heading with-search flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-[#FAFAFA]">Clientes</h2>
+            <h2 className="text-xl font-semibold text-[#FAFAFA]">{profile.preferencias?.nomeCliente??'Clientes'}</h2>
             <p className="mt-1 text-sm text-[#A1A1AA]">
               CRM de clientes e acompanhamento de fidelidade · {totalClientes}{' '}
               {totalClientes === 1 ? 'registrado' : 'registrados'}

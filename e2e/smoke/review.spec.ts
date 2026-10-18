@@ -114,6 +114,7 @@ test('reports export uses authentication and staff dashboard respects permission
       .poll(async () => (await p.agendamento.findUnique({ where: { id: agendamento.id } }))?.status)
       .toBe('CONCLUIDO');
   } finally {
+    await p.lancamentoFinanceiro.deleteMany({ where: { empresaId: empresa.id } });
     await p.venda.deleteMany({ where: { empresaId: empresa.id } });
     await p.agendamento.deleteMany({ where: { empresaId: empresa.id } });
     await p.servico.deleteMany({ where: { empresaId: empresa.id } });

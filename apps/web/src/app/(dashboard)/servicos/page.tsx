@@ -1,4 +1,5 @@
 'use client';
+import { useWorkspace } from '@/lib/workspace';
 
 import { hasPermission } from '@nexly/shared';
 import { useAuth } from '@/lib/auth';
@@ -36,6 +37,7 @@ interface Insumo {
 }
 
 export default function ServicosPage() {
+  const {profile}=useWorkspace();
   const { user } = useAuth();
   const podeCriar = hasPermission(user?.role, 'servicos:create');
   const podeEditar = hasPermission(user?.role, 'servicos:update');
@@ -210,7 +212,7 @@ export default function ServicosPage() {
       <PageToolbar>
         <div className="page-heading with-search flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-[#FAFAFA]">Serviços</h2>
+            <h2 className="text-xl font-semibold text-[#FAFAFA]">{profile.preferencias?.nomeServico??'Serviços'}</h2>
             <p className="mt-1 text-sm text-[#A1A1AA]">Cadastre serviços e configure insumos</p>
           </div>
           <div className="toolbar-actions flex flex-wrap items-center gap-3">

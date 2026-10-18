@@ -1,3 +1,4 @@
+import { PasswordRecoveryForm } from '@/components/PasswordRecoveryForm';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -12,16 +13,7 @@ export default function RecuperarSenhaPage() {
         className="mx-auto h-10 w-10 object-contain"
       />
       <h1 className="mt-6 text-center text-2xl font-semibold text-[#FAFAFA]">Recuperar senha</h1>
-      <div
-        role="status"
-        className="mt-6 rounded-xl border border-amber-400/20 bg-amber-500/5 p-4 text-sm leading-6 text-[#D4D4D8]"
-      >
-        <p className="font-medium text-amber-200">Recuperação por e-mail indisponível</p>
-        <p className="mt-2">
-          O envio de instruções por e-mail ainda não está disponível. Você pode voltar ao login para
-          tentar entrar novamente.
-        </p>
-      </div>
+      <PasswordRecoveryForm/>
       <p className="mt-5 text-sm leading-6 text-[#A1A1AA]">
         Se você ainda tem uma sessão aberta em outro dispositivo, altere sua senha na página Minha
         conta.

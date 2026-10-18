@@ -16,6 +16,7 @@ export interface Recommendation {
   status: string;
 }
 export interface Workspace {
+  preferencias?:{nomeCliente?:string;nomeServico?:string;segmento?:string};
   preset: string | null;
   modulos: ModuleId[];
   diasDeUso: number;

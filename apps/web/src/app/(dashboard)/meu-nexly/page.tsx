@@ -1,4 +1,5 @@
 'use client';
+import { PreferenciasNegocio } from '@/components/gestao/PreferenciasNegocio';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { MODULES, ModuleId, canAccessWorkspaceRoute } from '@nexly/shared';
@@ -76,6 +77,7 @@ export default function MeuNexly() {
           </p>
         )}
       </section>
+      {['ADMIN','GESTOR'].includes(user?.role??'')&&<PreferenciasNegocio/>}
       <section>
         <h2 className="mb-4 text-lg font-semibold">Entenda seu painel</h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

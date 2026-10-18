@@ -1,8 +1,10 @@
 'use client';
 
+import { useApi } from '@/lib/useApi';
+import { SelectField,erroDaAcao } from '@/components/gestao/GestaoUI';
 import { PageToolbar } from '@/components/ui/PageToolbar';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState,useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Input } from '@/components/ui/Input';
@@ -28,6 +30,9 @@ interface Item {
 }
 
 export default function PdvPage() {
+  const tentativa=useRef<{body:string;chave:string}|null>(null);
+  const unidades=useApi<{id:string;nome:string}[]>('/gestao/unidades');
+  const [filialId,setFilialId]=useState(''),[recebido,setRecebido]=useState(false),[erroVenda,setErroVenda]=useState(''),[catalogoLoading,setCatalogoLoading]=useState(false);
   const [catalogo, setCatalogo] = useState<Produto[]>([]);
   const [busca, setBusca] = useState('');
   const [resultados, setResultados] = useState<Produto[]>([]);
@@ -51,23 +56,18 @@ export default function PdvPage() {
   const [cupomErro, setCupomErro] = useState<string | null>(null);
   const [aplicandoCupom, setAplicandoCupom] = useState(false);
 
-  useEffect(() => {
-    api.get<{ data: Produto[] }>('/produtos', { params: { limit: 100 } }).then(r => setCatalogo(r.data.data)).catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      if (busca.trim().length >= 2) {
-        api
-          .get<{ data: Produto[] }>('/produtos', { params: { search: busca, limit: 10 } })
-          .then((r) => setResultados(r.data.data))
-          .catch(() => setResultados([]));
-      } else {
-        setResultados([]);
-      }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [busca]);
+  useEffect(()=>{
+    const controller=new AbortController();setCatalogo([]);setResultados([]);setCatalogoLoading(true);setErroVenda('');
+    api.get<{data:Produto[]}>(filialId?`/gestao/catalogo-filial/${filialId}`:'/produtos',{params:filialId?undefined:{limit:100},signal:controller.signal}).then(r=>{if(!controller.signal.aborted)setCatalogo(r.data.data);}).catch(()=>{if(!controller.signal.aborted)setErroVenda('Não foi possível carregar os produtos desta unidade. Troque a unidade ou atualize a página.');}).finally(()=>{if(!controller.signal.aborted)setCatalogoLoading(false);});
+    return ()=>controller.abort();
+  },[filialId]);
+  useEffect(()=>{
+    const controller=new AbortController();const t=setTimeout(()=>{
+      if(busca.trim().length<2){setResultados([]);return;}
+      if(filialId){const term=busca.trim().toLocaleLowerCase('pt-BR');setResultados(catalogo.filter(p=>`${p.nome} ${p.sku}`.toLocaleLowerCase('pt-BR').includes(term)));return;}
+      api.get<{data:Produto[]}>('/produtos',{params:{search:busca,limit:10},signal:controller.signal}).then(r=>{if(!controller.signal.aborted)setResultados(r.data.data);}).catch(()=>{if(!controller.signal.aborted)setResultados([]);});
+    },300);return()=>{clearTimeout(t);controller.abort();};
+  },[busca,filialId,catalogo]);
 
   useEffect(() => {
     api
@@ -118,21 +118,25 @@ export default function PdvPage() {
   const totalFinal = Math.max(0, total - descontoAplicado - descontoCupom);
 
   const finalizar = async (): Promise<void> => {
-    setFinalizando(true);
+    if(finalizando)return;
+    setFinalizando(true);setErroVenda('');
     try {
-      await api.post('/vendas', {
+      const body={
         clienteId: clienteId || undefined,
         itens: itens.map((i) => ({ produtoId: i.produto.id, quantidade: i.quantidade })),
         formaPagamento,
+        filialId:filialId||undefined,recebido,
         desconto: descontoAplicado > 0 ? Number(descontoAplicado.toFixed(2)) : undefined,
         cupomCodigo: cupom?.codigo,
-      });
+      };
+      const serialized=JSON.stringify(body);if(tentativa.current?.body!==serialized)tentativa.current={body:serialized,chave:crypto.randomUUID()};
+      await api.post('/vendas',{...body,chaveOperacao:tentativa.current.chave});tentativa.current=null;
       setCatalogo(prev => prev.map(p => ({ ...p, estoqueAtual: p.estoqueAtual - (itens.find(i => i.produto.id === p.id)?.quantidade || 0) })));
       setItens([]);
       setClienteId('');
       setSucesso(true);
       setMostrarPagamento(false);
-      setFormaPagamento('PIX');
+      setFormaPagamento('PIX');setRecebido(false);
       setDescontoTipo('R$');
       setDescontoValor('');
       setCupom(null);
@@ -149,7 +153,7 @@ export default function PdvPage() {
         toastSuccess(`Venda finalizada! R$ ${totalFinal.toFixed(2)} no ${formaPagamento}`);
       }
       setTimeout(() => setSucesso(false), 3000);
-    } finally {
+    } catch(e){setErroVenda(erroDaAcao(e));} finally {
       setFinalizando(false);
     }
   };
@@ -191,6 +195,7 @@ export default function PdvPage() {
             {resultados.length === 1 ? 'resultado' : 'resultados'}
           </span>
         </div></PageToolbar>
+        <div className="mb-4"><SelectField label="Estoque da venda" value={filialId} disabled={itens.length>0||finalizando} onChange={e=>{setFilialId(e.target.value);setBusca('');}}><option value="">Central</option>{unidades.data?.map(f=><option key={f.id} value={f.id}>{f.nome}</option>)}</SelectField><p className="mt-2 text-xs text-[#A1A1AA]">Esvazie o carrinho para trocar a unidade. Até {filialId?'500':'100'} produtos carregados.</p>{unidades.error&&<p role="alert" className="mt-2 text-sm text-amber-200">Não foi possível carregar as filiais. <button type="button" className="underline" onClick={()=>void unidades.refetch()}>Tentar novamente</button></p>}{catalogoLoading&&<p role="status">Carregando produtos…</p>}{erroVenda&&<p role="alert" className="mt-3 text-sm text-red-200">{erroVenda}</p>}</div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <div className="flex-1">
@@ -352,6 +357,7 @@ export default function PdvPage() {
           {/* Seção de pagamento — aparece após clique em "Continuar" */}
           {mostrarPagamento && (
             <div className="mt-4 rounded-lg border border-[rgba(255,255,255,0.08)] p-3">
+              <label className="mb-4 flex items-start gap-3 text-sm"><input type="checkbox" checked={recebido} onChange={e=>setRecebido(e.target.checked)}/><span>Já recebi o valor total<span className="mt-1 block text-xs text-[#A1A1AA]">Desmarcado: a venda ficará a receber no Financeiro.</span></span></label>
               <p className="mb-2 text-sm font-semibold text-[#E4E4E7]">Forma de pagamento</p>
               <div className="grid grid-cols-2 gap-2">
                 {([

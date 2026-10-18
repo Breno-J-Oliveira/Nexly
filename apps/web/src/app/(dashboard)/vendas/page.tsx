@@ -10,6 +10,9 @@ import { Pagination } from '@/components/ui/Pagination';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ResponsiveDetailPanel } from '@/components/ui/ResponsiveDetailPanel';
 import { MetricGrid } from '@/components/ui/MetricGrid';
+import { Modal } from '@/components/ui/Modal';
+import { Input } from '@/components/ui/Input';
+import { ActionStatus,useAction } from '@/components/gestao/GestaoUI';
 import { PageToolbar } from '@/components/ui/PageToolbar';
 
 import { Fragment, useEffect, useState } from 'react';
@@ -27,6 +30,8 @@ interface ItemVenda {
 }
 interface Venda {
   id: string;
+  status:string;
+  motivoEstorno:string|null;
   total: number;
   createdAt: string;
   cliente: { id: string; nome: string } | null;
@@ -35,6 +40,7 @@ interface Venda {
 }
 
 export default function VendasPage() {
+  const action=useAction();const [estorno,setEstorno]=useState<Venda|null>(null),[motivo,setMotivo]=useState('');
   const [detalhesAbertos, setDetalhesAbertos] = useState(false);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const { user } = useAuth();
@@ -99,6 +105,7 @@ export default function VendasPage() {
 
   return (
     <div>
+      <Modal open={!!estorno} title="Estornar venda" onClose={()=>{if(!action.busy)setEstorno(null);}}><form className="space-y-4" onSubmit={e=>{e.preventDefault();if(estorno)void action.run(async()=>{await api.post(`/vendas/${estorno.id}/estornar`,{motivo});setEstorno(null);await refetch();},'Venda estornada. Estoque e financeiro foram atualizados.');}}><p className="text-sm leading-6 text-[#A1A1AA]">O estoque volta à unidade da venda, a receita é cancelada e os pagamentos registrados são estornados. Confirme a devolução do dinheiro ao cliente fora do Nexly antes de prosseguir.</p><Input label="Motivo do estorno" required minLength={10} maxLength={500} value={motivo} onChange={e=>setMotivo(e.target.value)}/><ActionStatus {...action}/><Button type="submit" variant="danger" loading={action.busy}>Confirmar estorno</Button></form></Modal><ActionStatus {...action}/>
       <PageToolbar>
         <div className="flex items-center justify-between">
           <div>
@@ -213,13 +220,13 @@ export default function VendasPage() {
                   className="flex w-full justify-between gap-3 rounded-xl border border-white/10 bg-[#111116] p-4 text-left"
                 >
                   <span className="min-w-0">
-                    <strong className="block text-sm">{v.cliente?.nome || 'Venda avulsa'}</strong>
+                    <strong className="block text-sm">{v.cliente?.nome || 'Venda avulsa'}{v.status==='ESTORNADA'?' · ESTORNADA':''}</strong>
                     <span className="mt-1 block text-xs text-[#A1A1AA]">
                       {formatarDataHora(v.createdAt)}
                     </span>
                     <span className="block text-xs text-[#A1A1AA]">{v.itens.length} itens</span>
                     <span className="block text-xs text-[#A1A1AA]">
-                      {v.formaPagamento || 'Não informada'}
+                      {v.formaPagamento || 'Não informada'}{v.status==='ESTORNADA'?' · ESTORNADA':''}
                     </span>
                   </span>
                   <span className="shrink-0 text-sm font-semibold">{formatarMoeda(v.total)}</span>
@@ -265,7 +272,7 @@ export default function VendasPage() {
                             {formatarDataHora(v.createdAt)}
                           </td>
                           <td className="px-4 py-3 text-[#FAFAFA]">
-                            {v.cliente?.nome ?? (
+                            {v.status==='ESTORNADA'&&<span className="mb-1 block text-xs text-amber-200">ESTORNADA</span>}{v.cliente?.nome ?? (
                               <span className="text-[#A1A1AA]">Venda avulsa</span>
                             )}
                           </td>
@@ -317,6 +324,8 @@ export default function VendasPage() {
                 {formatarDataHora(selecionada.createdAt)}
               </p>
             </div>
+            <p className="mt-4 text-sm text-[#A5B4FC]">Situação: {selecionada.status==='ESTORNADA'?'Estornada':'Concluída'}</p>{selecionada.motivoEstorno&&<p className="mt-2 break-words text-sm text-[#A1A1AA]">Motivo: {selecionada.motivoEstorno}</p>}
+            {['ADMIN','GESTOR'].includes(user?.role??'')&&selecionada.status!=='ESTORNADA'&&<Button className="mt-4" variant="secondary" onClick={()=>{setEstorno(selecionada);setMotivo('');}}>Estornar venda</Button>}
             <p className="mb-3 mt-6 text-xs text-[#A1A1AA]">ITENS DA VENDA</p>
             <div className="space-y-3">
               {selecionada.itens.map((it) => (

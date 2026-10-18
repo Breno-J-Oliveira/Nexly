@@ -214,6 +214,7 @@ export function toggleModule(current: readonly string[], id: ModuleId): ModuleId
 }
 
 export function routeModule(path: string): ModuleId | undefined {
+  if(path==='/financeiro')return 'relatorios';
   if (path === '/produtos' || path.startsWith('/estoque/')) return 'estoque';
   return MODULES.find((m) => path === m.href || path.startsWith(`${m.href}/`))?.id;
 }
@@ -221,6 +222,7 @@ export function routeModule(path: string): ModuleId | undefined {
 export function canAccessWorkspaceRoute(path: string, role: string): boolean {
   if (path === '/meu-nexly' || path === '/minha-conta') return true;
   if (role === 'ADMIN') return true;
+  if(['/historico','/operacao'].includes(path))return false;
   if (role === 'GESTOR') return path !== '/usuarios';
   const allowed: Record<string, string[]> = {
     PROFISSIONAL: ['/dashboard', '/agenda'],

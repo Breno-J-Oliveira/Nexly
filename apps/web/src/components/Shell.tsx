@@ -15,6 +15,7 @@ import { ConnectionStatus } from '@/components/ConnectionStatus';
 
 /* --- Breadcrumb labels --- */
 const PAGE_LABELS: Record<string, string> = {
+  '/financeiro':'Financeiro','/importar':'Importar cadastros','/historico':'Histórico de alterações','/operacao':'Saúde e rotinas','/estoque/filiais':'Estoque por unidade',
   '/dashboard': 'Painel Geral',
   '/marketing':'Marketing', '/tarefas':'Tarefas', '/recorrencias':'Recorrências', '/automacao':'Automação', '/filiais':'Filiais', '/documentos':'Documentos',
   '/meu-nexly': 'Meu Nexly',
@@ -52,6 +53,8 @@ const NAV_GROUPS: NavGroup[] = [
     { label: 'Pedidos', href: '/estoque/pedidos', icon: 'truck' },
     { label: 'PDV', href: '/pdv', icon: 'cash-register' },
     { label: 'Vendas', href: '/vendas', icon: 'receipt' },
+    {label:'Financeiro',href:'/financeiro',icon:'wallet'},
+    {label:'Estoque por unidade',href:'/estoque/filiais',icon:'building'},
     { label: 'Relatórios', href: '/relatorios', icon: 'chart-column' },
   ]},
   { label: 'GESTÃO', items: [
@@ -61,6 +64,9 @@ const NAV_GROUPS: NavGroup[] = [
     { label: 'Usuários', href: '/usuarios', icon: 'user-group' },
     { label: 'Minha conta', href: '/minha-conta', icon: 'user' },
     { label: 'Meu Nexly', href: '/meu-nexly', icon: 'wand-magic-sparkles' },
+    {label:'Importar cadastros',href:'/importar',icon:'file-import'},
+    {label:'Histórico de alterações',href:'/historico',icon:'clock-rotate-left'},
+    {label:'Saúde e rotinas',href:'/operacao',icon:'heart-pulse'},
     { label: 'Configurações', href: '/configuracoes', icon: 'gear' },
   ]},
 ];
@@ -90,7 +96,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 
 export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { enabled } = useWorkspace();
+  const { enabled,profile } = useWorkspace();
   const { user, logout } = useAuth();
   const { notificacoes, naoLidas, marcarLida } = useNotifications();
   const [sidebarAberta, setSidebarAberta] = useState(false);
@@ -100,10 +106,11 @@ export function Shell({ children }: { children: ReactNode }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const pageLabel = PAGE_LABELS[pathname] ?? '';
+  const pageLabel = pathname==='/clientes'?(profile.preferencias?.nomeCliente??'Clientes'):pathname==='/servicos'?(profile.preferencias?.nomeServico??'Serviços'):PAGE_LABELS[pathname] ?? '';
   const nome = user?.nome ?? 'Usuário';
   const role = user?.role ?? '';
-  const destinos = NAV_GROUPS.flatMap(group => group.items).filter(item => hasAccess(item.href, role) && enabled(item.href));
+  const grupos=NAV_GROUPS.map(group=>({...group,items:group.items.map(item=>({...item,label:item.href==='/clientes'?(profile.preferencias?.nomeCliente??item.label):item.href==='/servicos'?(profile.preferencias?.nomeServico??item.label):item.label}))}));
+  const destinos = grupos.flatMap(group => group.items).filter(item => hasAccess(item.href, role) && enabled(item.href));
   const dataHoje = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
   const iniciais = nome.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 
@@ -151,7 +158,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
         <nav aria-label="Menu principal" className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
           <button type="button" aria-haspopup="dialog" onClick={() => { setSidebarAberta(false); setSearchOpen(true); }} className="flex min-h-11 items-center justify-between rounded-lg border border-white/10 px-3 text-sm text-[#D4D4D8]">Buscar páginas <kbd className="text-[10px] text-[#A1A1AA]">Ctrl K</kbd></button>
-          {NAV_GROUPS.map((group, idx) => {
+          {grupos.map((group, idx) => {
             const items = group.items.filter((item) => hasAccess(item.href, role) && enabled(item.href));
             if (items.length === 0) return null;
             return (
