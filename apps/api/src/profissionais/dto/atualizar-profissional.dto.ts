@@ -1,8 +1,9 @@
 import { TrimText } from '../../common/validation/trim-text';
+import { OptionalField } from '../../common/validation/optional-field';
 import { IsOptional, IsString, Length } from 'class-validator';
 
 export class AtualizarProfissionalDto {
-  @IsOptional()
+  @OptionalField()
   @IsString()
   @Length(2, 120)
   @TrimText()

@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from './auth.guard';
@@ -48,6 +48,14 @@ describe('AuthGuard', () => {
     reflector.getAllAndOverride.mockReturnValue(true);
 
     await expect(guard.canActivate(makeContext(undefined))).resolves.toBe(true);
+  });
+
+  it('indisponibilidade do banco retorna 503 sem invalidar a credencial', async () => {
+    jwtService.verifyAsync.mockResolvedValue({ sub: 'u1', sid, empresaId: 'e1', role: 'ADMIN' });
+    prisma.client.authSession.findUnique.mockRejectedValue(new Error('connection refused'));
+    await expect(guard.canActivate(makeContext('Bearer access'))).rejects.toThrow(
+      ServiceUnavailableException,
+    );
   });
 
   it('token temporário 2FA não acessa rotas de negócio', async () => {

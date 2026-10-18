@@ -1,3 +1,4 @@
+import { TrimText } from '../common/validation/trim-text';
 import {
   IsString,
   Length,
@@ -28,7 +29,7 @@ export class TarefaDto extends TituloDto {
   @IsOptional() @IsUUID() filialId?: string | null;
 }
 export class FilialDto {
-  @IsString() @Length(2, 120) nome!: string;
+  @TrimText() @IsString() @Length(2, 120) nome!: string;
   @IsString() @Length(5, 400) endereco!: string;
   @IsOptional() @IsString() @Length(0, 30) telefone?: string;
   @IsBoolean() @Transform(({ obj }: { obj: { ativa: unknown } }) => obj.ativa) ativa!: boolean;

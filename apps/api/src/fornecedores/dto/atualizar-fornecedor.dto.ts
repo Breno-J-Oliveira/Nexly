@@ -1,8 +1,11 @@
 import { StrictBoolean } from '../../common/validation/strict-boolean';
+import { OptionalField } from '../../common/validation/optional-field';
+import { TrimText } from '../../common/validation/trim-text';
 import { IsEmail, IsOptional, IsString, Length } from 'class-validator';
 
 export class AtualizarFornecedorDto {
-  @IsOptional()
+  @OptionalField()
+  @TrimText()
   @IsString()
   @Length(2, 120)
   nome?: string;
@@ -19,7 +22,7 @@ export class AtualizarFornecedorDto {
   @IsEmail()
   email?: string;
 
-  @IsOptional()
+  @OptionalField()
   @StrictBoolean()
   ativo?: boolean;
 }

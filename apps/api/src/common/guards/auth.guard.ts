@@ -1,4 +1,10 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from '@nexly/shared';
@@ -43,17 +49,31 @@ export class AuthGuard implements CanActivate {
       ) {
         throw new UnauthorizedException('Token inválido');
       }
-      const sessao = await this.prisma.client.authSession.findUnique({
-        where: { id: payload.sid },
-        select: {
-          usuarioId: true,
-          revogado: true,
-          expiresAt: true,
-          usuario: {
-            select: { id: true, empresaId: true, ativo: true, role: true, email: true, nome: true },
+      const sessao = await this.prisma.client.authSession
+        .findUnique({
+          where: { id: payload.sid },
+          select: {
+            usuarioId: true,
+            revogado: true,
+            expiresAt: true,
+            usuario: {
+              select: {
+                id: true,
+                empresaId: true,
+                ativo: true,
+                role: true,
+                email: true,
+                nome: true,
+              },
+            },
           },
-        },
-      });
+        })
+        .catch(() => {
+          // Indisponibilidade do banco não significa que a credencial foi revogada.
+          throw new ServiceUnavailableException(
+            'Não foi possível verificar a sessão. Tente novamente.',
+          );
+        });
       if (
         !sessao ||
         sessao.usuarioId !== payload.sub ||
@@ -74,7 +94,8 @@ export class AuthGuard implements CanActivate {
         email: usuario.email,
         nome: usuario.nome,
       };
-    } catch {
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
       throw new UnauthorizedException('Token inválido ou expirado');
     }
 

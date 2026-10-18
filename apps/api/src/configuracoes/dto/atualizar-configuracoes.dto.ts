@@ -1,18 +1,22 @@
 import { StrictBoolean } from '../../common/validation/strict-boolean';
 import { IsBusinessHours } from '../../common/validation/business-hours';
-import { IsObject, IsOptional, IsString, IsTimeZone, MaxLength } from 'class-validator';
+import { OptionalField } from '../../common/validation/optional-field';
+import { TrimText } from '../../common/validation/trim-text';
+import { IsObject, IsOptional, IsString, IsTimeZone, Length, MaxLength } from 'class-validator';
 
 export class AtualizarConfiguracoesDto {
-  @IsOptional()
+  @OptionalField()
   @IsTimeZone()
   @MaxLength(64)
   fusoHorario?: string;
 
-  @IsOptional()
+  @OptionalField()
+  @TrimText()
   @IsString()
+  @Length(2, 120)
   nome?: string;
 
-  @IsOptional()
+  @OptionalField()
   @IsString()
   cnpj?: string;
 
@@ -49,7 +53,7 @@ export class AtualizarConfiguracoesDto {
   @IsObject()
   notificacoes?: Record<string, unknown>;
 
-  @IsOptional()
+  @OptionalField()
   @StrictBoolean()
   lembretesAtivos?: boolean;
 

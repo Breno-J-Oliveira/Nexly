@@ -1,15 +1,18 @@
-import { IsDateString, IsString } from 'class-validator';
+import { IsDateString, IsUUID, Matches } from 'class-validator';
 
 export class CriarAgendamentoDto {
-  @IsString()
+  @IsUUID()
   clienteId!: string;
 
-  @IsString()
+  @IsUUID()
   profissionalId!: string;
 
-  @IsString()
+  @IsUUID()
   servicoId!: string;
 
-  @IsDateString()
+  @IsDateString({ strict: true, strictSeparator: true })
+  @Matches(/T.*(?:Z|[+-]\d{2}:\d{2})$/, {
+    message: 'Informe data e horário com fuso horário',
+  })
   dataHora!: string;
 }

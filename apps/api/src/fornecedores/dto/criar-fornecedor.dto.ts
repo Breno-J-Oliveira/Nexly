@@ -1,6 +1,8 @@
+import { TrimText } from '../../common/validation/trim-text';
 import { IsEmail, IsOptional, IsString, Length } from 'class-validator';
 
 export class CriarFornecedorDto {
+  @TrimText()
   @IsString()
   @Length(2, 120)
   nome!: string;

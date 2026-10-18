@@ -1,3 +1,4 @@
+import { TrimText } from '../../common/validation/trim-text';
 import { StrictBoolean } from '../../common/validation/strict-boolean';
 import {
   IsDateString,
@@ -7,11 +8,13 @@ import {
   IsOptional,
   IsString,
   Length,
+  Max,
   Min,
 } from 'class-validator';
 import { TipoCupom } from '@prisma/client';
 
 export class CriarCupomDto {
+  @TrimText()
   @IsString()
   @Length(1, 60)
   codigo!: string;
@@ -21,6 +24,7 @@ export class CriarCupomDto {
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(99999999.99)
   valor!: number;
 
   @IsOptional()
@@ -29,7 +33,7 @@ export class CriarCupomDto {
   usoMaximo?: number;
 
   @IsOptional()
-  @IsDateString()
+  @IsDateString({ strict: true })
   validade?: string;
 
   @IsOptional()

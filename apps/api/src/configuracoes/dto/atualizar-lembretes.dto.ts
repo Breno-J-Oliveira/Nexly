@@ -1,8 +1,9 @@
 import { StrictBoolean } from '../../common/validation/strict-boolean';
+import { OptionalField } from '../../common/validation/optional-field';
 import { IsOptional, IsString } from 'class-validator';
 
 export class AtualizarLembretesDto {
-  @IsOptional()
+  @OptionalField()
   @StrictBoolean()
   lembretesAtivos?: boolean;
 

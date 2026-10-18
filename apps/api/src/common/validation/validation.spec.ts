@@ -6,6 +6,17 @@ import { AtualizarUsuarioDto } from '../../usuarios/dto/atualizar-usuario.dto';
 import { AtualizarConfiguracoesDto } from '../../configuracoes/dto/atualizar-configuracoes.dto';
 import { calendarRange } from './calendar-range';
 import { dateRange } from './date-range';
+import { AtualizarProdutoDto } from '../../produtos/dto/atualizar-produto.dto';
+import { AtualizarServicoDto } from '../../servicos/dto/atualizar-servico.dto';
+import { CriarServicoDto } from '../../servicos/dto/criar-servico.dto';
+import { AtualizarProfissionalDto } from '../../profissionais/dto/atualizar-profissional.dto';
+import { CriarAgendamentoDto } from '../../agendamentos/dto/criar-agendamento.dto';
+import { AtualizarLembretesDto } from '../../configuracoes/dto/atualizar-lembretes.dto';
+import { AtualizarFornecedorDto } from '../../fornecedores/dto/atualizar-fornecedor.dto';
+import { CriarFornecedorDto } from '../../fornecedores/dto/criar-fornecedor.dto';
+import { AtualizarCupomDto } from '../../cupons/dto/atualizar-cupom.dto';
+import { CriarCupomDto } from '../../cupons/dto/criar-cupom.dto';
+import { FilialDto } from '../../operacoes/operacoes.dto';
 describe('Entradas de revisao', () => {
   const pipe = new ValidationPipe({
     transform: true,
@@ -78,4 +89,94 @@ describe('Entradas de revisao', () => {
       pipe.transform({ nome: '   ' }, { type: 'body', metatype: CriarClienteDto }),
     ).rejects.toThrow();
   });
+
+  it.each([
+    [AtualizarProdutoDto, { nome: null }],
+    [AtualizarProdutoDto, { preco: null }],
+    [AtualizarProdutoDto, { estoqueMinimo: null }],
+    [AtualizarServicoDto, { nome: null }],
+    [AtualizarServicoDto, { duracaoMin: null }],
+    [AtualizarServicoDto, { preco: null }],
+    [AtualizarClienteDto, { nome: null }],
+    [AtualizarProfissionalDto, { nome: null }],
+    [AtualizarUsuarioDto, { nome: null }],
+    [AtualizarUsuarioDto, { role: null }],
+    [AtualizarUsuarioDto, { ativo: null }],
+    [AtualizarConfiguracoesDto, { nome: null }],
+    [AtualizarConfiguracoesDto, { cnpj: null }],
+    [AtualizarConfiguracoesDto, { fusoHorario: null }],
+    [AtualizarConfiguracoesDto, { lembretesAtivos: null }],
+    [AtualizarLembretesDto, { lembretesAtivos: null }],
+    [AtualizarFornecedorDto, { nome: null }],
+    [AtualizarFornecedorDto, { ativo: null }],
+    [AtualizarCupomDto, { codigo: null }],
+    [AtualizarCupomDto, { tipo: null }],
+    [AtualizarCupomDto, { valor: null }],
+    [AtualizarCupomDto, { ativo: null }],
+  ])('recusa null em campo obrigatório de %p', async (metatype, value) => {
+    await expect(pipe.transform(value, { type: 'body', metatype })).rejects.toThrow();
+  });
+
+  it.each([AtualizarProdutoDto, AtualizarServicoDto, AtualizarUsuarioDto])(
+    'permite omitir campos em atualizações parciais de %p',
+    async (metatype) => {
+      await expect(pipe.transform({}, { type: 'body', metatype })).resolves.toBeDefined();
+    },
+  );
+
+  it.each([CriarServicoDto, AtualizarServicoDto])(
+    'normaliza nome de serviço e rejeita espaços ou preço fora do banco em %p',
+    async (metatype) => {
+      const value = { nome: '  Consulta  ', preco: 10, duracaoMin: 30 };
+      await expect(pipe.transform(value, { type: 'body', metatype })).resolves.toMatchObject({
+        nome: 'Consulta',
+      });
+      await expect(
+        pipe.transform({ ...value, nome: '   ' }, { type: 'body', metatype }),
+      ).rejects.toThrow();
+      await expect(
+        pipe.transform({ ...value, preco: 100000000 }, { type: 'body', metatype }),
+      ).rejects.toThrow();
+    },
+  );
+
+  const appointment = {
+    clienteId: 'b64c48ce-9cfa-4135-821c-7baf199c1db7',
+    profissionalId: 'b64c48ce-9cfa-4135-821c-7baf199c1db8',
+    servicoId: 'b64c48ce-9cfa-4135-821c-7baf199c1db9',
+  };
+  it.each([
+    [CriarFornecedorDto, { nome: '   ' }],
+    [AtualizarFornecedorDto, { nome: '   ' }],
+    [FilialDto, { nome: '   ', endereco: 'Rua teste, 123', ativa: true }],
+    [CriarCupomDto, { codigo: '   ', tipo: 'FIXO', valor: 10 }],
+    [AtualizarCupomDto, { codigo: '   ' }],
+    [CriarCupomDto, { codigo: 'TESTE', tipo: 'FIXO', valor: 100000000 }],
+    [AtualizarCupomDto, { valor: 100000000 }],
+    [CriarCupomDto, { codigo: 'TESTE', tipo: 'FIXO', valor: 10, validade: '2030-02-30' }],
+  ])('rejeita entrada vazia ou fora dos limites em %p', async (metatype, value) => {
+    await expect(pipe.transform(value, { type: 'body', metatype })).rejects.toThrow();
+  });
+  it.each(['2030-02-30T13:00:00Z', '2030-03-05T13:00:00', '2030-03-05'])(
+    'rejeita data impossível ou ambígua na agenda: %s',
+    async (dataHora) => {
+      await expect(
+        pipe.transform(
+          { ...appointment, dataHora },
+          { type: 'body', metatype: CriarAgendamentoDto },
+        ),
+      ).rejects.toThrow();
+    },
+  );
+  it.each(['2030-03-05T13:00:00Z', '2030-03-05T10:00:00-03:00'])(
+    'aceita horário explícito na agenda: %s',
+    async (dataHora) => {
+      await expect(
+        pipe.transform(
+          { ...appointment, dataHora },
+          { type: 'body', metatype: CriarAgendamentoDto },
+        ),
+      ).resolves.toMatchObject({ dataHora });
+    },
+  );
 });
