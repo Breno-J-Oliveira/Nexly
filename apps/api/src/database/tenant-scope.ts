@@ -1,5 +1,6 @@
 /** Escopo de queries Prisma 5: filtros adicionais são aceitos em where único. */
 const DIRECT_MODELS = new Set([
+  'Assinatura',
   'LancamentoFinanceiro',
   'SaldoFilial',
   'TransferenciaFilial',

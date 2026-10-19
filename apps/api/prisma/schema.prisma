@@ -72,6 +72,7 @@ enum AuditAcao {
 // ─────────────────────────────────────────────────────────────
 
 model Empresa {
+  assinatura Assinatura?
   id        String   @id @default(uuid())
   nome      String
   cnpj      String   @unique
@@ -121,6 +122,33 @@ model Empresa {
   exclusoesConta ExclusaoConta[]
 
   @@map("empresas")
+}
+
+// Cobrança do próprio Nexly. O Sandbox não altera o plano comercial da empresa.
+model Assinatura {
+  empresaId String @id @map("empresa_id")
+  customerId String? @unique @map("customer_id")
+  subscriptionId String? @unique @map("subscription_id")
+  plano Plano @default(FREE)
+  status String @default("none")
+  periodoFim DateTime? @map("periodo_fim")
+  cancelarEm DateTime? @map("cancelar_em")
+  checkoutId String? @unique @map("checkout_id")
+  checkoutPlano Plano? @map("checkout_plano")
+  checkoutChave String? @map("checkout_chave")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("assinaturas")
+}
+
+// Apenas recibos de processamento, sem payloads ou dados de cartão.
+model EventoStripe {
+  id String @id
+  tipo String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("eventos_stripe")
 }
 
 model Usuario {

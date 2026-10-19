@@ -1070,19 +1070,18 @@ return (
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                disabled
-                className="mt-5 text-[13px] font-medium opacity-60"
+              <Link
+                href="/assinatura"
+                className="mt-5 inline-flex min-h-11 items-center text-[13px] font-medium"
                 style={{ color: '#6366F1' }}
               >
                 Gerenciar assinatura →
-              </button>
+              </Link>
               <p
                 className="mt-4 border-t pt-4 text-[12px]"
                 style={{ color: '#71717A', borderColor: 'rgba(255,255,255,0.06)' }}
               >
-                Para integrar pagamentos, configure o gateway na seção de integrações.
+                Conheça os planos e acompanhe a contratação no ambiente de testes do Stripe.
               </p>
             </div>
           </div>

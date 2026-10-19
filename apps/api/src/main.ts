@@ -4,7 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import type { NextFunction, Request, Response } from 'express';
-import { json, urlencoded } from 'express';
+import { json, raw, urlencoded } from 'express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { AppModule } from './app.module';
@@ -153,6 +153,8 @@ async function bootstrap(): Promise<void> {
   // Operações pesadas são limitadas pelo HeavyOperationGuard após validar a identidade.
   // A importação recebe o teto do formulário; os demais JSONs mantêm 100 KB.
   app.use('/api/gestao/importacao', json({ limit: '2mb' }));
+  // A assinatura do Stripe depende dos bytes originais, antes de qualquer parse JSON.
+  app.use('/api/assinaturas/webhook', raw({ type: 'application/json', limit: '100kb' }));
   app.use(json({ limit: '100kb' }));
   app.use(urlencoded({ extended: true, limit: '100kb' }));
 

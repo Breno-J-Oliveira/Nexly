@@ -1,11 +1,13 @@
 'use client';
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useWorkspace } from '@/lib/workspace';
 import { api } from '@/lib/api';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { RecommendationForm } from './RecommendationForm';
 export function RecommendationPrompt() {
+  const pathname = usePathname();
   const { profile, reload } = useWorkspace();
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -19,7 +21,7 @@ export function RecommendationPrompt() {
       setErro('Não foi possível salvar sua preferência. Tente novamente.');
     }
   }
-  if (!profile.pedirRecomendacao || hidden) return null;
+  if (!profile.pedirRecomendacao || hidden || pathname === '/assinatura') return null;
   return (
     <>
       <section className="mb-6 rounded-xl border border-[#6366F1]/30 bg-[#6366F1]/10 p-4">

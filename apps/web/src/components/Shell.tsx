@@ -34,6 +34,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/fidelidade': 'Fidelidade',
   '/usuarios': 'Usuários',
   '/configuracoes': 'Configurações',
+  '/assinatura': 'Plano e assinatura',
 };
 
 /* --- Navigation structure --- */

@@ -44,6 +44,7 @@ import { ExportModule } from './export/export.module';
 import { FinanceiroModule } from './financeiro/financeiro.module';
 import { RedisModule } from './redis/redis.module';
 import { ExperienciaModule } from './experiencia/experiencia.controller';
+import { AssinaturasModule } from './assinaturas/assinaturas.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { ExperienciaModule } from './experiencia/experiencia.controller';
     GestaoModule,
     RedisModule,
     ExperienciaModule,
+    AssinaturasModule,
     OperacoesModule,
     EventEmitterModule.forRoot(),
     JwtModule.registerAsync({

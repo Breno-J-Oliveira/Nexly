@@ -54,6 +54,7 @@
     "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "stripe": "23.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -68,6 +69,7 @@
     "@types/jest": "30.0.0",
     "@types/node": "^20.17.6",
     "@types/qrcode": "^1.5.6",
+    "@types/supertest": "7.2.1",
     "@typescript-eslint/eslint-plugin": "8.71.2",
     "@typescript-eslint/parser": "8.71.2",
     "babel-jest": "30.5.2",

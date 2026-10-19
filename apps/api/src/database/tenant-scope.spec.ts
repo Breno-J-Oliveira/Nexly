@@ -2,6 +2,7 @@ import { applyTenantScope } from './tenant-scope';
 
 describe('Escopo de empresa', () => {
   it.each([
+    'Assinatura',
     'Tarefa',
     'Filial',
     'Documento',
