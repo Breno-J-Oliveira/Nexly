@@ -50,6 +50,9 @@ test('staff can manage their own password and sessions on mobile', async ({ page
       page.getByRole('heading', { name: 'Minha conta', exact: true, level: 2 }),
     ).toBeVisible();
     await expect(page.getByText('Esta sessão', { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Escolher conta Google', exact: true }),
+    ).toBeVisible();
     await page.getByLabel('Senha atual', { exact: true }).fill('SenhaOriginal123!');
     await page.getByLabel('Nova senha', { exact: true }).fill('SenhaNova123!');
     await page.getByLabel('Confirmar nova senha', { exact: true }).fill('Diferente123!');

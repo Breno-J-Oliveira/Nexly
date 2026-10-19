@@ -9,11 +9,12 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { UsuarioPublico, validarCnpj, normalizeModules, PRESETS, ModuleId } from '@nexly/shared';
 import { ModulePicker } from '@/components/ModulePicker';
+import { GoogleSignIn } from '@/components/GoogleSignIn';
 import { AuthInput, AuthSelect as Select, useAuthReady } from '@/components/ui/AuthField';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { api } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+import { api, waitForSessionRefresh } from '@/lib/api';
+import { GoogleRegistration, LoginResponse, useAuth } from '@/lib/auth';
 import { ErrorCodes, parseApiError } from '@/lib/errors';
 import { maskCnpj, maskTelefone, soDigitos } from '@/lib/format';
 
@@ -72,7 +73,7 @@ function StepIndicator({ passoAtual }: { passoAtual: number }) {
 export default function CadastroPage() {
   const ready = useAuthReady();
   const router = useRouter();
-  const { completeLogin } = useAuth();
+  const { completeLogin, googleRegistration, setGoogleRegistration, setGoogleTwoFactorToken } = useAuth();
   const [passo, setPasso] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -86,6 +87,13 @@ export default function CadastroPage() {
   const form2 = useForm<Passo2>({ resolver: zodResolver(schemaPasso2), mode: 'onBlur' });
   const form3 = useForm<Passo3>({ resolver: zodResolver(schemaPasso3), mode: 'onBlur', defaultValues: { plano: 'FREE' } });
   const perfil = useForm<z.infer<typeof schemaPerfil>>({ resolver: zodResolver(schemaPerfil), mode: 'onBlur' });
+
+  useEffect(() => {
+    if (!googleRegistration) return;
+    form1.setValue('email', googleRegistration.email);
+    perfil.setValue('responsavelNome', googleRegistration.nome);
+    setForm((previous) => ({ ...previous, email: googleRegistration.email }));
+  }, [googleRegistration, form1, perfil]);
 
   const segmento = form2.watch('segmento');
   useEffect(() => {
@@ -131,7 +139,7 @@ export default function CadastroPage() {
         plano: 'FREE',
         aceitouTermos: true,
       };
-      const res = await api.post<{ accessToken: string; usuario: UsuarioPublico }>('/auth/register', payload);
+      const res = await api.post<{ accessToken: string; usuario: UsuarioPublico }>(googleRegistration ? '/auth/google/register' : '/auth/register', { ...payload, ...(googleRegistration ? { registrationToken: googleRegistration.registrationToken } : {}) });
       completeLogin(res.data.accessToken, res.data.usuario);
       router.push('/dashboard');
     } catch (e) {
@@ -148,7 +156,8 @@ export default function CadastroPage() {
       case 1:
         return (
           <div className="space-y-4">
-            <AuthInput label="E-mail" type="email" placeholder="voce@empresa.com" error={form1.formState.errors.email?.message} {...form1.register('email')} defaultValue={form.email} />
+            {googleRegistration && <div className="rounded-xl bg-indigo-500/10 p-3 text-sm text-indigo-200"><p role="status">E-mail confirmado pelo Google. Crie uma senha alternativa para acessar o Nexly também sem o Google.</p><button type="button" className="mt-2 underline" onClick={() => { setGoogleRegistration(null); form1.setValue('email', ''); setForm((previous) => ({ ...previous, email: '' })); }}>Usar outro acesso</button></div>}
+            <AuthInput label="E-mail" type="email" readOnly={Boolean(googleRegistration)} placeholder="voce@empresa.com" error={form1.formState.errors.email?.message} {...form1.register('email')} defaultValue={form.email} />
             <AuthInput label="Senha" type={showPassword ? 'text' : 'password'} placeholder="Mínimo 8 caracteres" error={form1.formState.errors.senha?.message} defaultValue={form.senha} {...form1.register('senha')} right={
               <button type="button" onClick={() => setShowPassword((v) => !v)} className="text-[#71717A] transition-colors hover:text-[#A1A1AA]" aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>
                 {showPassword ? (
@@ -258,6 +267,18 @@ export default function CadastroPage() {
           )}
         </div>
       </form>
+      {passo === 1 && !googleRegistration && <div className="mt-6 border-t border-white/10 pt-5"><GoogleSignIn text="signup_with" onCredential={async (credential) => {
+        await waitForSessionRefresh();
+        const { data } = await api.post<LoginResponse & Partial<GoogleRegistration> & { requiresRegistration?: boolean }>('/auth/google/login', { credential });
+        if (data.requiresRegistration && data.registrationToken && data.email) {
+          setGoogleRegistration({ registrationToken: data.registrationToken, email: data.email, nome: data.nome ?? '' });
+        } else if (data.accessToken && data.usuario) {
+          completeLogin(data.accessToken, data.usuario); router.push('/dashboard');
+        } else if (data.requiresTwoFactor && data.tempToken) {
+          setGoogleTwoFactorToken(data.tempToken);
+          router.push('/login');
+        } else throw new Error('Resposta de autenticação inválida.');
+      }} /></div>}
       <p className="mt-6 text-center text-[12px] leading-relaxed" style={{ color: '#71717A' }}>
         Ao continuar, você concorda com os{' '}
         <Link href="/termos" className="underline hover:text-[#A1A1AA]" style={{ color: '#A1A1AA' }}>Termos de Uso</Link>{' '}

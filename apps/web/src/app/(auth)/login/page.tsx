@@ -10,8 +10,9 @@ import { z } from 'zod';
 import { AuthInput, useAuthReady } from '@/components/ui/AuthField';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { api } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+import { GoogleSignIn } from '@/components/GoogleSignIn';
+import { api, waitForSessionRefresh } from '@/lib/api';
+import { GoogleRegistration, LoginResponse, useAuth } from '@/lib/auth';
 import { ErrorCodes, parseApiError } from '@/lib/errors';
 import {
   UsuarioPublico,
@@ -29,15 +30,16 @@ type FormData = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const ready = useAuthReady();
-  const { login, completeLogin } = useAuth();
+  const { login, completeLogin, setGoogleRegistration, googleTwoFactorToken, setGoogleTwoFactorToken } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [twoFactor, setTwoFactor] = useState<{ tempToken: string } | null>(null);
+  const [twoFactor, setTwoFactor] = useState<{ tempToken: string } | null>(googleTwoFactorToken ? { tempToken: googleTwoFactorToken } : null);
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [backupMode, setBackupMode] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const twoFactorInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (googleTwoFactorToken) setGoogleTwoFactorToken(null); }, [googleTwoFactorToken, setGoogleTwoFactorToken]);
 
   // Foca o campo do código quando a etapa de 2FA aparece. Equivale ao
   // `autoFocus`, mas sem o atributo (que prejudica leitores de tela).
@@ -283,37 +285,18 @@ export default function LoginPage() {
         <div className="flex-1 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          disabled
-          title="Login social ainda não disponível"
-          className="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-medium opacity-50 disabled:cursor-not-allowed"
-          style={{ borderColor: 'rgba(255,255,255,0.08)', color: '#FAFAFA' }}
-        >
-          <Icon
-            name="google"
-            variant="brand"
-            className="text-[18px]"
-            style={{ color: '#4285F4' }}
-          />
-          Google
-        </button>
-        <button
-          type="button"
-          disabled
-          title="Login social ainda não disponível"
-          className="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-medium opacity-50 disabled:cursor-not-allowed"
-          style={{ borderColor: 'rgba(255,255,255,0.08)', color: '#FAFAFA' }}
-        >
-          <Icon name="apple" variant="brand" className="text-[18px]" style={{ color: '#FAFAFA' }} />
-          Apple
-        </button>
-      </div>
-
-      <p className="mt-2 text-center text-[11px] text-[#A1A1AA]">
-        Google e Apple estarão disponíveis em breve.
-      </p>
+      {!twoFactor && <div className="mt-6"><GoogleSignIn onCredential={async (credential) => {
+        await waitForSessionRefresh();
+        const { data } = await api.post<LoginResponse & Partial<GoogleRegistration> & { requiresRegistration?: boolean }>('/auth/google/login', { credential });
+        if (data.requiresRegistration && data.registrationToken && data.email) {
+          setGoogleRegistration({ registrationToken: data.registrationToken, email: data.email, nome: data.nome ?? '' });
+          router.push('/cadastro');
+        } else if (data.requiresTwoFactor && data.tempToken) {
+          setError(null); setTwoFactor({ tempToken: data.tempToken });
+        } else if (data.accessToken && data.usuario) {
+          completeLogin(data.accessToken, data.usuario); router.push('/dashboard');
+        } else throw new Error('Resposta de autenticação inválida.');
+      }} /></div>}
       <p className="mt-6 text-center text-[12px] leading-relaxed" style={{ color: '#71717A' }}>
         Ao continuar, você concorda com os{' '}
         <Link

@@ -61,6 +61,10 @@ test('equipe configura 2FA, usa recuperação e bloqueia repetição de desafio'
       page.getByRole('img', { name: 'QR code para configurar o autenticador Nexly', exact: true }),
     ).toBeVisible();
     const configured = await p.usuario.findUniqueOrThrow({ where: { id: userId } });
+    // Evita gerar um código nos últimos milissegundos da janela: a requisição
+    // pode chegar na janela seguinte sem que isso represente falha do produto.
+    const remaining = 30_000 - (Date.now() % 30_000);
+    if (remaining < 2_000) await new Promise((resolve) => setTimeout(resolve, remaining + 100));
     await page
       .getByLabel('Código do app', { exact: true })
       .fill(authenticator.generate(configured.twoFactorSecret!));

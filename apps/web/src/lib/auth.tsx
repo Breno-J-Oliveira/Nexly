@@ -41,6 +41,12 @@ export interface LoginResponse {
   tempToken?: string;
 }
 
+export interface GoogleRegistration {
+  registrationToken: string;
+  email: string;
+  nome: string;
+}
+
 interface AuthContextValue {
   user: UsuarioPublico | null;
   loading: boolean;
@@ -51,11 +57,17 @@ interface AuthContextValue {
   completeLogin: (accessToken: string, usuario: UsuarioPublico) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  googleRegistration: GoogleRegistration | null;
+  setGoogleRegistration: (value: GoogleRegistration | null) => void;
+  googleTwoFactorToken: string | null;
+  setGoogleTwoFactorToken: (value: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [googleRegistration, setGoogleRegistration] = useState<GoogleRegistration | null>(null);
+  const [googleTwoFactorToken, setGoogleTwoFactorToken] = useState<string | null>(null);
   const [user, setUser] = useState<UsuarioPublico | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
@@ -105,6 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const completeLogin = (accessToken: string, usuario: UsuarioPublico): void => {
+    setGoogleRegistration(null);
+    setGoogleTwoFactorToken(null);
     attempt.current += 1;
     setAccessToken(accessToken);
     setUser(usuario);
@@ -118,6 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await api.post('/auth/logout', {});
     } finally {
       setAccessToken(null);
+      setGoogleRegistration(null);
+      setGoogleTwoFactorToken(null);
       setUser(null);
       window.location.href = '/login';
     }
@@ -145,6 +161,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         completeLogin,
         logout,
         refreshUser,
+        googleRegistration,
+        setGoogleRegistration,
+        googleTwoFactorToken,
+        setGoogleTwoFactorToken,
       }}
     >
       {children}

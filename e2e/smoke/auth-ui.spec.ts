@@ -17,8 +17,8 @@ test('login tem campos associados e navegação acessível no mobile', async ({ 
   await expect(page.locator('form')).toHaveAttribute('method', 'post');
   await expect(page.getByLabel('E-mail', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Senha', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Google', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Apple', exact: true })).toBeDisabled();
+  await expect(page.getByRole('link', { name: '← Voltar para o início' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Apple', exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
