@@ -25,6 +25,8 @@ import { Enable2faDto } from './dto/enable-2fa.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { Verify2faDto } from './dto/verify-2fa.dto';
+import { GoogleCredentialDto, GoogleLinkDto, GoogleRegisterDto } from './dto/google.dto';
+import { GoogleService } from './google.service';
 
 const REFRESH_COOKIE = 'refreshToken';
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -51,7 +53,93 @@ function getClientIp(req: Request): string {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly google: GoogleService,
+  ) {}
+
+  @Public()
+  @Get('google/config')
+  googleConfig(@Res({ passthrough: true }) res: Response) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.google.config();
+  }
+
+  @Public()
+  @Post('google/challenge')
+  async googleChallenge(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const result = await this.google.challenge(getClientIp(req));
+    res.setHeader('Cache-Control', 'no-store');
+    res.cookie('googleNonce', result.nonce, {
+      ...this.cookieOptions(),
+      path: '/api/auth/google',
+      maxAge: 300_000,
+    });
+    return result;
+  }
+
+  @Public()
+  @HttpCode(200)
+  @Post('google/login')
+  async googleLogin(
+    @Body() dto: GoogleCredentialDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    const nonce = getCookie(req, 'googleNonce');
+    res.clearCookie('googleNonce', { ...this.cookieOptions(), path: '/api/auth/google' });
+    const identity = await this.google.verify(dto.credential, nonce, getClientIp(req));
+    const result = await this.google.login(identity, getClientIp(req));
+    if ('requiresRegistration' in result) {
+      res.cookie('googleRegistration', result.registrationToken, {
+        ...this.cookieOptions(),
+        path: '/api/auth/google',
+        maxAge: 900_000,
+      });
+      return result;
+    }
+    if (result.requiresTwoFactor) return result;
+    this.setRefreshCookie(res, result.refreshToken);
+    return { accessToken: result.accessToken, usuario: result.usuario };
+  }
+
+  @Public()
+  @Post('google/register')
+  async googleRegister(
+    @Body() dto: GoogleRegisterDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.google.register(
+      dto,
+      getCookie(req, 'googleRegistration'),
+      getClientIp(req),
+    );
+    res.clearCookie('googleRegistration', { ...this.cookieOptions(), path: '/api/auth/google' });
+    this.setRefreshCookie(res, result.refreshToken);
+    return { accessToken: result.accessToken, usuario: result.usuario };
+  }
+
+  @Get('google/status')
+  @Roles(...Object.values(Role))
+  googleStatus(@CurrentUser() user: { id: string }) {
+    return this.authService.googleStatus(user.id);
+  }
+
+  @Post('google/link')
+  @Roles(...Object.values(Role))
+  async googleLink(
+    @Body() dto: GoogleLinkDto,
+    @CurrentUser() user: { id: string },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const nonce = getCookie(req, 'googleNonce');
+    res.clearCookie('googleNonce', { ...this.cookieOptions(), path: '/api/auth/google' });
+    const identity = await this.google.verify(dto.credential, nonce, getClientIp(req));
+    return this.authService.linkGoogle(user.id, identity, dto.senha, dto.code);
+  }
 
   @Public()
   @Post('register')

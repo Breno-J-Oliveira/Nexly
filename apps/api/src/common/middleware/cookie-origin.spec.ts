@@ -25,6 +25,18 @@ describe('Proteção de origem de cookies', () => {
     expect(request(undefined, undefined, '/api/vendas').next).toHaveBeenCalled();
   });
 
+  it.each(['challenge', 'login', 'register', 'link'])(
+    'Google %s exige origem permitida mesmo sem cookies',
+    (action) => {
+      const path = `/api/auth/google/${action}`;
+      expect(request(undefined, undefined, path).response.status).toHaveBeenCalledWith(403);
+      expect(
+        request('https://attacker.test', undefined, path).response.status,
+      ).toHaveBeenCalledWith(403);
+      expect(request('https://app.nexly.test', undefined, path).next).toHaveBeenCalled();
+    },
+  );
+
   it.each(['/api/auth/refresh/', '/API/AUTH/REFRESH', '/api/auth/login', '/api/auth/register'])(
     'bloqueia origem externa em %s',
     (path) => {

@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { authenticator } from '@otplib/preset-default';
-import { Usuario } from '@prisma/client';
+import { Prisma, Usuario } from '@prisma/client';
 import { Plano } from '@prisma/client';
 import {
   Role,
@@ -43,7 +43,7 @@ export class AuthService {
     private readonly auditService: AuditService,
   ) {}
 
-  async register(dto: RegisterDto, ip?: string): Promise<AuthResult> {
+  async register(dto: RegisterDto, ip?: string, googleSubject?: string): Promise<AuthResult> {
     if (dto.aceitouTermos !== true) throw new BadRequestException('Aceite dos termos obrigatório');
     const cnpj = dto.cnpj.replace(/\D/g, '');
     if (!validarCnpj(cnpj)) {
@@ -77,6 +77,7 @@ export class AuthService {
             nome: dto.responsavelNome,
             email: dto.email,
             senhaHash,
+            googleSubject,
             role: Role.ADMIN,
             termosAceite: { create: { versao: '1.0', ip: ip ?? null } },
           },
@@ -91,6 +92,108 @@ export class AuthService {
     }
 
     return this.buildAuthResult(usuario);
+  }
+
+  async loginGoogle(userId: string) {
+    const usuario = await this.prisma.client.usuario.findUnique({ where: { id: userId } });
+    if (!usuario?.ativo || !usuario.googleSubject)
+      throw new UnauthorizedException('Acesso indisponível.');
+    this.auditService.registrar({
+      empresaId: usuario.empresaId,
+      usuarioId: usuario.id,
+      acao: 'LOGIN',
+      recurso: 'Auth',
+    });
+    if (usuario.twoFactorEnabled) {
+      return {
+        requiresTwoFactor: true as const,
+        tempToken: await this.tokenService.generateTempToken(usuario.id),
+      };
+    }
+    return this.buildAuthResult(usuario);
+  }
+
+  async googleStatus(userId: string) {
+    const user = await this.prisma.client.usuario.findUnique({
+      where: { id: userId },
+      select: { googleSubject: true },
+    });
+    return { linked: Boolean(user?.googleSubject) };
+  }
+
+  async linkGoogle(
+    userId: string,
+    identity: { sub: string; email: string },
+    password: string,
+    code?: string,
+  ) {
+    const key = `google-link:${userId}`;
+    if (await this.throttle.isBlocked(key))
+      throw new UnauthorizedException('Muitas tentativas. Aguarde alguns minutos.');
+    const user = await this.prisma.client.usuario.findUnique({ where: { id: userId } });
+    if (!user?.ativo || !(await argon2.verify(user.senhaHash, password))) {
+      await this.throttle.registerFailure(key);
+      throw new UnauthorizedException('Senha incorreta ou acesso indisponível.');
+    }
+    if (
+      user.email.toLowerCase() !== identity.email ||
+      (user.googleSubject && user.googleSubject !== identity.sub)
+    ) {
+      throw new ConflictException('Selecione a conta Google com o mesmo e-mail do seu cadastro.');
+    }
+    const step = Math.floor(Date.now() / 30_000);
+    const hash = createHash('sha256')
+      .update(code ?? '')
+      .digest('hex');
+    const backup = user.twoFactorBackupCodes.includes(hash);
+    if (
+      user.twoFactorEnabled &&
+      (!code ||
+        (!backup &&
+          (!user.twoFactorSecret ||
+            !authenticator.check(code, user.twoFactorSecret) ||
+            (user.twoFactorLastUsedStep !== null && user.twoFactorLastUsedStep >= step))))
+    ) {
+      await this.throttle.registerFailure(key);
+      throw new UnauthorizedException(
+        'Informe um código de segundo fator válido e ainda não utilizado.',
+      );
+    }
+    try {
+      const updated = await this.prisma.client.usuario.updateMany({
+        where: {
+          id: userId,
+          ativo: true,
+          email: user.email,
+          senhaHash: user.senhaHash,
+          googleSubject: user.googleSubject,
+          twoFactorEnabled: user.twoFactorEnabled,
+          twoFactorSecret: user.twoFactorSecret,
+          twoFactorLastUsedStep: user.twoFactorLastUsedStep,
+          twoFactorBackupCodes: { equals: user.twoFactorBackupCodes },
+        },
+        data: {
+          googleSubject: identity.sub,
+          ...(user.twoFactorEnabled
+            ? {
+                twoFactorBackupCodes: backup
+                  ? user.twoFactorBackupCodes.filter((v) => v !== hash)
+                  : user.twoFactorBackupCodes,
+                twoFactorLastUsedStep: backup ? user.twoFactorLastUsedStep : step,
+              }
+            : {}),
+        },
+      });
+      if (updated.count !== 1)
+        throw new ConflictException('O acesso mudou. Atualize a página e tente novamente.');
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('Esta conta Google já está vinculada a outro usuário.');
+      }
+      throw error;
+    }
+    await this.throttle.registerSuccess(key);
+    return { linked: true };
   }
 
   async login(

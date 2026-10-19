@@ -106,6 +106,31 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  /** Reservas de autenticação falham fechadas se o Redis estiver indisponível. */
+  async setOnce(key: string, value: string, ttlSeconds: number): Promise<boolean | null> {
+    if (!this.client) return null;
+    try {
+      return (await this.client.set(key, value, 'EX', ttlSeconds, 'NX')) === 'OK';
+    } catch {
+      return null;
+    }
+  }
+
+  /** Leitura e remoção atômicas, compatíveis com Redis anterior a GETDEL. */
+  async take(key: string): Promise<{ value: string | null } | null> {
+    if (!this.client) return null;
+    try {
+      const value = await this.client.eval(
+        "local v = redis.call('GET', KEYS[1]); if v then redis.call('DEL', KEYS[1]) end; return v",
+        1,
+        key,
+      );
+      return { value: typeof value === 'string' ? value : null };
+    } catch {
+      return null;
+    }
+  }
+
   async onModuleDestroy(): Promise<void> {
     if (this.client) {
       await this.client.quit().catch(() => undefined);

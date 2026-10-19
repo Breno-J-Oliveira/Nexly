@@ -102,6 +102,9 @@ async function bootstrap(): Promise<void> {
         req.method !== 'POST' ||
         ![
           '/login',
+          '/google/login',
+          '/google/link',
+          '/google/register',
           '/2fa/verify',
           '/2fa/enable',
           '/2fa/disable',

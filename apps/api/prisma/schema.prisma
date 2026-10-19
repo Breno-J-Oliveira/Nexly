@@ -130,6 +130,7 @@ model Usuario {
   nome       String
   email      String   @unique
   senhaHash  String   @map("senha_hash")
+  googleSubject String? @unique @map("google_subject")
   role       Role     @default(CAIXA)
   ativo      Boolean  @default(true)
   twoFactorSecret       String?  @map("two_factor_secret")

@@ -12,13 +12,14 @@ export function cookieOriginGuard(origins: string[]) {
       '/api/auth/register',
       '/api/auth/2fa/verify',
     ];
-    if (req.method !== 'POST' || !sensitive.includes(path)) {
+    const google = path.startsWith('/api/auth/google/');
+    if (req.method !== 'POST' || (!google && !sensitive.includes(path))) {
       next();
       return;
     }
     const origin = req.headers.origin;
     const hasCookie = /(?:^|;\s*)refreshToken=/.test(req.headers.cookie ?? '');
-    if ((origin && !allowed.has(origin)) || (hasCookie && !origin)) {
+    if ((origin && !allowed.has(origin)) || ((hasCookie || google) && !origin)) {
       res
         .status(403)
         .json({ code: 'INVALID_ORIGIN', message: 'Origem da solicitação não permitida' });

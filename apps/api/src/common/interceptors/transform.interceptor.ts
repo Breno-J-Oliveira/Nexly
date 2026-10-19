@@ -8,6 +8,7 @@ import { map, Observable } from 'rxjs';
 // (que ficam armazenados apenas como hash) nunca saem da API.
 const SENSITIVE_KEYS = new Set([
   'senhaHash',
+  'googleSubject',
   'twoFactorSecret',
   'twoFactorBackupCodes',
   'twoFactorChallengeHash',

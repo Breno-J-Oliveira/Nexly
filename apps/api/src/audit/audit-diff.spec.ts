@@ -15,6 +15,22 @@ describe('audit-diff', () => {
       });
     });
 
+    it('não registra credenciais e provas de identidade Google', () => {
+      expect(
+        sanitizar({
+          credential: 'jwt-google',
+          registrationToken: 'pending',
+          nonce: 'nonce',
+          googleSubject: 'identity',
+        }),
+      ).toEqual({
+        credential: '[REDACTED]',
+        registrationToken: '[REDACTED]',
+        nonce: '[REDACTED]',
+        googleSubject: '[REDACTED]',
+      });
+    });
+
     it('cobre senha, tokens, 2FA e cartão', () => {
       const entrada = {
         senha: 's',
