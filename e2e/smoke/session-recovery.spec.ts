@@ -59,3 +59,30 @@ test('sessão confirmada como inválida retorna ao login', async ({ page, baseUR
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole('button', { name: 'Entrar no painel', exact: true })).toBeVisible();
 });
+
+test('visitante sem cookie chega ao login ao abrir a assinatura publicada', async ({ page }) => {
+  await page.context().clearCookies();
+  await page.goto('/assinatura');
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole('button', { name: 'Entrar no painel', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Recuperar acesso', exact: true })).toHaveCount(0);
+});
+
+test('resposta de sessão incompleta permite recuperar sem anunciar logout', async ({
+  page,
+  baseURL,
+}) => {
+  await page.route('**/api/auth/refresh', (route) =>
+    route.fulfill({
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': baseURL!,
+        'Access-Control-Allow-Credentials': 'true',
+      },
+      json: {},
+    }),
+  );
+  await page.goto('/assinatura');
+  await expect(page.getByRole('region', { name: 'Recuperar acesso', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/assinatura$/);
+});

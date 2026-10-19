@@ -64,6 +64,11 @@ async function requestRefresh(): Promise<RefreshResult | null> {
       {},
       { withCredentials: true, timeout: 10_000 },
     );
+    // A API responde 200 com ambos nulos quando não existe cookie de sessão.
+    if (data.accessToken === null && data.usuario === null) {
+      setAccessToken(null);
+      return null;
+    }
     if (data.accessToken) {
       setAccessToken(data.accessToken);
       return data;
