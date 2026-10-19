@@ -1081,7 +1081,7 @@ return (
                 className="mt-4 border-t pt-4 text-[12px]"
                 style={{ color: '#71717A', borderColor: 'rgba(255,255,255,0.06)' }}
               >
-                Conheça os planos e acompanhe a contratação no ambiente de testes do Stripe.
+                Conheça os planos, acompanhe sua assinatura e gerencie os pagamentos com segurança.
               </p>
             </div>
           </div>

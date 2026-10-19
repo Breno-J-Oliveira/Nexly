@@ -11,10 +11,10 @@ import { Plano, Prisma } from '@prisma/client';
 import type Stripe from 'stripe';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { ESTADOS_EM_ANDAMENTO, PLANOS, PORTAL_SANDBOX } from './catalogo';
+import { ESTADOS_EM_ANDAMENTO } from './catalogo';
 import { StripeGateway } from './stripe.gateway';
 
-/** Assinaturas exclusivamente de teste; não concede nem remove módulos comerciais. */
+/** Só a reconciliação autenticada com o Stripe altera o plano comercial em produção. */
 @Injectable()
 export class AssinaturasService {
   constructor(
@@ -25,17 +25,25 @@ export class AssinaturasService {
 
   async status(empresaId: string) {
     const assinatura = await this.prisma.client.assinatura.findUnique({ where: { empresaId } });
+    const incompativel = assinatura && assinatura.ambiente !== this.gateway.mode;
     return {
-      disponivel: this.gateway.enabled,
-      ambiente: 'test' as const,
-      plano: assinatura?.plano ?? Plano.FREE,
-      status: assinatura?.status ?? 'none',
-      periodoFim: assinatura?.periodoFim ?? null,
-      cancelarEm: assinatura?.cancelarEm ?? null,
-      podeGerenciar: Boolean(assinatura?.customerId && assinatura?.subscriptionId),
-      emAndamento: ESTADOS_EM_ANDAMENTO.has(assinatura?.status ?? ''),
-      planos: PLANOS.map(({ id, nome, centavos }) => ({ id, nome, centavos })),
+      disponivel: this.gateway.enabled && !incompativel,
+      ambiente: this.gateway.mode,
+      plano: !incompativel && assinatura ? assinatura.plano : Plano.FREE,
+      status: incompativel ? 'environment_mismatch' : (assinatura?.status ?? 'none'),
+      periodoFim: !incompativel ? (assinatura?.periodoFim ?? null) : null,
+      cancelarEm: !incompativel ? (assinatura?.cancelarEm ?? null) : null,
+      podeGerenciar: !incompativel && Boolean(assinatura?.customerId && assinatura?.subscriptionId),
+      emAndamento: !incompativel && ESTADOS_EM_ANDAMENTO.has(assinatura?.status ?? ''),
+      planos: this.gateway.planos.map(({ id, nome, centavos }) => ({ id, nome, centavos })),
     };
+  }
+
+  private validarAmbiente(assinatura: { ambiente: string }): void {
+    if (assinatura.ambiente !== this.gateway.mode)
+      throw new ConflictException(
+        'Há um vínculo de cobrança de outro ambiente. Solicite a revisão antes de contratar.',
+      );
   }
 
   private async limitar(empresaId: string): Promise<void> {
@@ -52,7 +60,7 @@ export class AssinaturasService {
   }
 
   async checkout(empresaId: string, plano: string) {
-    const tier = PLANOS.find((item) => item.id === plano);
+    const tier = this.gateway.planos.find((item) => item.id === plano);
     if (!tier) throw new BadRequestException('Plano inválido.');
     const stripe = this.gateway.client;
     const origin = this.gateway.origin;
@@ -60,7 +68,7 @@ export class AssinaturasService {
     // Confere a oferta no provedor antes de iniciar qualquer checkout.
     const price = await stripe.prices.retrieve(tier.precoId);
     if (
-      price.livemode ||
+      price.livemode !== this.gateway.livemode ||
       !price.active ||
       price.currency !== 'brl' ||
       price.unit_amount !== tier.centavos ||
@@ -72,7 +80,7 @@ export class AssinaturasService {
     try {
       await this.prisma.client.assinatura.upsert({
         where: { empresaId },
-        create: { empresaId },
+        create: { empresaId, ambiente: this.gateway.mode },
         update: {},
       });
     } catch (error) {
@@ -89,13 +97,14 @@ export class AssinaturasService {
           where: { empresaId },
           data: { updatedAt: new Date() },
         });
+        this.validarAmbiente(row);
         try {
           if (!row.customerId) {
             const customer = await stripe.customers.create(
               {},
-              { idempotencyKey: `nexly-customer-${empresaId}` },
+              { idempotencyKey: `nexly-customer-${this.gateway.mode}-${empresaId}` },
             );
-            if (customer.livemode)
+            if (customer.livemode !== this.gateway.livemode)
               throw new ServiceUnavailableException('Ambiente de cobrança inválido.');
             row = await tx.assinatura.update({
               where: { empresaId },
@@ -118,6 +127,8 @@ export class AssinaturasService {
           }
           if (row.checkoutId) {
             const session = await stripe.checkout.sessions.retrieve(row.checkoutId);
+            if (session.livemode !== this.gateway.livemode)
+              throw new ServiceUnavailableException('Ambiente de cobrança inválido.');
             if (session.status === 'complete')
               throw new ConflictException('Pagamento em processamento. Aguarde a confirmação.');
             if (session.status === 'open') {
@@ -154,7 +165,7 @@ export class AssinaturasService {
             },
             { idempotencyKey: key },
           );
-          if (session.livemode || !session.url)
+          if (session.livemode !== this.gateway.livemode || !session.url)
             throw new ServiceUnavailableException('Checkout indisponível.');
           await tx.assinatura.update({ where: { empresaId }, data: { checkoutId: session.id } });
           return { url: session.url };
@@ -179,9 +190,10 @@ export class AssinaturasService {
     const row = await this.prisma.client.assinatura.findUnique({ where: { empresaId } });
     if (!row?.customerId || !row.subscriptionId)
       throw new BadRequestException('Nenhuma assinatura encontrada.');
+    this.validarAmbiente(row);
     const session = await stripe.billingPortal.sessions.create({
       customer: row.customerId,
-      configuration: PORTAL_SANDBOX,
+      configuration: this.gateway.portalId,
       return_url: `${this.gateway.origin}/assinatura`,
       locale: 'pt-BR',
     });
@@ -196,7 +208,7 @@ export class AssinaturasService {
       if (error instanceof ServiceUnavailableException) throw error;
       throw new BadRequestException('Assinatura do webhook inválida.');
     }
-    if (event.livemode || event.account)
+    if (event.livemode !== this.gateway.livemode || event.account)
       throw new BadRequestException('Ambiente do evento inválido.');
     const supported =
       event.type.startsWith('customer.subscription.') ||
@@ -214,7 +226,7 @@ export class AssinaturasService {
     if (!customerId) return { received: true };
     // O customer pertence à empresa no banco; nunca confiamos em metadata enviada pelo cliente.
     const owner = await this.prisma.client.assinatura.findUnique({ where: { customerId } });
-    if (!owner) return { received: true };
+    if (!owner || owner.ambiente !== this.gateway.mode) return { received: true };
     await this.reconcile(owner.empresaId, { id: event.id, type: event.type });
     return { received: true };
   }
@@ -234,6 +246,7 @@ export class AssinaturasService {
           where: { empresaId },
           data: { updatedAt: new Date() },
         });
+        this.validarAmbiente(row);
         if (!row.customerId) return;
         if (event && (await tx.eventoStripe.findUnique({ where: { id: event.id } }))) return;
         const subscriptions = await this.gateway.client.subscriptions.list({
@@ -250,17 +263,31 @@ export class AssinaturasService {
           subscriptions.data.find((item) => item.id === row.subscriptionId) ??
           subscriptions.data[0];
         if (current) {
-          if (current.livemode) throw new BadRequestException('Assinatura fora do Sandbox.');
+          if (current.livemode !== this.gateway.livemode)
+            throw new BadRequestException('Ambiente da assinatura inválido.');
           const item = current.items.data[0];
           const tier =
             current.items.data.length === 1 && item?.quantity === 1
-              ? PLANOS.find((plan) => plan.precoId === item.price.id)
+              ? this.gateway.planos.find((plan) => plan.precoId === item.price.id)
               : undefined;
           if (!tier || !item) throw new BadRequestException('Preço da assinatura não reconhecido.');
           const invoice =
             typeof current.latest_invoice === 'object' ? current.latest_invoice : null;
+          const periodoVigente = Boolean(
+            item.current_period_end && item.current_period_end * 1000 > Date.now(),
+          );
+          // Um aumento pendente não remove o plano anterior já pago nem libera o novo.
+          const manterPlanoPago = Boolean(
+            current.pending_update &&
+            row.plano === tier.id &&
+            row.periodoFim &&
+            row.periodoFim.getTime() > Date.now(),
+          );
           const paid =
-            current.status === 'active' && !current.pause_collection && invoice?.status === 'paid';
+            current.status === 'active' &&
+            !current.pause_collection &&
+            periodoVigente &&
+            ((!current.pending_update && invoice?.status === 'paid') || manterPlanoPago);
           await tx.assinatura.update({
             where: { empresaId: row.empresaId },
             data: {
@@ -278,6 +305,20 @@ export class AssinaturasService {
               checkoutPlano: null,
             },
           });
+          if (this.gateway.livemode) {
+            await tx.empresa.update({
+              where: { id: row.empresaId },
+              data: { plano: paid ? tier.id : Plano.FREE },
+            });
+          }
+        } else if (row.subscriptionId) {
+          // Ausência no estado canônico nunca deve deixar um plano pago ativo.
+          await tx.assinatura.update({
+            where: { empresaId: row.empresaId },
+            data: { plano: Plano.FREE, status: 'canceled', periodoFim: null, cancelarEm: null },
+          });
+          if (this.gateway.livemode)
+            await tx.empresa.update({ where: { id: row.empresaId }, data: { plano: Plano.FREE } });
         }
         if (event) await tx.eventoStripe.create({ data: { id: event.id, tipo: event.type } });
       },

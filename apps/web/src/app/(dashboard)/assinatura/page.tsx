@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 
 interface SubscriptionState {
   disponivel: boolean;
-  ambiente: 'test';
+  ambiente: 'test' | 'live';
   plano: string;
   status: string;
   periodoFim: string | null;
@@ -28,6 +28,7 @@ const labels: Record<string, string> = {
   incomplete: 'Aguardando pagamento',
   incomplete_expired: 'Tentativa expirada',
   paused: 'Pausada',
+  environment_mismatch: 'Vínculo de outro ambiente: solicite uma revisão ao suporte',
 };
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const date = (value: string) =>
@@ -114,10 +115,18 @@ export default function AssinaturaPage() {
           Escolha o próximo passo para o seu negócio e acompanhe sua assinatura.
         </p>
       </header>
-      <div className="rounded-xl border border-amber-400/25 bg-amber-400/5 p-5 text-sm leading-7 text-amber-100">
-        <strong>Ambiente de testes do Stripe.</strong> Use apenas dados de teste. Nenhum dinheiro
-        real será movimentado e seu acesso atual ao Nexly será preservado.
-      </div>
+      {data?.ambiente === 'test' && (
+        <div className="rounded-xl border border-amber-400/25 bg-amber-400/5 p-5 text-sm leading-7 text-amber-100">
+          <strong>Ambiente de testes do Stripe.</strong> Use apenas dados de teste. Nenhum dinheiro
+          real será movimentado e seu acesso atual ao Nexly será preservado.
+        </div>
+      )}
+      {data?.ambiente === 'live' && (
+        <p className="rounded-xl border border-indigo-400/25 bg-indigo-400/5 p-5 text-sm leading-7 text-indigo-100">
+          Assinatura mensal com renovação automática. Você confere o valor antes de pagar no
+          checkout seguro do Stripe e pode gerenciar ou cancelar a assinatura por aqui.
+        </p>
+      )}
       {retorno === 'sucesso' && (
         <p
           role="status"
@@ -155,7 +164,9 @@ export default function AssinaturaPage() {
           >
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div>
-                <p className="text-sm text-[#A1A1AA]">Assinatura no Sandbox</p>
+                <p className="text-sm text-[#A1A1AA]">
+                  {data.ambiente === 'test' ? 'Assinatura no Sandbox' : 'Sua assinatura Nexly'}
+                </p>
                 <h2 className="mt-2 text-xl font-semibold">
                   {data.planos.find((plan) => plan.id === data.plano)?.nome ?? 'Acesso gratuito'}
                 </h2>
@@ -197,7 +208,7 @@ export default function AssinaturaPage() {
             {!data.disponivel && (
               <p className="mt-5 border-t border-white/10 pt-4 text-sm leading-7 text-[#A1A1AA]">
                 A contratação está em preparação. O checkout será liberado após configurar e validar
-                as credenciais e o webhook de testes.
+                as credenciais e a confirmação dos pagamentos.
               </p>
             )}
           </section>
@@ -223,7 +234,7 @@ export default function AssinaturaPage() {
                   loading={busy === plan.id}
                   onClick={() => void open('checkout', plan.id)}
                 >
-                  Testar {plan.nome}
+                  {data.ambiente === 'live' ? 'Assinar' : 'Testar'} {plan.nome}
                 </Button>
               </article>
             ))}

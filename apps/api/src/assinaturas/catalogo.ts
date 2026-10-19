@@ -17,6 +17,17 @@ export const PLANOS = [
 ] as const;
 
 export const PORTAL_SANDBOX = 'bpc_1US5P5L7qFzhxMmg1F3XpGni';
+// Identificadores públicos do catálogo aprovado na conta de produção Nexly.
+const PRECOS_LIVE = {
+  BASIC: 'price_1USMi3LaaHKTv1WnMwtEzzth',
+  PRO: 'price_1USMiFLaaHKTv1Wny3a15dTA',
+  ENTERPRISE: 'price_1USMiGLaaHKTv1WnElswXTIZ',
+} as const;
+export const PLANOS_LIVE = PLANOS.map((plano) => ({
+  ...plano,
+  precoId: PRECOS_LIVE[plano.id],
+}));
+export const PORTAL_LIVE = 'bpc_1USMijLaaHKTv1Wnog3jNvm3';
 export const ESTADOS_EM_ANDAMENTO = new Set([
   'active',
   'trialing',

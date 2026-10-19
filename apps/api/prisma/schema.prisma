@@ -124,9 +124,10 @@ model Empresa {
   @@map("empresas")
 }
 
-// Cobrança do próprio Nexly. O Sandbox não altera o plano comercial da empresa.
+// Cobrança do próprio Nexly. O ambiente impede reutilizar vínculos de teste em produção.
 model Assinatura {
   empresaId String @id @map("empresa_id")
+  ambiente String @default("test")
   customerId String? @unique @map("customer_id")
   subscriptionId String? @unique @map("subscription_id")
   plano Plano @default(FREE)

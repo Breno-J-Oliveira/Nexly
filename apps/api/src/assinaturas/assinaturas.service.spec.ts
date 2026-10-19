@@ -8,7 +8,7 @@ import { AssinaturasService } from './assinaturas.service';
 import { StripeGateway } from './stripe.gateway';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { PLANOS } from './catalogo';
+import { PLANOS, PLANOS_LIVE, PORTAL_SANDBOX, PORTAL_LIVE } from './catalogo';
 
 describe('Assinaturas do Nexly no Sandbox', () => {
   let row: Record<string, unknown>;
@@ -36,6 +36,10 @@ describe('Assinaturas do Nexly no Sandbox', () => {
   };
   const gateway = {
     enabled: true,
+    mode: 'test',
+    livemode: false,
+    planos: [...PLANOS] as { id: Plano; nome: string; centavos: number; precoId: string }[],
+    portalId: PORTAL_SANDBOX,
     origin: 'http://localhost:3002',
     client: stripe,
     verify: jest.fn(),
@@ -49,7 +53,7 @@ describe('Assinaturas do Nexly no Sandbox', () => {
         return Promise.resolve(row);
       }),
     },
-    empresa: { findUniqueOrThrow: jest.fn().mockResolvedValue({ nome: 'Empresa local' }) },
+    empresa: { update: jest.fn().mockResolvedValue({}) },
     eventoStripe: {
       findUnique: jest.fn(({ where }: { where: { id: string } }) =>
         Promise.resolve(receipts.has(where.id) ? { id: where.id } : null),
@@ -86,9 +90,11 @@ describe('Assinaturas do Nexly no Sandbox', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(Date, 'now').mockReturnValue(1_790_000_000_000);
     receipts = new Set();
     row = {
       empresaId: 'e1',
+      ambiente: 'test',
       customerId: 'cus_1',
       subscriptionId: null,
       plano: Plano.FREE,
@@ -99,6 +105,11 @@ describe('Assinaturas do Nexly no Sandbox', () => {
     };
     db.assinatura.findUnique.mockImplementation(() => Promise.resolve(row));
     gateway.enabled = true;
+    gateway.origin = 'http://localhost:3002';
+    gateway.mode = 'test';
+    gateway.livemode = false;
+    gateway.planos = [...PLANOS];
+    gateway.portalId = PORTAL_SANDBOX;
     redis.consumeLimit.mockResolvedValue({ allowed: true });
     stripe.prices.retrieve.mockResolvedValue({
       active: true,
@@ -115,6 +126,7 @@ describe('Assinaturas do Nexly no Sandbox', () => {
     });
     gateway.verify.mockReset();
   });
+  afterEach(() => jest.restoreAllMocks());
 
   it('não expõe identificadores internos no status', async () => {
     const result = await service.status('e1');
@@ -168,6 +180,7 @@ describe('Assinaturas do Nexly no Sandbox', () => {
     stripe.checkout.sessions.retrieve.mockResolvedValue({
       id: 'cs_1',
       status: 'open',
+      livemode: false,
       url: 'https://checkout.stripe.com/recovered',
     });
     expect(await service.checkout('e1', 'BASIC')).toEqual({
@@ -233,6 +246,7 @@ describe('Assinaturas do Nexly no Sandbox', () => {
     expect(row.plano).toBe(Plano.BASIC);
     expect(stripe.subscriptions.list).toHaveBeenCalledTimes(1);
     expect(db.eventoStripe.create).toHaveBeenCalledTimes(1);
+    expect(db.empresa.update).not.toHaveBeenCalled();
   });
 
   it('evento antigo de pagamento não reativa assinatura já cancelada no Stripe', async () => {
@@ -294,5 +308,132 @@ describe('Assinaturas do Nexly no Sandbox', () => {
     const result = await service.atualizar('e1');
     expect(result.plano).toBe(Plano.BASIC);
     expect(receipts.size).toBe(0);
+  });
+
+  function configurarProducao() {
+    gateway.mode = 'live';
+    gateway.livemode = true;
+    gateway.planos = [...PLANOS_LIVE];
+    gateway.portalId = PORTAL_LIVE;
+    gateway.origin = 'https://nexly-web.vercel.app';
+    row.ambiente = 'live';
+    stripe.subscriptions.list.mockResolvedValue({
+      data: [
+        subscription({
+          livemode: true,
+          items: {
+            data: [
+              {
+                quantity: 1,
+                price: { id: PLANOS_LIVE[0]!.precoId },
+                current_period_end: 1_800_000_000,
+              },
+            ],
+          },
+        }),
+      ],
+      has_more: false,
+    });
+  }
+
+  it('libera o plano comercial somente com confirmação canônica paga em produção', async () => {
+    configurarProducao();
+    await deliver('evt_live_paid', 'invoice.paid', { livemode: true });
+    expect(db.empresa.update).toHaveBeenCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.BASIC },
+    });
+    expect(row.plano).toBe(Plano.BASIC);
+    await deliver('evt_live_paid', 'invoice.paid', { livemode: true });
+    expect(db.empresa.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('um evento de teste nunca altera acesso em produção, mesmo com assinatura válida', async () => {
+    configurarProducao();
+    await expect(deliver()).rejects.toBeInstanceOf(BadRequestException);
+    expect(db.empresa.update).not.toHaveBeenCalled();
+    expect(stripe.subscriptions.list).not.toHaveBeenCalled();
+  });
+
+  it('não contrata, reconcilia nem abre portal para vínculo de outro ambiente', async () => {
+    row.ambiente = 'live';
+    row.subscriptionId = 'sub_live';
+    const status = await service.status('e1');
+    expect(status).toMatchObject({
+      disponivel: false,
+      podeGerenciar: false,
+      plano: 'FREE',
+      status: 'environment_mismatch',
+    });
+    await expect(service.checkout('e1', 'BASIC')).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.portal('e1')).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.atualizar('e1')).rejects.toBeInstanceOf(ConflictException);
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+    expect(stripe.billingPortal.sessions.create).not.toHaveBeenCalled();
+    expect(db.empresa.update).not.toHaveBeenCalled();
+  });
+
+  it('ignora webhook de customer vinculado a outro ambiente sem alterar a empresa', async () => {
+    row.ambiente = 'live';
+    await deliver();
+    expect(stripe.subscriptions.list).not.toHaveBeenCalled();
+    expect(db.empresa.update).not.toHaveBeenCalled();
+  });
+
+  it('revoga o plano quando uma assinatura real foi cancelada', async () => {
+    configurarProducao();
+    row.subscriptionId = 'sub_1';
+    const current = (await stripe.subscriptions.list()).data[0];
+    stripe.subscriptions.list.mockResolvedValue({
+      data: [{ ...current, status: 'canceled' }],
+      has_more: false,
+    });
+    await deliver('evt_live_canceled', 'customer.subscription.deleted', { livemode: true });
+    expect(db.empresa.update).toHaveBeenCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.FREE },
+    });
+  });
+
+  it('não concede acesso por uma fatura antiga fora do período pago', async () => {
+    stripe.subscriptions.list.mockResolvedValue({
+      data: [
+        subscription({
+          items: {
+            data: [{ quantity: 1, price: { id: PLANOS[0].precoId }, current_period_end: 1 }],
+          },
+        }),
+      ],
+      has_more: false,
+    });
+    await deliver();
+    expect(row.plano).toBe(Plano.FREE);
+  });
+
+  it('conserva o plano já pago enquanto um aumento aguarda pagamento', async () => {
+    row.plano = Plano.BASIC;
+    row.periodoFim = new Date(1_800_000_000_000);
+    stripe.subscriptions.list.mockResolvedValue({
+      data: [
+        subscription({
+          pending_update: { expires_at: 1_800_000_000 },
+          latest_invoice: { status: 'open' },
+        }),
+      ],
+      has_more: false,
+    });
+    await deliver();
+    expect(row.plano).toBe(Plano.BASIC);
+  });
+
+  it('não mantém plano real quando o Stripe já não encontra a assinatura', async () => {
+    configurarProducao();
+    row.subscriptionId = 'sub_1';
+    stripe.subscriptions.list.mockResolvedValue({ data: [], has_more: false });
+    await deliver('evt_live_missing', 'customer.subscription.deleted', { livemode: true });
+    expect(db.empresa.update).toHaveBeenCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.FREE },
+    });
   });
 });

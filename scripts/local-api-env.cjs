@@ -11,6 +11,7 @@ for (const key of ['JWT_PRIVATE_KEY', 'JWT_PUBLIC_KEY']) {
 }
 Object.assign(process.env, {
   NODE_ENV: 'development',
+  STRIPE_MODE: 'test',
   HOST: '127.0.0.1',
   PORT: '3001',
   CORS_ORIGIN: 'http://localhost:3002,http://127.0.0.1:3002',
