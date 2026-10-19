@@ -196,7 +196,7 @@ export default function AssinaturaPage() {
                 {data.podeGerenciar && (
                   <Button
                     type="button"
-                    disabled={!data.disponivel || Boolean(busy)}
+                    disabled={!data.disponivel || Boolean(busy) || loading}
                     loading={busy === 'portal'}
                     onClick={() => void open('portal')}
                   >
@@ -206,9 +206,25 @@ export default function AssinaturaPage() {
               </div>
             </div>
             {!data.disponivel && (
-              <p className="mt-5 border-t border-white/10 pt-4 text-sm leading-7 text-[#A1A1AA]">
-                A contratação está em preparação. O checkout será liberado após configurar e validar
-                as credenciais e a confirmação dos pagamentos.
+              <p
+                id="assinatura-indisponivel"
+                className="mt-5 border-t border-white/10 pt-4 text-sm leading-7 text-[#A1A1AA]"
+              >
+                {data.status === 'environment_mismatch'
+                  ? 'Esta conta tem um vínculo de cobrança de outro ambiente. Entre em contato com o suporte para revisar o vínculo antes de contratar.'
+                  : data.ambiente === 'test'
+                    ? 'O checkout de testes está indisponível. Confira a configuração do Sandbox antes de testar os planos. Nenhuma cobrança será iniciada.'
+                    : 'A contratação está em preparação. Tente atualizar o status ou entre em contato com o suporte.'}
+              </p>
+            )}
+            {data.emAndamento && (
+              <p
+                id="assinatura-em-andamento"
+                className="mt-5 border-t border-white/10 pt-4 text-sm leading-7 text-[#A1A1AA]"
+              >
+                {data.podeGerenciar
+                  ? 'Você já tem uma assinatura em andamento. Escolha outro plano para abrir o portal do Stripe e conferir as opções de mudança antes de confirmar.'
+                  : 'Sua assinatura está sendo processada. Aguarde a confirmação e use Atualizar status antes de escolher outro plano.'}
               </p>
             )}
           </section>
@@ -230,11 +246,29 @@ export default function AssinaturaPage() {
                 <Button
                   type="button"
                   variant={plan.id === 'PRO' ? 'primary' : 'secondary'}
-                  disabled={!data.disponivel || Boolean(busy) || data.emAndamento}
+                  disabled={
+                    !data.disponivel ||
+                    Boolean(busy) ||
+                    loading ||
+                    (data.emAndamento && (!data.podeGerenciar || data.plano === plan.id))
+                  }
+                  aria-describedby={
+                    !data.disponivel
+                      ? 'assinatura-indisponivel'
+                      : data.emAndamento
+                        ? 'assinatura-em-andamento'
+                        : undefined
+                  }
                   loading={busy === plan.id}
-                  onClick={() => void open('checkout', plan.id)}
+                  onClick={() =>
+                    void (data.emAndamento ? open('portal') : open('checkout', plan.id))
+                  }
                 >
-                  {data.ambiente === 'live' ? 'Assinar' : 'Testar'} {plan.nome}
+                  {data.emAndamento && data.podeGerenciar
+                    ? data.plano === plan.id
+                      ? 'Plano atual'
+                      : `Mudar para ${plan.nome}`
+                    : `${data.ambiente === 'live' ? 'Assinar' : 'Testar'} ${plan.nome}`}
                 </Button>
               </article>
             ))}

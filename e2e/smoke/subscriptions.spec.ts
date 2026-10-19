@@ -49,7 +49,9 @@ test('assinaturas sem credenciais preservam acesso e não oferecem cobrança rea
   for (const name of ['Essencial', 'Profissional', 'Empresarial']) {
     await expect(plans.getByRole('button', { name: `Testar ${name}`, exact: true })).toBeDisabled();
   }
-  await expect(page.getByText('A contratação está em preparação.', { exact: false })).toBeVisible();
+  await expect(
+    page.getByText('O checkout de testes está indisponível.', { exact: false }),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Atualizar status', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Sua assinatura' })).toContainText(
     'Sem assinatura',
@@ -58,6 +60,58 @@ test('assinaturas sem credenciais preservam acesso e não oferecem cobrança rea
   await page.getByRole('button', { name: 'Plano e Assinatura', exact: true }).click();
   await page.getByRole('link', { name: 'Gerenciar assinatura →', exact: true }).click();
   await expect(page).toHaveURL(/\/assinatura$/);
+});
+
+test('assinatura ativa permite mudar pelo portal sem iniciar outra assinatura', async ({
+  page,
+  baseURL,
+}) => {
+  const headers = {
+    'Access-Control-Allow-Origin': baseURL!,
+    'Access-Control-Allow-Credentials': 'true',
+  };
+  await page.route('**/api/assinaturas', (route) =>
+    route.fulfill({
+      headers,
+      json: {
+        ...subscriptionState,
+        disponivel: true,
+        plano: 'BASIC',
+        status: 'active',
+        podeGerenciar: true,
+        emAndamento: true,
+      },
+    }),
+  );
+  let portalRequests = 0;
+  let checkoutRequests = 0;
+  await page.route('**/api/assinaturas/portal', async (route) => {
+    portalRequests += 1;
+    expect(route.request().postDataJSON()).toEqual({});
+    await route.fulfill({
+      headers,
+      json: { url: 'https://billing.stripe.com/p/session/test_portal' },
+    });
+  });
+  await page.route('**/api/assinaturas/checkout', async (route) => {
+    checkoutRequests += 1;
+    await route.fulfill({ status: 409, headers, json: { message: 'Duplicate subscription' } });
+  });
+  await page.route('https://billing.stripe.com/p/session/test_portal', (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: '<h1>Portal de teste</h1>',
+    }),
+  );
+  await page.goto('/assinatura');
+  await expect(page.getByRole('button', { name: 'Plano atual', exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Mudar para Empresarial', exact: true }),
+  ).toBeEnabled();
+  await page.getByRole('button', { name: 'Mudar para Profissional', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Portal de teste' })).toBeVisible();
+  expect(portalRequests).toBe(1);
+  expect(checkoutRequests).toBe(0);
 });
 
 test('retorno do checkout não anuncia pagamento confirmado', async ({ page }) => {
