@@ -1,4 +1,6 @@
 import type { MDXComponents } from 'mdx/types';
+import Link from 'next/link';
+import type { ComponentProps } from 'react';
 
 /**
  * Componentes de estilo para o conteúdo MDX do blog.
@@ -12,7 +14,11 @@ export const mdxComponents: MDXComponents = {
     </h1>
   ),
   h2: ({ children, ...props }) => (
-    <h2 className="mb-3 mt-8 text-xl font-semibold" style={{ color: '#FAFAFA' }} {...props}>
+    <h2
+      className="mb-4 mt-10 text-2xl font-semibold tracking-tight"
+      style={{ color: '#FAFAFA' }}
+      {...props}
+    >
       {children}
     </h2>
   ),
@@ -23,34 +29,44 @@ export const mdxComponents: MDXComponents = {
   ),
   p: (props) => (
     <p
-      className="my-4 max-w-[65ch] text-[15px]"
-      style={{ color: '#A1A1AA', lineHeight: 1.8 }}
+      className="my-5 max-w-[68ch] text-base"
+      style={{ color: '#C4C4CC', lineHeight: 1.9 }}
       {...props}
     />
   ),
-  a: ({ children, ...props }) => (
-    <a
-      className="underline"
-      style={{ color: '#818CF8' }}
-      target="_blank"
-      rel="noopener noreferrer"
-      {...props}
-    >
-      {children}
-    </a>
-  ),
+  a: ({ children, href = '', ...props }: ComponentProps<'a'>) =>
+    href.startsWith('/') && !href.startsWith('//') ? (
+      <Link
+        href={href}
+        className="rounded text-indigo-300 underline underline-offset-4 hover:text-indigo-200"
+        {...props}
+      >
+        {children}
+      </Link>
+    ) : (
+      <a
+        href={href}
+        className="rounded underline underline-offset-4 hover:text-indigo-200"
+        style={{ color: '#818CF8' }}
+        target={href.startsWith('#') ? undefined : '_blank'}
+        rel="noopener noreferrer"
+        {...props}
+      >
+        {children}
+      </a>
+    ),
   ul: (props) => (
     <ul className="my-4 list-disc space-y-2 pl-6" style={{ color: '#A1A1AA' }} {...props} />
   ),
   ol: (props) => (
     <ol className="my-4 list-decimal space-y-2 pl-6" style={{ color: '#A1A1AA' }} {...props} />
   ),
-  li: (props) => <li className="text-[15px]" style={{ lineHeight: 1.7 }} {...props} />,
+  li: (props) => <li className="text-base" style={{ lineHeight: 1.9 }} {...props} />,
   strong: (props) => <strong style={{ color: '#FAFAFA' }} {...props} />,
   blockquote: (props) => (
     <blockquote
       className="my-4 border-l-4 pl-4 italic"
-      style={{ borderColor: '#6366F1', color: '#71717A' }}
+      style={{ borderColor: '#6366F1', color: '#A1A1AA' }}
       {...props}
     />
   ),
@@ -64,7 +80,11 @@ export const mdxComponents: MDXComponents = {
   pre: (props) => (
     <pre
       className="my-4 overflow-x-auto rounded-lg border p-4 font-mono text-[13px]"
-      style={{ backgroundColor: '#18181F', borderColor: 'rgba(255,255,255,0.06)', color: '#A1A1AA' }}
+      style={{
+        backgroundColor: '#18181F',
+        borderColor: 'rgba(255,255,255,0.06)',
+        color: '#A1A1AA',
+      }}
       {...props}
     />
   ),

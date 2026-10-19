@@ -1,50 +1,134 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getAllPosts } from '@/lib/blog';
+import { formatBlogDate } from '@/lib/blog-presentation';
+import { BlogArtwork } from '@/components/BlogArtwork';
+import { BlogExplorer } from '@/components/BlogExplorer';
 
 export const metadata: Metadata = {
-  title: 'Blog — Nexly',
-  description: 'Insights e conteúdos para crescer seu negócio de beleza, estética ou pet.',
+  title: 'Blog',
+  description:
+    'Guias práticos sobre agenda, estoque, finanças e privacidade para cuidar melhor do seu negócio.',
+  alternates: { canonical: '/blog' },
+  openGraph: {
+    title: 'Blog Nexly — Ideias para uma gestão mais leve',
+    description: 'Conteúdo prático para transformar a rotina do seu negócio.',
+    url: '/blog',
+    type: 'website',
+  },
 };
 
 export default function BlogPage() {
   const posts = getAllPosts();
+  const featured =
+    posts.find((post) => post.slug === 'como-reduzir-no-show-80-porcento') ?? posts[0];
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-16">
-      <p className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#818CF8' }}>
-        Blog
-      </p>
-      <h1 className="mt-2 text-4xl font-bold" style={{ color: '#FAFAFA' }}>
-        Insights para crescer seu negócio
-      </h1>
-
-      <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
-        {posts.map((post) => (
+    <div className="mx-auto max-w-6xl px-5 sm:px-6">
+      <section className="relative pb-12 pt-14 sm:pb-16 sm:pt-20" aria-labelledby="blog-title">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.10),transparent_70%)]" />
+        <div className="relative max-w-3xl">
           <Link
-            key={post.slug}
-            href={`/blog/${post.slug}`}
-            className="rounded-2xl border p-6 transition-all hover:-translate-y-0.5 hover:border-[#6366F1]/40"
-            style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}
+            href="/"
+            className="inline-flex rounded py-2 text-sm text-[#A1A1AA] hover:text-white"
           >
-            <span
-              className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
-              style={{ backgroundColor: 'rgba(99,102,241,0.12)', color: '#818CF8' }}
-            >
-              {post.categoria}
-            </span>
-            <h2 className="mt-3 text-xl font-semibold" style={{ color: '#FAFAFA' }}>
-              {post.title}
-            </h2>
-            <p className="mt-2 text-sm" style={{ color: '#A1A1AA' }}>
-              {post.description}
-            </p>
-            <p className="mt-4 text-xs" style={{ color: '#71717A' }}>
-              {new Date(post.date).toLocaleDateString('pt-BR')} · {post.tempoLeitura}
-            </p>
+            ← Página inicial
           </Link>
-        ))}
-      </div>
+          <p className="mt-7 text-xs font-semibold uppercase tracking-[0.22em] text-indigo-300">
+            Blog Nexly
+          </p>
+          <h1
+            id="blog-title"
+            className="mt-5 text-4xl font-semibold leading-[1.12] tracking-tight sm:text-6xl"
+          >
+            Ideias claras.
+            <br />
+            <span className="text-indigo-300">Uma gestão mais leve.</span>
+          </h1>
+          <p className="mt-6 max-w-xl text-base leading-8 text-[#A1A1AA]">
+            Menos dúvidas na rotina, mais espaço para cuidar do seu negócio. Encontre orientações
+            práticas para organizar a agenda, os números e o próximo passo.
+          </p>
+          <a
+            href="#artigos"
+            className="mt-7 inline-flex min-h-11 items-center gap-3 rounded text-sm font-semibold text-indigo-200 hover:text-white"
+          >
+            Explorar os artigos <span aria-hidden="true">↓</span>
+          </a>
+        </div>
+      </section>
+      {featured && (
+        <section
+          aria-label="Artigo em destaque"
+          className="overflow-hidden rounded-3xl border border-indigo-400/20 bg-[#111116]"
+        >
+          <div className="grid md:grid-cols-2">
+            <BlogArtwork category={featured.categoria} large />
+            <div className="flex flex-col justify-center p-6 sm:p-9 lg:p-11">
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <span className="rounded-full border border-indigo-400/25 bg-indigo-400/10 px-3 py-1 font-medium text-indigo-200">
+                  Em destaque
+                </span>
+                <span className="text-[#A1A1AA]">
+                  {featured.categoria} · {featured.tempoLeitura} de leitura
+                </span>
+              </div>
+              <h2 className="mt-5 text-2xl font-semibold leading-snug tracking-tight sm:text-3xl">
+                <Link href={`/blog/${featured.slug}`} className="rounded hover:text-indigo-200">
+                  {featured.title}
+                </Link>
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-[#A1A1AA]">{featured.description}</p>
+              <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
+                {featured.date && (
+                  <time dateTime={featured.date} className="text-xs text-[#A1A1AA]">
+                    {formatBlogDate(featured.date)}
+                  </time>
+                )}
+                <Link
+                  href={`/blog/${featured.slug}`}
+                  className="inline-flex min-h-11 items-center gap-3 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-400"
+                >
+                  Ler o guia <span aria-hidden="true">↗</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+      <BlogExplorer
+        posts={posts.map((post) => ({
+          slug: post.slug,
+          title: post.title,
+          description: post.description,
+          date: post.date,
+          updatedAt: post.updatedAt,
+          categoria: post.categoria,
+          tempoLeitura: post.tempoLeitura,
+        }))}
+      />
+      <section
+        aria-labelledby="blog-cta-title"
+        className="mb-20 flex flex-col justify-between gap-7 rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/10 to-[#111116] p-7 sm:p-10 md:flex-row md:items-center"
+      >
+        <div className="max-w-xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-300">
+            Da leitura para a rotina
+          </p>
+          <h2 id="blog-cta-title" className="mt-3 text-2xl font-semibold tracking-tight">
+            Seu negócio, organizado do seu jeito.
+          </h2>
+          <p className="mt-3 text-sm leading-7 text-[#A1A1AA]">
+            Conheça os módulos do Nexly e escolha os recursos que fazem sentido para você.
+          </p>
+        </div>
+        <Link
+          href="/funcionalidades"
+          className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl border border-indigo-400/30 bg-indigo-400/10 px-5 text-sm font-semibold text-indigo-100 hover:bg-indigo-400/20"
+        >
+          Conhecer o Nexly ↗
+        </Link>
+      </section>
     </div>
   );
 }
