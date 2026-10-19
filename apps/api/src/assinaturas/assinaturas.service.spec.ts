@@ -310,7 +310,7 @@ describe('Assinaturas do Nexly no Sandbox', () => {
     expect(receipts.size).toBe(0);
   });
 
-  function configurarProducao() {
+  function configurarProducao(planoIndex = 0, overrides: Record<string, unknown> = {}) {
     gateway.mode = 'live';
     gateway.livemode = true;
     gateway.planos = [...PLANOS_LIVE];
@@ -325,11 +325,12 @@ describe('Assinaturas do Nexly no Sandbox', () => {
             data: [
               {
                 quantity: 1,
-                price: { id: PLANOS_LIVE[0]!.precoId },
+                price: { id: PLANOS_LIVE[planoIndex]!.precoId },
                 current_period_end: 1_800_000_000,
               },
             ],
           },
+          ...overrides,
         }),
       ],
       has_more: false,
@@ -435,5 +436,94 @@ describe('Assinaturas do Nexly no Sandbox', () => {
       where: { id: 'e1' },
       data: { plano: Plano.FREE },
     });
+  });
+
+  it('cancelamento agendado mantém o plano pago e só revoga após o encerramento canônico', async () => {
+    configurarProducao(1, { cancel_at_period_end: true });
+    await deliver('evt_cancel_scheduled', 'customer.subscription.updated', { livemode: true });
+    expect(row).toMatchObject({ plano: Plano.PRO, cancelarEm: new Date(1_800_000_000_000) });
+    expect(db.empresa.update).toHaveBeenLastCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.PRO },
+    });
+    configurarProducao(1, { status: 'canceled' });
+    await deliver('evt_cancel_finished', 'customer.subscription.deleted', { livemode: true });
+    expect(row.plano).toBe(Plano.FREE);
+    expect(db.empresa.update).toHaveBeenLastCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.FREE },
+    });
+  });
+
+  it('renovação recusada suspende o plano e pagamento recuperado restaura somente o plano pago', async () => {
+    configurarProducao(1);
+    await deliver('evt_before_renewal', 'invoice.paid', { livemode: true });
+    configurarProducao(1, { status: 'past_due', latest_invoice: { status: 'open' } });
+    await deliver('evt_renewal_failed', 'invoice.payment_failed', { livemode: true });
+    expect(row).toMatchObject({ plano: Plano.FREE, status: 'past_due' });
+    expect(db.empresa.update).toHaveBeenLastCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.FREE },
+    });
+    configurarProducao(1);
+    await deliver('evt_renewal_recovered', 'invoice.paid', { livemode: true });
+    expect(row).toMatchObject({ plano: Plano.PRO, status: 'active' });
+    expect(db.empresa.update).toHaveBeenLastCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.PRO },
+    });
+  });
+
+  it('aumento pendente preserva Essencial e só libera Profissional após pagamento confirmado', async () => {
+    configurarProducao();
+    await deliver('evt_basic_paid', 'invoice.paid', { livemode: true });
+    configurarProducao(0, {
+      pending_update: { expires_at: 1_800_000_000 },
+      latest_invoice: { status: 'open' },
+    });
+    await deliver('evt_upgrade_pending', 'customer.subscription.updated', { livemode: true });
+    expect(row.plano).toBe(Plano.BASIC);
+    expect(db.empresa.update).toHaveBeenLastCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.BASIC },
+    });
+    configurarProducao(1);
+    await deliver('evt_upgrade_paid', 'invoice.paid', { livemode: true });
+    expect(row.plano).toBe(Plano.PRO);
+    expect(db.empresa.update).toHaveBeenLastCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.PRO },
+    });
+  });
+
+  it('falha temporária no provedor não confirma evento e permite nova entrega', async () => {
+    configurarProducao();
+    stripe.subscriptions.list.mockRejectedValueOnce(new Error('temporary provider timeout'));
+    await expect(deliver('evt_retryable', 'invoice.paid', { livemode: true })).rejects.toThrow();
+    expect(receipts.has('evt_retryable')).toBe(false);
+    expect(db.empresa.update).not.toHaveBeenCalled();
+    await deliver('evt_retryable', 'invoice.paid', { livemode: true });
+    expect(row.plano).toBe(Plano.BASIC);
+    expect(receipts.has('evt_retryable')).toBe(true);
+    expect(db.empresa.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('redução agendada conserva o plano vigente até o Stripe aplicar o novo preço', async () => {
+    configurarProducao(1, { schedule: 'sub_sched_downgrade' });
+    await deliver('evt_downgrade_scheduled', 'customer.subscription.updated', { livemode: true });
+    expect(row.plano).toBe(Plano.PRO);
+    expect(db.empresa.update).toHaveBeenLastCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.PRO },
+    });
+    configurarProducao();
+    await deliver('evt_downgrade_applied', 'invoice.paid', { livemode: true });
+    expect(row.plano).toBe(Plano.BASIC);
+    expect(db.empresa.update).toHaveBeenLastCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.BASIC },
+    });
+    await deliver('evt_delayed_failure', 'invoice.payment_failed', { livemode: true });
+    expect(row.plano).toBe(Plano.BASIC);
   });
 });
