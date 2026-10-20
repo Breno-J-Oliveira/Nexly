@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { dateRange } from '../common/validation/date-range';
 import { calendarRange } from '../common/validation/calendar-range';
+import { commissionTotals } from './commission-totals';
+import { Prisma } from '@prisma/client';
 
 function commissionRange(inicio: string, fim: string) {
   if (typeof inicio === 'string' && inicio.includes('T')) {
@@ -31,50 +33,65 @@ export class ComissaoService {
       include: { servico: true },
     });
 
-    const faturamento = agendamentos.reduce((acc, a) => acc + Number(a.servico.preco), 0);
-    const comissao = faturamento * ((profissional.comissaoPercentual ?? 0) / 100);
-
     return {
       profissional: profissional.nome,
       comissaoPercentual: profissional.comissaoPercentual,
-      faturamento,
-      comissao,
-      totalServicos: agendamentos.length,
+      ...commissionTotals(agendamentos, profissional.comissaoPercentual ?? 0),
       periodo: { dataInicio, dataFim },
     };
   }
 
   async resumoGeral(dataInicio: string, dataFim: string) {
-    commissionRange(dataInicio, dataFim);
+    const { inicio, fim } = commissionRange(dataInicio, dataFim);
     const profissionais = await this.prisma.client.profissional.findMany({
-      where: { ativo: true },
-      select: { id: true, nome: true, comissaoPercentual: true },
+      where: {
+        OR: [
+          { ativo: true },
+          { agendamentos: { some: { status: 'CONCLUIDO', dataHora: { gte: inicio, lte: fim } } } },
+        ],
+      },
+      select: {
+        id: true,
+        nome: true,
+        ativo: true,
+        comissaoPercentual: true,
+        agendamentos: {
+          where: { status: 'CONCLUIDO', dataHora: { gte: inicio, lte: fim } },
+          include: { servico: { select: { preco: true } } },
+        },
+      },
     });
-    const resumo = await Promise.all(
-      profissionais.map(async (p) => {
-        const { faturamento, comissao, totalServicos } = await this.calcular(
-          p.id,
-          dataInicio,
-          dataFim,
-        );
-        return {
-          id: p.id,
-          nome: p.nome,
-          comissaoPercentual: p.comissaoPercentual,
-          faturamento,
-          comissao,
-          totalServicos,
-        };
-      }),
-    );
+    const resumo = profissionais.map((p) => {
+      return {
+        id: p.id,
+        nome: p.nome,
+        ativo: p.ativo,
+        comissaoPercentual: p.comissaoPercentual,
+        ...commissionTotals(p.agendamentos, p.comissaoPercentual ?? 0),
+      };
+    });
     const total = resumo.reduce(
       (a, r) => ({
-        faturamento: a.faturamento + r.faturamento,
-        comissao: a.comissao + r.comissao,
+        faturamento: a.faturamento.plus(r.faturamento),
+        comissao: a.comissao.plus(r.comissao),
         servicos: a.servicos + r.totalServicos,
+        estimados: a.estimados + r.estimados,
       }),
-      { faturamento: 0, comissao: 0, servicos: 0 },
+      {
+        faturamento: new Prisma.Decimal(0),
+        comissao: new Prisma.Decimal(0),
+        servicos: 0,
+        estimados: 0,
+      },
     );
-    return { profissionais: resumo, total, periodo: { dataInicio, dataFim } };
+    return {
+      profissionais: resumo,
+      total: {
+        ...total,
+        faturamento: total.faturamento.toNumber(),
+        comissao: total.comissao.toNumber(),
+      },
+      periodo: { dataInicio, dataFim },
+    };
   }
 }

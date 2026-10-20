@@ -197,8 +197,8 @@ describe('ProfissionaisService', () => {
       const args = agendamento.findMany.mock.calls[0][0];
       expect(args.where.profissionalId).toBe('p1');
       expect(args.where.status.in).toEqual(['AGENDADO', 'CONFIRMADO']);
-      expect(args.where.dataHora.gte.toISOString()).toBe('2026-01-15T00:00:00.000Z');
       expect(args.where.dataHora.lte.toISOString()).toBe('2026-01-15T23:59:59.999Z');
+      expect(args.where.dataHoraFim.gt.toISOString()).toBe('2026-01-15T00:00:00.000Z');
     });
   });
 });

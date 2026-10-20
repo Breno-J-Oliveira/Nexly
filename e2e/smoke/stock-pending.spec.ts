@@ -302,12 +302,15 @@ test('erro inesperado após o primeiro insumo reverte status, CRM e todos os des
       data: { status: 'CONCLUIDO' },
     });
     expect(result.status()).toBe(400);
-    expect((await p.agendamento.findUniqueOrThrow({ where: { id: ag.id } })).status).toBe(
-      'CONFIRMADO',
-    );
+    const rolledBack = await p.agendamento.findUniqueOrThrow({ where: { id: ag.id } });
+    expect(rolledBack.status).toBe('CONFIRMADO');
+    expect(rolledBack.valorServicoConcluido).toBeNull();
+    expect(rolledBack.comissaoPercentualAplicada).toBeNull();
     expect((await p.produto.findUniqueOrThrow({ where: { id: first.id } })).estoqueAtual).toBe(10);
     expect(await p.movimentacaoEstoque.count({ where: { agendamentoId: ag.id } })).toBe(0);
-    expect((await p.cliente.findUniqueOrThrow({ where: { id: cliente.id } })).ultimaVisita).toBeNull();
+    expect(
+      (await p.cliente.findUniqueOrThrow({ where: { id: cliente.id } })).ultimaVisita,
+    ).toBeNull();
   } finally {
     await clean(p, a.id);
     await p.$disconnect();

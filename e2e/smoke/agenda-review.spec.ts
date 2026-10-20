@@ -185,3 +185,115 @@ test('calendar filters, late appointments, mobile creation and cancellation work
     await p.$disconnect();
   }
 });
+
+test('disponibilidade inclui atendimento iniciado antes do intervalo e exclui limites sem sobreposição', async ({
+  request,
+  baseURL,
+}) => {
+  const api = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  test.skip(
+    !['localhost', '127.0.0.1'].includes(
+      new URL(process.env.DATABASE_URL || 'http://unavailable').hostname,
+    ) || !['localhost', '127.0.0.1'].includes(new URL(api).hostname),
+    'Somente API e banco locais',
+  );
+  const db = new PrismaClient();
+  const stamp = Date.now();
+  const email = `overlap-${stamp}@example.test`;
+  const senha = 'AgendaOverlap123!';
+  const empresa = await db.empresa.create({
+    data: {
+      nome: 'TESTE sobreposição',
+      cnpj: `overlap-${stamp}`,
+      usuarios: {
+        create: {
+          nome: 'Administrador teste',
+          email,
+          senhaHash: await argon2.hash(senha),
+          role: 'ADMIN',
+        },
+      },
+    },
+  });
+  try {
+    const cliente = await db.cliente.create({
+      data: { empresaId: empresa.id, nome: 'Cliente teste' },
+    });
+    const profissional = await db.profissional.create({
+      data: { empresaId: empresa.id, nome: 'Equipe teste' },
+    });
+    const servico = await db.servico.create({
+      data: { empresaId: empresa.id, nome: 'Serviço teste', duracaoMin: 30, preco: 50 },
+    });
+    const data = {
+      empresaId: empresa.id,
+      clienteId: cliente.id,
+      profissionalId: profissional.id,
+      servicoId: servico.id,
+    };
+    const overnight = await db.agendamento.create({
+      data: {
+        ...data,
+        status: 'CONFIRMADO',
+        dataHora: new Date('2026-10-20T23:45:00Z'),
+        dataHoraFim: new Date('2026-10-21T00:15:00Z'),
+      },
+    });
+    await db.agendamento.createMany({
+      data: [
+        {
+          ...data,
+          status: 'CONFIRMADO',
+          dataHora: new Date('2026-10-20T23:00:00Z'),
+          dataHoraFim: new Date('2026-10-21T00:00:00Z'),
+        },
+        {
+          ...data,
+          status: 'CANCELADO',
+          dataHora: new Date('2026-10-21T00:00:00Z'),
+          dataHoraFim: new Date('2026-10-21T01:00:00Z'),
+        },
+        {
+          ...data,
+          status: 'AGENDADO',
+          dataHora: new Date('2026-10-22T00:00:00Z'),
+          dataHoraFim: new Date('2026-10-22T01:00:00Z'),
+        },
+      ],
+    });
+    const login = await request.post(`${api}/api/auth/login`, {
+      headers: { Origin: baseURL! },
+      data: { email, senha },
+    });
+    expect(login.status()).toBe(200);
+    const { accessToken } = await login.json();
+    const headers = { Authorization: `Bearer ${accessToken}` };
+    const availability = await request.get(
+      `${api}/api/profissionais/${profissional.id}/disponibilidade?data=2026-10-21`,
+      { headers },
+    );
+    expect(availability.status()).toBe(200);
+    expect(await availability.json()).toEqual([
+      { inicio: overnight.dataHora.toISOString(), fim: overnight.dataHoraFim.toISOString() },
+    ]);
+    const params = new URLSearchParams({
+      inicio: '2026-10-21T00:05:00Z',
+      fim: '2026-10-21T00:10:00Z',
+    });
+    const narrow = await request.get(
+      `${api}/api/profissionais/${profissional.id}/disponibilidade?${params}`,
+      { headers },
+    );
+    expect(narrow.status()).toBe(200);
+    expect(await narrow.json()).toEqual([
+      { inicio: overnight.dataHora.toISOString(), fim: overnight.dataHoraFim.toISOString() },
+    ]);
+  } finally {
+    await db.agendamento.deleteMany({ where: { empresaId: empresa.id } });
+    await db.servico.deleteMany({ where: { empresaId: empresa.id } });
+    await db.profissional.deleteMany({ where: { empresaId: empresa.id } });
+    await db.cliente.deleteMany({ where: { empresaId: empresa.id } });
+    await db.empresa.delete({ where: { id: empresa.id } });
+    await db.$disconnect();
+  }
+});

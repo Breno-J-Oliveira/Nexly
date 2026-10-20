@@ -1,5 +1,6 @@
 import { TrimText } from '../../common/validation/trim-text';
-import { IsOptional, IsString, Length } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Length, Min, Max } from 'class-validator';
+import { OptionalField } from '../../common/validation/optional-field';
 
 export class CriarProfissionalDto {
   @IsString()
@@ -12,4 +13,10 @@ export class CriarProfissionalDto {
   @Length(2, 120)
   @TrimText({ nullable: true })
   especialidade?: string | null;
+
+  @OptionalField()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(100)
+  comissaoPercentual?: number;
 }

@@ -243,6 +243,8 @@ describe('AgendamentosService', () => {
       servicoId: 's1',
       clienteId: 'c1',
       dataHora: new Date('2026-10-15T10:00Z'),
+      servico: { preco: 120 },
+      profissional: { comissaoPercentual: 25 },
     };
 
     it('não emite baixa duplicada se outra requisição já mudou o status', async () => {

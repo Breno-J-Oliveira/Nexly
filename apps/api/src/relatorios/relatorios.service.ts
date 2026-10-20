@@ -1,5 +1,6 @@
 import { dateRange } from '../common/validation/date-range';
 import { Injectable } from '@nestjs/common';
+import { commissionTotals } from '../comissao/commission-totals';
 import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
@@ -163,7 +164,9 @@ export class RelatoriosService {
     const { inicio, fim } = dateRange(dataInicio, dataFim);
 
     const profissionais = await this.prisma.client.profissional.findMany({
-      where: { ativo: true },
+      where: {
+        OR: [{ ativo: true }, { agendamentos: { some: { dataHora: { gte: inicio, lte: fim } } } }],
+      },
       include: {
         agendamentos: {
           where: { dataHora: { gte: inicio, lte: fim } },
@@ -178,7 +181,7 @@ export class RelatoriosService {
 
     return profissionais.map((p) => {
       const concluidos = p.agendamentos.filter((a) => a.status === 'CONCLUIDO');
-      const receita = concluidos.reduce((acc, a) => acc + Number(a.servico.preco), 0);
+      const valores = commissionTotals(concluidos, p.comissaoPercentual);
       const notas = p.agendamentos.flatMap((a) => a.avaliacoes.map((av) => av.nota));
       const avaliacaoMedia =
         notas.length === 0 ? 0 : notas.reduce((a, b) => a + b, 0) / notas.length;
@@ -195,8 +198,9 @@ export class RelatoriosService {
         nome: p.nome,
         avatar,
         agendamentos: p.agendamentos.length,
-        receita,
-        comissao: receita * (p.comissaoPercentual / 100),
+        receita: valores.faturamento,
+        comissao: valores.comissao,
+        estimados: valores.estimados,
         avaliacaoMedia: Number(avaliacaoMedia.toFixed(1)),
       };
     });

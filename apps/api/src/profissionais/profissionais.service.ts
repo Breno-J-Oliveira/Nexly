@@ -71,7 +71,14 @@ export class ProfissionaisService {
           });
         }
         return tx.profissional.create({
-          data: { empresaId, nome: dto.nome, especialidade: dto.especialidade },
+          data: {
+            empresaId,
+            nome: dto.nome,
+            especialidade: dto.especialidade,
+            ...(dto.comissaoPercentual !== undefined
+              ? { comissaoPercentual: dto.comissaoPercentual }
+              : {}),
+          },
         });
       },
       { maxWait: 5000, timeout: 10000 },
@@ -82,7 +89,13 @@ export class ProfissionaisService {
     await this.obter(id);
     await this.prisma.client.profissional.updateMany({
       where: { id },
-      data: { nome: dto.nome, especialidade: dto.especialidade },
+      data: {
+        nome: dto.nome,
+        especialidade: dto.especialidade,
+        ...(dto.comissaoPercentual !== undefined
+          ? { comissaoPercentual: dto.comissaoPercentual }
+          : {}),
+      },
     });
     return this.obter(id);
   }
@@ -114,7 +127,10 @@ export class ProfissionaisService {
       where: {
         profissionalId: id,
         status: { in: ['AGENDADO', 'CONFIRMADO'] },
-        dataHora: { gte: periodo.inicio, lte: periodo.fim },
+        // Um atendimento pode ter começado antes do período consultado.
+        // Consulta a sobreposição inteira para não mostrar esse horário como livre.
+        dataHora: { lte: periodo.fim },
+        dataHoraFim: { gt: periodo.inicio },
       },
       select: { dataHora: true, dataHoraFim: true },
       orderBy: { dataHora: 'asc' },

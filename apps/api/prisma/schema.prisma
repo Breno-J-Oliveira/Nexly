@@ -320,6 +320,8 @@ model Agendamento {
   dataHoraFim    DateTime          @map("data_hora_fim")
   status         StatusAgendamento @default(AGENDADO)
   pendenciasEstoque Json @default("[]") @map("pendencias_estoque")
+  valorServicoConcluido Decimal? @db.Decimal(10, 2) @map("valor_servico_concluido")
+  comissaoPercentualAplicada Decimal? @db.Decimal(5, 2) @map("comissao_percentual_aplicada")
   createdAt      DateTime          @default(now()) @map("created_at")
 
   cliente      Cliente      @relation(fields: [clienteId], references: [id], onDelete: Restrict)

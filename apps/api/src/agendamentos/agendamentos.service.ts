@@ -187,6 +187,16 @@ export class AgendamentosService {
         throw new NotFoundException('Agendamento não encontrado');
       }
       if (novoStatus === StatusAgendamento.CONCLUIDO) {
+        const valoresConclusao = {
+          valorServicoConcluido: atualizado.servico.preco,
+          comissaoPercentualAplicada: new Prisma.Decimal(
+            atualizado.profissional.comissaoPercentual,
+          ),
+        };
+        await tx.agendamento.updateMany({
+          where: { id, empresaId, status: 'CONCLUIDO' },
+          data: valoresConclusao,
+        });
         await registrarVisitaClienteTx(
           tx as unknown as Prisma.TransactionClient,
           getTenantIdOrFail(),
@@ -197,7 +207,7 @@ export class AgendamentosService {
           tx as unknown as Prisma.TransactionClient,
           atualizado,
         );
-        return { ...atualizado, pendenciasEstoque };
+        return { ...atualizado, ...valoresConclusao, pendenciasEstoque };
       }
       return atualizado;
     });

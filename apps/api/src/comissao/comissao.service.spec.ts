@@ -53,6 +53,30 @@ describe('Comissões por período', () => {
     );
   });
 
+  it('resume a equipe com uma consulta e preserva centavos entre profissionais', async () => {
+    client.profissional.findMany.mockResolvedValue(
+      [0.1, 0.2].map((value, index) => ({
+        id: `p${index}`,
+        nome: `Pessoa ${index}`,
+        ativo: index === 0,
+        comissaoPercentual: 100,
+        agendamentos: [
+          {
+            servico: { preco: 999 },
+            valorServicoConcluido: value,
+            comissaoPercentualAplicada: 100,
+          },
+        ],
+      })),
+    );
+    const result = await service.resumoGeral('2026-10-20', '2026-10-20');
+    expect(result.total).toEqual({ faturamento: 0.3, comissao: 0.3, servicos: 2, estimados: 0 });
+    expect(result.profissionais[1]).toMatchObject({ ativo: false, comissao: 0.2 });
+    expect(client.profissional.findMany).toHaveBeenCalledTimes(1);
+    expect(client.profissional.findFirst).not.toHaveBeenCalled();
+    expect(client.agendamento.findMany).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['', '2026-10-16'],
     ['2026-02-30', '2026-03-01'],
