@@ -82,12 +82,22 @@ test('administrador gerencia acesso e convite cria usuário com a função corre
     const token = new URL(link).searchParams.get('token');
     expect(token).toBeTruthy();
     const guest = await guestContext.newPage();
-    await guest.goto(`/aceitar-convite?token=${encodeURIComponent(token!)}`);
+    const tokenRequests: string[] = [];
+    guest.on('request', (request) => {
+      if (request.url().includes(token!)) tokenRequests.push(request.url());
+    });
+    await guest.goto(`/aceitar-convite#token=${encodeURIComponent(token!)}`);
     await guest.getByLabel('Nome completo', { exact: true }).fill('Convidado teste');
+    await expect(guest).toHaveURL(/\/aceitar-convite$/);
     await guest.getByLabel('Senha', { exact: true }).fill(password);
+    await guest.getByLabel('Confirmar senha', { exact: true }).fill('OutraSenha123!');
+    await guest.getByLabel('Confirmar senha', { exact: true }).press('Enter');
+    await expect(guest.locator('form').getByRole('alert')).toContainText('As senhas não coincidem');
+    expect(await prisma.usuario.count({ where: { email: guestEmail } })).toBe(0);
     await guest.getByLabel('Confirmar senha', { exact: true }).fill(password);
-    await guest.getByRole('button', { name: 'Criar conta', exact: true }).click();
+    await guest.getByLabel('Confirmar senha', { exact: true }).press('Enter');
     await guest.waitForURL('**/login');
+    expect(tokenRequests).toEqual([]);
     const invited = await prisma.usuario.findUniqueOrThrow({ where: { email: guestEmail } });
     expect(invited.empresaId).toBe(company.id);
     expect(invited.role).toBe('CAIXA');

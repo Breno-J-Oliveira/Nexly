@@ -1,119 +1,223 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import Link from 'next/link';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { AuthInput, useAuthReady } from '@/components/ui/AuthField';
+import { AuthShell } from '@/components/marketing/AuthShell';
 import { api } from '@/lib/api';
-import { toastError, toastSuccess } from '@/components/ui/Toaster';
+import { parseApiError } from '@/lib/errors';
+import { toastSuccess } from '@/components/ui/Toaster';
 
 interface ConviteInfo {
   email: string;
   role: string;
   empresaNome: string;
 }
+const roles: Record<string, string> = {
+  ADMIN: 'Administrador',
+  GESTOR: 'Gestor',
+  CAIXA: 'Caixa',
+  RECEPCIONISTA: 'Recepcionista',
+  PROFISSIONAL: 'Profissional',
+};
 
 export default function AceitarConvitePage() {
-  const [token, setToken] = useState('');
+  const ready = useAuthReady();
+  const router = useRouter();
+  const token = useRef('');
+  const submitting = useRef(false);
   const [convite, setConvite] = useState<ConviteInfo | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [erroForm, setErroForm] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ nome: '', senha: '', confirmar: '' });
   const [salvando, setSalvando] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
 
-  useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get('token') ?? '';
-    setToken(t);
-    if (!t) {
-      setErro('Link inválido.');
-      return;
+  const carregar = useCallback(async (signal: AbortSignal) => {
+    setLoading(true);
+    setErro(null);
+    try {
+      if (!token.current)
+        throw new Error('Link inválido. Peça um novo convite ao administrador do seu negócio.');
+      const { data } = await api.post<ConviteInfo>(
+        '/auth/convite/detalhes',
+        { token: token.current },
+        { signal, timeout: 10000 },
+      );
+      if (!signal.aborted) setConvite(data);
+    } catch (error) {
+      if (!signal.aborted)
+        setErro(parseApiError(error).message || 'Não foi possível consultar o convite.');
+    } finally {
+      if (!signal.aborted) setLoading(false);
     }
-    api
-      .get<ConviteInfo>('/auth/aceitar-convite', { params: { token: t } })
-      .then((r) => setConvite(r.data))
-      .catch((e) => {
-        const err = e as { response?: { data?: { message?: string } } };
-        setErro(err?.response?.data?.message ?? 'Convite inválido ou expirado');
-      });
   }, []);
 
-  const enviar = async (): Promise<void> => {
+  useEffect(() => {
+    // Fragmentos não são enviados ao servidor ou ao Referer. Links antigos continuam válidos.
+    token.current ||=
+      new URLSearchParams(window.location.hash.slice(1)).get('token') ||
+      new URLSearchParams(window.location.search).get('token') ||
+      '';
+    if (window.location.hash || window.location.search)
+      window.history.replaceState(window.history.state, '', window.location.pathname);
+    const controller = new AbortController();
+    void carregar(controller.signal);
+    return () => controller.abort();
+  }, [carregar, tentativa]);
+
+  async function enviar(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!ready || submitting.current) return;
+    setErroForm(null);
     if (form.senha !== form.confirmar) {
-      toastError('As senhas não coincidem');
+      setErroForm('As senhas não coincidem. Confira os dois campos.');
       return;
     }
+    submitting.current = true;
     setSalvando(true);
     try {
       await api.post('/auth/aceitar-convite', {
-        token,
-        nome: form.nome,
+        token: token.current,
+        nome: form.nome.trim(),
         senha: form.senha,
       });
+      setForm({ nome: '', senha: '', confirmar: '' });
       toastSuccess('Conta criada! Faça login.');
-      window.location.href = '/login';
-    } catch (e) {
-      const err = e as { response?: { data?: { message?: string } } };
-      toastError(err?.response?.data?.message ?? 'Erro ao criar conta');
+      router.replace('/login');
+    } catch (error) {
+      setErroForm(
+        parseApiError(error).message || 'Não foi possível criar sua conta. Tente novamente.',
+      );
     } finally {
+      submitting.current = false;
       setSalvando(false);
     }
-  };
+  }
 
   return (
-    <div
-      className="flex min-h-screen items-center justify-center p-4"
-      style={{ backgroundColor: '#0C0C10' }}
-    >
-      <div
-        className="w-full max-w-md rounded-2xl border p-6"
-        style={{ borderColor: 'rgba(255,255,255,0.08)', backgroundColor: '#111116' }}
-      >
-        <h1 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>
+    <AuthShell>
+      <main className="rounded-2xl border border-white/10 bg-[#111116] p-6 sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C7C5FF]">
+          Seu novo espaço de trabalho
+        </p>
+        <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-white">
           Aceitar convite
         </h1>
-        {erro ? (
-          <p className="mt-4 text-sm" style={{ color: '#EF4444' }}>
-            {erro}
+        {loading ? (
+          <p role="status" className="mt-6 text-sm leading-7 text-[#AAA7BA]">
+            Consultando seu convite…
           </p>
-        ) : !convite ? (
-          <p className="mt-4 text-sm" style={{ color: '#71717A' }}>
-            Carregando…
-          </p>
-        ) : (
-          <div className="mt-4 space-y-3">
-            <p className="text-sm" style={{ color: '#A1A1AA' }}>
-              Você foi convidado para <strong style={{ color: '#FAFAFA' }}>{convite.empresaNome}</strong>{' '}
-              como <strong style={{ color: '#FAFAFA' }}>{convite.role}</strong> ({convite.email}).
+        ) : erro ? (
+          <div className="mt-6">
+            <p role="alert" className="text-sm leading-7 text-red-300">
+              {erro}
             </p>
-            <Input
-              label="Nome completo"
-              value={form.nome}
-              onChange={(e) => setForm({ ...form, nome: e.target.value })}
-              placeholder="Seu nome"
-            />
-            <Input
-              label="Senha"
-              type="password"
-              value={form.senha}
-              onChange={(e) => setForm({ ...form, senha: e.target.value })}
-              placeholder="••••••••"
-            />
-            <Input
-              label="Confirmar senha"
-              type="password"
-              value={form.confirmar}
-              onChange={(e) => setForm({ ...form, confirmar: e.target.value })}
-              placeholder="••••••••"
-            />
-            <Button
-              onClick={() => void enviar()}
-              loading={salvando}
-              disabled={!form.nome || form.senha.length < 8}
-              className="w-full"
+            <button
+              type="button"
+              onClick={() => setTentativa((value) => value + 1)}
+              className="mt-5 min-h-11 rounded-xl border border-white/15 px-4 text-sm font-medium text-[#C7C5FF] hover:bg-white/5"
             >
-              Criar conta
-            </Button>
+              Tentar novamente
+            </button>
+            <Link
+              href="/login"
+              className="mt-4 block rounded py-2 text-sm text-[#B8B3C8] hover:text-white"
+            >
+              Já tenho conta. Ir para o login →
+            </Link>
           </div>
+        ) : (
+          convite && (
+            <>
+              <div className="mt-6 rounded-xl border border-[#C7C5FF]/15 bg-[#C7C5FF]/5 p-4">
+                <p className="text-sm leading-7 text-[#B8B3C8]">
+                  Você foi convidado para{' '}
+                  <strong className="font-medium text-white">{convite.empresaNome}</strong>.
+                </p>
+                <dl className="mt-3 space-y-2 text-xs leading-6">
+                  <div>
+                    <dt className="text-[#AAA7BA]">Acesso como</dt>
+                    <dd className="text-[#DBD6EB]">{roles[convite.role] || convite.role}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[#AAA7BA]">E-mail da conta</dt>
+                    <dd className="break-all text-[#DBD6EB]">{convite.email}</dd>
+                  </div>
+                </dl>
+              </div>
+              <form
+                method="post"
+                onSubmit={(event) => void enviar(event)}
+                className="mt-6 space-y-4"
+              >
+                <AuthInput
+                  label="Nome completo"
+                  name="nome"
+                  autoComplete="name"
+                  required
+                  minLength={2}
+                  maxLength={120}
+                  value={form.nome}
+                  onChange={(event) => setForm({ ...form, nome: event.target.value })}
+                  disabled={salvando}
+                  placeholder="Como você prefere ser chamado?"
+                />
+                <AuthInput
+                  label="Senha"
+                  name="senha"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  maxLength={72}
+                  value={form.senha}
+                  onChange={(event) => setForm({ ...form, senha: event.target.value })}
+                  disabled={salvando}
+                  aria-describedby="invite-password-help"
+                />
+                <p id="invite-password-help" className="text-xs leading-6 text-[#AAA7BA]">
+                  Use de 8 a 72 caracteres. Prefira uma senha única para o Nexly.
+                </p>
+                <AuthInput
+                  label="Confirmar senha"
+                  name="confirmar"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  maxLength={72}
+                  value={form.confirmar}
+                  onChange={(event) => setForm({ ...form, confirmar: event.target.value })}
+                  disabled={salvando}
+                />
+                {erroForm && (
+                  <p
+                    role="alert"
+                    className="rounded-xl border border-red-300/20 bg-red-300/5 p-3 text-sm leading-6 text-red-300"
+                  >
+                    {erroForm}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  disabled={!ready || salvando}
+                  aria-busy={salvando || undefined}
+                  className="min-h-12 w-full rounded-xl bg-[#C7C5FF] px-4 py-3 text-sm font-semibold text-[#151326] transition-colors hover:bg-[#DAD9FF] disabled:cursor-wait disabled:opacity-60"
+                >
+                  {salvando ? 'Criando sua conta…' : 'Criar conta'}
+                </button>
+              </form>
+              <p className="mt-5 text-xs leading-6 text-[#AAA7BA]">
+                O convite cria seu acesso ao negócio indicado acima. Não é necessário informar
+                cartão de crédito.
+              </p>
+            </>
+          )
         )}
-      </div>
-    </div>
+      </main>
+    </AuthShell>
   );
 }
