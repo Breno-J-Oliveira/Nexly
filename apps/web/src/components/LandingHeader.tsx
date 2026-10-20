@@ -36,6 +36,12 @@ export function LandingHeader() {
       className="sticky top-0 z-50 border-b backdrop-blur-md"
       style={{ backgroundColor: 'rgba(8,8,12,0.92)', borderColor: 'rgba(255,255,255,0.06)' }}
     >
+      <a
+        href={pathname.startsWith('/blog') ? '#blog-content' : '#conteudo-principal'}
+        className="sr-only rounded-lg bg-[#C7C5FF] p-3 text-sm font-semibold text-[#151326] focus:not-sr-only focus:absolute focus:left-4 focus:top-3"
+      >
+        Pular para o conteúdo
+      </a>
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
         <Link
           href="/"

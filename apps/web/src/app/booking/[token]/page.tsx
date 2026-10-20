@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { BookingApiError, bookingRequest as getJson, mensagemErro } from '@/lib/public-booking-api';
 import { formatarMoeda } from '@/lib/format';
 import { env } from '@/lib/env';
@@ -128,6 +129,21 @@ function IniciaisAvatar({ nome }: { nome: string }) {
 /* ------------------------------------------------------------------ */
 /* Calendário                                                          */
 /* ------------------------------------------------------------------ */
+
+function BookingFooter() {
+  return (
+    <footer className="mx-auto max-w-5xl px-4 pb-8 text-center text-xs leading-6 text-[#AAA7BA]">
+      Agendamento com{' '}
+      <Link href="/" className="rounded font-medium text-[#C7C5FF] underline underline-offset-4">
+        Nexly
+      </Link>{' '}
+      ·{' '}
+      <Link href="/privacidade" className="rounded hover:text-white">
+        Privacidade
+      </Link>
+    </footer>
+  );
+}
 
 function Mes({ offset, selecionado, onSelecionar, hojeIso }: { offset: number; selecionado: string; onSelecionar: (iso: string) => void; hojeIso: string }) {
   const hoje = new Date(`${hojeIso}T12:00:00`);
@@ -399,6 +415,7 @@ export default function BookingPage() {
         Verifique o endereço ou tente carregar novamente.
       </p>
       <button type="button" className="mt-5 rounded-xl bg-[#6366F1] px-5 py-3 text-sm text-white" onClick={() => setTentativa(v=>v+1)}>Tentar novamente</button>
+      <Link href="/" className="mt-5 rounded py-2 text-sm text-[#C7C5FF] hover:underline">Voltar para o início do Nexly</Link>
     </div>
   );
 
@@ -423,7 +440,7 @@ export default function BookingPage() {
               Sua reserva foi registrada. Guarde os detalhes abaixo.
             </p>
 
-            <div className="mt-6 w-full rounded-xl p-5" style={{ backgroundColor: '#111116', border: '1px solid rgba(99,102,241,0.30)' }}>
+            <div className="mt-6 w-full rounded-xl p-5 [&>div]:gap-4 [&>div>span:last-child]:min-w-0 [&>div>span:last-child]:break-words [&>div>span:last-child]:text-right" style={{ backgroundColor: '#111116', border: '1px solid rgba(99,102,241,0.30)' }}>
               <div className="flex justify-between py-1 text-sm">
                 <span style={{ color: '#71717A' }}>Serviço</span>
                 <span style={{ color: '#FAFAFA' }}>{servicoSelecionado?.nome}</span>
@@ -455,6 +472,7 @@ export default function BookingPage() {
             </button>
           </div>
         </div>
+        <BookingFooter />
       </div>
     );
   }
@@ -481,22 +499,63 @@ export default function BookingPage() {
   });
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#0C0C10' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#08080C' }}>
       {/* Header fixo */}
       <header
         className="fixed inset-x-0 top-0 z-20 flex h-14 items-center border-b px-4"
         style={{ backgroundColor: 'rgba(12,12,16,0.90)', backdropFilter: 'blur(8px)', borderColor: 'rgba(255,255,255,0.06)' }}
       >
-        <div className="mx-auto flex w-full max-w-md items-center gap-2.5">
+        <div className="mx-auto flex w-full min-w-0 max-w-5xl items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg text-[13px] font-semibold" style={{ backgroundColor: '#6366F1', color: '#FFFFFF' }}>
             {empresa?.logo ? <Image src={empresa.logo} unoptimized width={32} height={32} alt="" className="h-full w-full object-cover" /> : ((empresa?.nome ?? 'N').charAt(0) || 'N').toUpperCase()}
           </div>
-          <span className="text-[15px] font-semibold" style={{ color: '#FAFAFA' }}>{empresa?.nome ?? 'Agendamento'}</span>
+          <span className="truncate text-[15px] font-semibold" style={{ color: '#FAFAFA' }}>{empresa?.nome ?? 'Agendamento'}</span>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-md px-4 pb-16 pt-20">
-        <div className="mb-6">
+      <main className="mx-auto grid w-full max-w-5xl gap-10 px-4 pb-10 pt-24 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14 lg:pb-16 lg:pt-28">
+        <aside className="lg:sticky lg:top-28 lg:self-start">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C7C5FF]">
+            Reserve seu horário
+          </p>
+          <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-[-0.04em] text-white sm:text-4xl">
+            Seu próximo atendimento começa aqui.
+          </h1>
+          <p className="mt-4 text-sm leading-7 text-[#AAA7BA]">
+            Escolha o serviço e o profissional, consulte os horários e confira os detalhes antes de
+            confirmar.
+          </p>
+          <div className="mt-7 hidden rounded-2xl border border-white/10 bg-[#111116] p-6 lg:block">
+            <p className="text-xs font-medium uppercase tracking-widest text-[#BDB6D5]">
+              Sua escolha
+            </p>
+            <dl className="mt-5 space-y-5 text-sm">
+              <div>
+                <dt className="text-[#AAA7BA]">Serviço</dt>
+                <dd className="mt-1 break-words text-[#E6E1F1]">
+                  {servicoSelecionado?.nome || 'Escolha na próxima etapa'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[#AAA7BA]">Profissional</dt>
+                <dd className="mt-1 break-words text-[#E6E1F1]">
+                  {profissionalId === 'qualquer'
+                    ? 'Qualquer profissional disponível'
+                    : profissionalSelecionado?.nome || 'Ainda não escolhido'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[#AAA7BA]">Data e horário</dt>
+                <dd className="mt-1 text-[#E6E1F1]">
+                  {data ? formatarDataBR(data) : 'A definir'}
+                  {horario ? ` · ${horario}` : ''}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </aside>
+        <div className="min-w-0 rounded-2xl border border-white/10 bg-[#111116] p-5 sm:p-7">
+          <div className="mb-6">
           <Stepper step={step} />
         </div>
 
@@ -812,7 +871,9 @@ export default function BookingPage() {
             </div>
           </form>
         )}
+        </div>
       </main>
+      <BookingFooter />
     </div>
   );
 }

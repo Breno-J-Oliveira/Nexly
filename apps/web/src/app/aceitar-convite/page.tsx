@@ -99,7 +99,7 @@ export default function AceitarConvitePage() {
 
   return (
     <AuthShell>
-      <main className="rounded-2xl border border-white/10 bg-[#111116] p-6 sm:p-8">
+      <div className="rounded-2xl border border-white/10 bg-[#111116] p-6 sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C7C5FF]">
           Seu novo espaço de trabalho
         </p>
@@ -217,7 +217,7 @@ export default function AceitarConvitePage() {
             </>
           )
         )}
-      </main>
+      </div>
     </AuthShell>
   );
 }

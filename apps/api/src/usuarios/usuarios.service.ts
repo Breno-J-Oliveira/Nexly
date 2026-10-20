@@ -125,7 +125,7 @@ export class UsuariosService {
       data: { empresaId, email: dto.email, role: dto.role, token, expiresAt },
     });
 
-    const link = `${appUrl}/aceitar-convite?token=${token}`;
+    const link = `${appUrl}/aceitar-convite#token=${token}`;
     // Simula envio de e-mail — substituir por Resend quando RESEND_API_KEY existir.
     this.logger.warn(
       'Provedor de e-mail não configurado: convite disponível para compartilhamento manual.',

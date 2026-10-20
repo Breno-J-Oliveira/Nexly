@@ -79,7 +79,9 @@ test('administrador gerencia acesso e convite cria usuário com a função corre
     await dialog.getByRole('button', { name: 'Gerar convite', exact: true }).click();
     const { link } = (await (await response).json()) as { link: string };
     await expect(dialog.getByText('Link de convite gerado:')).toBeVisible();
-    const token = new URL(link).searchParams.get('token');
+    const inviteUrl = new URL(link);
+    expect(inviteUrl.search).toBe('');
+    const token = new URLSearchParams(inviteUrl.hash.slice(1)).get('token');
     expect(token).toBeTruthy();
     const guest = await guestContext.newPage();
     const tokenRequests: string[] = [];

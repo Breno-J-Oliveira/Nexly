@@ -38,7 +38,7 @@ export default function SuportePage() {
   return (
     <div className="min-h-screen bg-[#08080C] text-[#FAFAFA]">
       <LandingHeader />
-      <main className="mx-auto max-w-6xl px-5 py-14 sm:px-8 sm:py-24">
+      <main id="conteudo-principal" className="mx-auto max-w-6xl px-5 py-14 sm:px-8 sm:py-24">
         <Link
           href="/"
           className="inline-flex rounded-lg py-2 text-sm text-[#C7C5FF] hover:underline"

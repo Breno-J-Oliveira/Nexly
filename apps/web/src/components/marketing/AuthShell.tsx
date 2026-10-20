@@ -49,7 +49,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           Escolha os módulos que fazem sentido para você.
         </p>
       </aside>
-      <div className="flex min-w-0 items-center justify-center px-4 py-8 sm:px-8 sm:py-12">
+      <main className="flex min-w-0 items-center justify-center px-4 py-8 sm:px-8 sm:py-12">
         <div className="auth-content relative w-full max-w-[440px]">
           <Link
             href="/"
@@ -65,7 +65,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
             </Link>
           </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

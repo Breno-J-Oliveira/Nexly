@@ -3,59 +3,57 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 
-/**
- * Error boundary global do Next.js. Captura erros não tratados em qualquer
- * rota dentro de `app/` e mostra uma página amigável em vez do stack trace.
- *
- * O Next chama esse componente automaticamente quando um erro é lançado
- * em um Server Component ou durante o render de um Client Component.
- */
-export default function GlobalError({
+/** Erros de uma rota preservam o layout raiz e oferecem recuperação explícita. */
+export default function RouteError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   useEffect(() => {
-    // Em produção, enviar para o Sentry/Datadog aqui.
-    if (process.env.NODE_ENV === 'production') {
-      // eslint-disable-next-line no-console
-      console.error('Unhandled UI error', error);
-    } else {
-      // eslint-disable-next-line no-console
-      console.error('Unhandled UI error:', error);
-    }
+    // O detalhe permanece no console de desenvolvimento; a interface nunca exibe stack traces.
+    if (process.env.NODE_ENV !== 'production') console.error('Unhandled UI error:', error);
   }, [error]);
 
   return (
-    <html lang="pt-BR">
-      <body className="min-h-screen bg-[#060608] text-[#FAFAFA]">
-        <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 text-center">
-          <p className="text-5xl">⚠️</p>
-          <h1 className="mt-4 text-2xl font-semibold">Algo deu errado</h1>
-          <p className="mt-2 text-sm text-[#A1A1AA]">
-            Encontramos um problema inesperado. Você pode tentar recarregar a página ou voltar para o início.
+    <main className="flex min-h-screen items-center justify-center bg-[#08080C] px-5 py-16 text-white">
+      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#111116] p-7 sm:p-10">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C7C5FF]">
+          Vamos retomar
+        </p>
+        <h1 className="mt-5 text-3xl font-semibold tracking-[-0.04em]">Algo deu errado</h1>
+        <p className="mt-4 text-sm leading-7 text-[#AAA7BA]">
+          Não foi possível exibir esta página. Tente carregá-la novamente ou volte para o início.
+        </p>
+        {error.digest && (
+          <p className="mt-4 break-all font-mono text-xs text-[#AAA7BA]">
+            ID do erro: {error.digest}
           </p>
-          {error.digest && (
-            <p className="mt-3 font-mono text-xs text-[#71717A]">ID do erro: {error.digest}</p>
-          )}
-          <div className="mt-6 flex gap-3">
-            <button
-              onClick={() => reset()}
-              className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-medium text-[#09090B] hover:bg-[#818CF8]"
-            >
-              Tentar de novo
-            </button>
-            <Link
-              href="/dashboard"
-              className="rounded-lg border border-[rgba(255,255,255,0.10)] px-4 py-2 text-sm font-medium text-[#D4D4D8] hover:bg-[#18181F]"
-            >
-              Ir para o início
-            </Link>
-          </div>
+        )}
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => retry()}
+            className="rounded-xl bg-[#C7C5FF] px-5 py-3.5 text-sm font-semibold text-[#151326] hover:bg-[#DAD9FF]"
+          >
+            Tentar de novo
+          </button>
+          <Link
+            href="/"
+            className="rounded-xl border border-white/15 px-5 py-3.5 text-center text-sm font-medium hover:bg-white/5"
+          >
+            Ir para o início
+          </Link>
         </div>
-      </body>
-    </html>
+        <p className="mt-6 text-xs leading-6 text-[#AAA7BA]">
+          Se o problema continuar,{' '}
+          <Link href="/suporte" className="rounded text-[#C7C5FF] underline underline-offset-4">
+            fale com o suporte
+          </Link>{' '}
+          e informe a página em que aconteceu.
+        </p>
+      </div>
+    </main>
   );
 }
