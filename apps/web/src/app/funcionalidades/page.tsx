@@ -1,57 +1,126 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { Icon } from '@/components/ui/Icon';
 import { LandingFooter } from '@/components/LandingFooter';
 import { LandingHeader } from '@/components/LandingHeader';
+import { ProductPreview } from '@/components/marketing/ProductPreview';
+import { PublicCTA, PublicIntro, PublicSectionTitle } from '@/components/marketing/PublicUI';
 
-const funcionalidades = [
-  { icon: 'calendar-days', title: 'Agenda inteligente', desc: 'Visualize e gerencie os agendamentos do dia, confirme, cancele ou conclua atendimentos em poucos cliques.' },
-  { icon: 'users', title: 'Cadastro de clientes', desc: 'Mantenha o histórico completo de atendimentos, compras e dados de contato dos seus clientes.' },
-  { icon: 'user-tie', title: 'Profissionais', desc: 'Cadastre a equipe, vincule serviços e acompanhe a produtividade de cada profissional.' },
-  { icon: 'scissors', title: 'Serviços e insumos', desc: 'Configure serviços, durações, preços e insumos consumidos em cada atendimento.' },
-  { icon: 'box-open', title: 'Estoque e produtos', desc: 'Controle o inventário, receba alertas de reposição e gerencie entradas e saídas.' },
-  { icon: 'cash-register', title: 'PDV rápido', desc: 'Realize vendas com busca de produtos, múltiplas formas de pagamento e descontos.' },
-  { icon: 'chart-column', title: 'Relatórios financeiros', desc: 'Acompanhe DRE, fluxo de caixa, ticket médio e margem bruta do seu negócio.' },
-  { icon: 'hand-holding-dollar', title: 'Comissões', desc: 'Configure e acompanhe as comissões dos profissionais de forma automática.' },
-] as const;
+const resources = [
+  {
+    icon: 'users',
+    title: 'Clientes',
+    description: 'Dados de contato e histórico reunidos para dar continuidade ao relacionamento.',
+  },
+  {
+    icon: 'user-tie',
+    title: 'Profissionais',
+    description: 'Equipe, serviços e horários organizados por profissional.',
+  },
+  {
+    icon: 'scissors',
+    title: 'Serviços e insumos',
+    description: 'Duração, preço e consumo de produtos definidos para cada atendimento.',
+  },
+  {
+    icon: 'cash-register',
+    title: 'Ponto de venda',
+    description: 'Registro de vendas, descontos e formas de pagamento, com atualização do estoque.',
+  },
+  {
+    icon: 'chart-column',
+    title: 'Financeiro e relatórios',
+    description: 'Receitas, despesas e indicadores para acompanhar o resultado da operação.',
+  },
+  {
+    icon: 'hand-holding-dollar',
+    title: 'Comissões',
+    description: 'Configuração e acompanhamento das comissões da equipe.',
+  },
+];
 
 export default function FuncionalidadesPage() {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#0C0C10' }}>
+    <div className="min-h-screen bg-[#08080C] text-white">
       <LandingHeader />
-
-      <main className="px-4 py-16 md:px-6 md:py-24">
-        <div className="mx-auto max-w-4xl text-center">
-          <h1 className="text-3xl font-bold tracking-tight md:text-5xl" style={{ color: '#FAFAFA' }}>Toda sua operação em um só lugar</h1>
-          <p className="mt-4 text-[16px]" style={{ color: '#A1A1AA' }}>Conheça tudo o que o Nexly oferece para simplificar a gestão do seu negócio.</p>
-        </div>
-
-        <div className="mx-auto mt-16 max-w-6xl space-y-20">
-          {[funcionalidades[0], funcionalidades[1], funcionalidades[5], funcionalidades[4], funcionalidades[6]].map((f, i) => (
-            <section key={f.title} className="grid items-center gap-10 lg:grid-cols-2">
-              <figure className={`overflow-hidden rounded-xl border border-white/10 bg-[#111116] p-3 shadow-2xl ${i % 2 === 1 ? 'lg:order-2' : ''}`}>
-                <Image src={`/images/product/${['agenda', 'clientes', 'pdv', 'estoque', 'relatorios'][i]}.webp`} alt={`Prévia ilustrativa: ${f.title}`} width={1200} height={750} sizes="(max-width: 1024px) 100vw, 560px" className="h-auto w-full rounded-lg" />
-                <figcaption className="mt-2 text-center text-[10px] text-[#71717A]">Modelo de interface com dados de exemplo</figcaption>
-              </figure>
-              <div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ backgroundColor: 'rgba(99,102,241,0.12)' }}>
-                <Icon name={f.icon} className="text-[#818CF8]" size="lg" />
-              </div>
-              <h2 className="mt-4 text-2xl font-semibold tracking-tight md:text-3xl" style={{ color: '#FAFAFA' }}>{f.title}</h2>
-              <p className="mt-4 text-[15px] leading-relaxed" style={{ color: '#A1A1AA' }}>{f.desc}</p>
-              <Link href="/cadastro" className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-[#818CF8]">Conhecer o Nexly <Icon name="chevron-right" size="xs" /></Link>
-              </div>
-            </section>
-          ))}
-        </div>
-
-        <div className="mx-auto mt-24 max-w-6xl rounded-xl p-10 text-center" style={{ backgroundColor: '#6366F1' }}>
-          <h2 className="text-2xl font-bold" style={{ color: '#FAFAFA' }}>E muito mais por vir</h2>
-          <p className="mt-2 text-[15px]" style={{ color: '#A1A1AA' }}>Estamos sempre adicionando novos recursos para ajudar o seu negócio a crescer.</p>
-          <Link href="/cadastro" className="mt-6 inline-block rounded-xl px-6 py-3 text-[14px] font-semibold" style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}>Experimente grátis</Link>
-        </div>
+      <main id="conteudo-principal">
+        <PublicIntro
+          eyebrow="Conheça o Nexly"
+          title={
+            <>
+              Uma rotina conectada.
+              <br />
+              <span className="text-[#B9B4CD]">Do começo ao fechamento.</span>
+            </>
+          }
+          description="Cada parte do seu negócio tem seu espaço. E as informações seguem juntas, sem precisar repetir o mesmo trabalho."
+        />
+        <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 pb-16 sm:px-8 sm:pb-24 lg:grid-cols-2">
+          <div>
+            <PublicSectionTitle
+              eyebrow="Agenda e atendimento"
+              title="O próximo horário, sem desencontro."
+              description="Consulte os atendimentos, escolha um profissional e encontre um horário disponível. A verificação de conflitos ajuda a evitar dois agendamentos no mesmo espaço da agenda."
+            />
+            <ul className="mt-6 space-y-3 text-sm leading-6 text-[#C2BDCF]">
+              {[
+                'Confirme, cancele ou conclua atendimentos.',
+                'Consulte a rotina de cada profissional.',
+                'Vincule os serviços ao consumo de insumos.',
+              ].map((item) => (
+                <li key={item} className="flex gap-3">
+                  <Icon name="check" color="#C7C5FF" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <ProductPreview initialTab="agenda" />
+        </section>
+        <section className="border-y border-white/8 bg-[#0D0D13] px-5 py-16 sm:px-8 sm:py-24">
+          <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2">
+            <div className="lg:order-2">
+              <PublicSectionTitle
+                eyebrow="Produtos e insumos"
+                title="Seu estoque acompanha a operação."
+                description="Registre entradas e saídas, consulte o histórico e acompanhe alertas de estoque mínimo. Produtos vendidos no PDV e insumos configurados nos serviços entram no mesmo controle."
+              />
+              <Link
+                href="/cadastro"
+                className="mt-6 inline-block rounded-xl border border-white/15 px-5 py-3 text-sm font-medium text-[#C7C5FF] hover:bg-white/5"
+              >
+                Configurar meu negócio <span aria-hidden="true">↗</span>
+              </Link>
+            </div>
+            <ProductPreview initialTab="stock" />
+          </div>
+        </section>
+        <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
+          <PublicSectionTitle
+            eyebrow="Um espaço para cada tarefa"
+            title="Mais contexto para trabalhar melhor."
+            description="Escolha os módulos que fazem sentido para a sua atividade. Você pode ajustar essa organização conforme o negócio evolui."
+          />
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {resources.map((resource) => (
+              <article
+                key={resource.title}
+                className="rounded-2xl border border-white/10 bg-[#111116] p-6"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#C7C5FF]/10">
+                  <Icon name={resource.icon} color="#C7C5FF" />
+                </span>
+                <h3 className="mt-5 text-lg font-medium tracking-tight">{resource.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-[#AAA7BA]">{resource.description}</p>
+              </article>
+            ))}
+          </div>
+          <p className="mt-6 text-sm leading-7 text-[#AAA7BA]">
+            O PDV registra as vendas do seu negócio. Os pagamentos das assinaturas do Nexly são
+            gerenciados separadamente pelo Stripe.
+          </p>
+        </section>
+        <PublicCTA />
       </main>
-
       <LandingFooter />
     </div>
   );
