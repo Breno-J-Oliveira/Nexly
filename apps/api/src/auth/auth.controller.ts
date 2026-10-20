@@ -19,7 +19,7 @@ import { env } from '../config/env';
 import { AuthService } from './auth.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '@nexly/shared';
-import { AceitarConviteDto } from './dto/aceitar-convite.dto';
+import { AceitarConviteDto, ConviteTokenDto } from './dto/aceitar-convite.dto';
 import { Disable2faDto } from './dto/disable-2fa.dto';
 import { Enable2faDto } from './dto/enable-2fa.dto';
 import { LoginDto } from './dto/login.dto';
@@ -159,6 +159,14 @@ export class AuthController {
   async obterConvite(@Query('token') token?: string) {
     if (!token) throw new BadRequestException('Token ausente');
     return this.authService.obterConvite(token);
+  }
+
+  @Public()
+  @HttpCode(200)
+  @Post('convite/detalhes')
+  async detalhesConvite(@Body() dto: ConviteTokenDto, @Res({ passthrough: true }) res: Response) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.authService.obterConvite(dto.token);
   }
 
   @Public()

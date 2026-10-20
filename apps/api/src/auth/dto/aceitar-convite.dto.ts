@@ -1,9 +1,11 @@
-import { IsString, Length } from 'class-validator';
+import { IsString, IsUUID, Length } from 'class-validator';
 
-export class AceitarConviteDto {
-  @IsString()
+export class ConviteTokenDto {
+  @IsUUID('4')
   token!: string;
+}
 
+export class AceitarConviteDto extends ConviteTokenDto {
   @IsString()
   @Length(2, 120)
   nome!: string;

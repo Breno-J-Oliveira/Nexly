@@ -341,8 +341,23 @@ export class AuthService {
 
     const senhaHash = await argon2.hash(dto.senha, { type: argon2.argon2id });
 
-    await this.prisma.client.$transaction([
-      this.prisma.client.usuario.create({
+    await this.prisma.client.$transaction(async (tx) => {
+      // O hash é calculado fora da transação. Revalida o convite ao consumi-lo,
+      // inclusive quando outra solicitação o utiliza durante o cálculo.
+      const claimed = await tx.conviteUsuario.updateMany({
+        where: {
+          id: convite.id,
+          token: dto.token,
+          empresaId: convite.empresaId,
+          email: convite.email,
+          role: convite.role,
+          usado: false,
+          expiresAt: { gt: new Date() },
+        },
+        data: { usado: true },
+      });
+      if (claimed.count !== 1) throw new BadRequestException('Convite inválido ou expirado');
+      await tx.usuario.create({
         data: {
           empresaId: convite.empresaId,
           nome: dto.nome,
@@ -350,12 +365,8 @@ export class AuthService {
           senhaHash,
           role: convite.role,
         },
-      }),
-      this.prisma.client.conviteUsuario.update({
-        where: { id: convite.id },
-        data: { usado: true },
-      }),
-    ]);
+      });
+    });
 
     return { success: true };
   }

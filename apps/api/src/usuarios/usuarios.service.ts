@@ -9,6 +9,7 @@ import { Role } from '@nexly/shared';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
+import { publicAppUrl } from '../config/public-app-url';
 
 @Injectable()
 export class UsuariosService {
@@ -114,6 +115,7 @@ export class UsuariosService {
   }
 
   async convidar(empresaId: string, dto: { email: string; role: Role }) {
+    const appUrl = publicAppUrl();
     const existente = await this.prisma.client.usuario.findUnique({ where: { email: dto.email } });
     if (existente) throw new BadRequestException('Email ja cadastrado');
 
@@ -123,7 +125,6 @@ export class UsuariosService {
       data: { empresaId, email: dto.email, role: dto.role, token, expiresAt },
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3002';
     const link = `${appUrl}/aceitar-convite?token=${token}`;
     // Simula envio de e-mail — substituir por Resend quando RESEND_API_KEY existir.
     this.logger.warn(
