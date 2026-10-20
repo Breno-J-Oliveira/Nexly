@@ -1,6 +1,7 @@
 'use client';
 
-import { hasPermission } from '@nexly/shared';
+import { hasPermission, PLAN_NAMES, ProfessionalQuota } from '@nexly/shared';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 
 import { ResponsiveDetailPanel } from '@/components/ui/ResponsiveDetailPanel';
@@ -42,18 +43,22 @@ export default function ProfissionaisPage() {
     refetch: carregar,
   } = useApi<Profissional[]>('/profissionais');
   const profissionais = lista ?? [];
+  const { data: quota, refetch: carregarLimites } =
+    useApi<ProfessionalQuota>('/profissionais/limites');
   const [modalAberto, setModalAberto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [nome, setNome] = useState('');
   const [especialidade, setEspecialidade] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [erroLimite, setErroLimite] = useState(false);
 
   const abrirNovo = (): void => {
     setEditandoId(null);
     setNome('');
     setEspecialidade('');
     setErro(null);
+    setErroLimite(false);
     setModalAberto(true);
   };
 
@@ -63,6 +68,7 @@ export default function ProfissionaisPage() {
     setNome(p.nome);
     setEspecialidade(p.especialidade ?? '');
     setErro(null);
+    setErroLimite(false);
     setModalAberto(true);
   };
 
@@ -78,10 +84,13 @@ export default function ProfissionaisPage() {
       }
       setModalAberto(false);
       toastSuccess(editandoId ? 'Profissional atualizado!' : 'Profissional cadastrado!');
-      await carregar();
+      await Promise.all([carregar(), carregarLimites()]);
     } catch (e) {
-      const err = e as { response?: { data?: { message?: string } } };
-      setErro(err?.response?.data?.message ?? 'Erro ao salvar profissional');
+      const err = parseApiError(e);
+      setErro(err.message);
+      setErroLimite(err.code === 'PROFESSIONAL_LIMIT_REACHED');
+      if (err.code === 'PROFESSIONAL_LIMIT_REACHED')
+        await Promise.all([carregar(), carregarLimites()]);
     } finally {
       setSalvando(false);
     }
@@ -92,7 +101,7 @@ export default function ProfissionaisPage() {
     try {
       await api.delete(`/profissionais/${p.id}`);
       toastSuccess('Profissional desativado');
-      await carregar();
+      await Promise.all([carregar(), carregarLimites()]);
     } catch (error) {
       toastError(parseApiError(error).message);
     }
@@ -118,13 +127,53 @@ export default function ProfissionaisPage() {
               />
             </div>
             {podeCriar && (
-              <Button className="toolbar-primary" onClick={abrirNovo}>
+              <Button
+                className="toolbar-primary"
+                onClick={abrirNovo}
+                disabled={quota?.podeAdicionar === false}
+                aria-describedby={quota ? 'professional-quota' : undefined}
+              >
                 + Novo profissional
               </Button>
             )}
           </div>
         </div>
       </PageToolbar>
+
+      {quota && (
+        <section
+          aria-label="Uso do plano"
+          className="mb-6 rounded-xl border border-white/10 bg-[#111116] p-5"
+        >
+          <p id="professional-quota" className="text-sm leading-7 text-[#A1A1AA]">
+            Plano {PLAN_NAMES[quota.plano]}: {quota.ativos}{' '}
+            {quota.ativos === 1 ? 'profissional ativo' : 'profissionais ativos'}
+            {quota.limite === null
+              ? ' · sem limite de profissionais.'
+              : ` de ${quota.limite} ${quota.limite === 1 ? 'permitido' : 'permitidos'}.`}
+          </p>
+          {!quota.podeAdicionar && (
+            <>
+              <p className="mt-2 text-sm leading-7 text-amber-200">
+                Você atingiu o limite do plano. Para adicionar outro profissional, desative um
+                cadastro ou altere o plano. Os cadastros existentes continuam disponíveis.
+              </p>
+              {user?.role === 'ADMIN' ? (
+                <Link
+                  href="/assinatura"
+                  className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-indigo-300 hover:underline"
+                >
+                  Ver planos e assinatura →
+                </Link>
+              ) : (
+                <p className="mt-2 text-sm text-[#A1A1AA]">
+                  Peça ao administrador do negócio para revisar o plano.
+                </p>
+              )}
+            </>
+          )}
+        </section>
+      )}
 
       <MetricGrid
         items={[
@@ -152,7 +201,13 @@ export default function ProfissionaisPage() {
           icon="user-tie"
           title="Equipe vazia"
           description="Adicione os profissionais do seu negocio para comecar a agendar"
-          action={<Button onClick={abrirNovo}>+ Novo profissional</Button>}
+          action={
+            podeCriar ? (
+              <Button onClick={abrirNovo} disabled={quota?.podeAdicionar === false}>
+                + Novo profissional
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
@@ -267,7 +322,19 @@ export default function ProfissionaisPage() {
               onChange={(e) => setEspecialidade(e.target.value)}
               placeholder="Ex: cabeleireiro, manicure"
             />
-            {erro && <p className="text-sm text-red-400">{erro}</p>}
+            {erro && (
+              <p role="alert" className="text-sm text-red-400">
+                {erro}
+              </p>
+            )}
+            {erroLimite && user?.role === 'ADMIN' && (
+              <Link
+                href="/assinatura"
+                className="inline-flex min-h-11 items-center text-sm text-indigo-300 underline"
+              >
+                Ver planos e assinatura
+              </Link>
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="secondary" onClick={() => setModalAberto(false)}>
                 Cancelar

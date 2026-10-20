@@ -6,3 +6,4 @@ export * from './utils';
 export * from './workspace';
 export * from './permissions';
 export * from './csv-import';
+export * from './plans';

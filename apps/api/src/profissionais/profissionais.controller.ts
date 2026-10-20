@@ -12,6 +12,11 @@ export class ProfissionaisController {
     return this.profissionaisService.listar();
   }
 
+  @Get('limites')
+  limites() {
+    return this.profissionaisService.limites();
+  }
+
   @Get(':id')
   obter(@Param('id') id: string) {
     return this.profissionaisService.obter(id);

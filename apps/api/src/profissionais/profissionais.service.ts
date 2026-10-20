@@ -1,7 +1,14 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { professionalQuota, PLAN_NAMES } from '@nexly/shared';
 import { calendarRange } from '../common/validation/calendar-range';
-import { Prisma } from '@prisma/client';
+import { Plano } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { getTenantIdOrFail } from '../database/tenant-context';
 import { AtualizarProfissionalDto } from './dto/atualizar-profissional.dto';
 import { CriarProfissionalDto } from './dto/criar-profissional.dto';
 
@@ -33,13 +40,42 @@ export class ProfissionaisService {
     return profissional;
   }
 
-  criar(dto: CriarProfissionalDto) {
-    return this.prisma.client.profissional.create({
-      data: {
-        nome: dto.nome,
-        especialidade: dto.especialidade,
-      } as Prisma.ProfissionalUncheckedCreateInput,
-    });
+  async limites() {
+    const empresaId = getTenantIdOrFail();
+    const [empresa, ativos] = await Promise.all([
+      this.prisma.client.empresa.findUniqueOrThrow({
+        where: { id: empresaId },
+        select: { plano: true },
+      }),
+      this.prisma.client.profissional.count({ where: { empresaId, ativo: true } }),
+    ]);
+    return professionalQuota(empresa.plano, ativos);
+  }
+
+  async criar(dto: CriarProfissionalDto) {
+    const empresaId = getTenantIdOrFail();
+    return this.prisma.client.$transaction(
+      async (tx) => {
+        // O lock serializa os cadastros e as mudanças de plano desta empresa.
+        // O identificador vem do contexto autenticado, nunca do corpo do pedido.
+        const [empresa] = await tx.$queryRaw<{ plano: Plano }[]>`
+        SELECT "plano" FROM "empresas" WHERE "id" = ${empresaId} FOR UPDATE
+      `;
+        if (!empresa) throw new NotFoundException('Empresa não encontrada');
+        const ativos = await tx.profissional.count({ where: { empresaId, ativo: true } });
+        const quota = professionalQuota(empresa.plano, ativos);
+        if (!quota.podeAdicionar) {
+          throw new ForbiddenException({
+            code: 'PROFESSIONAL_LIMIT_REACHED',
+            message: `O plano ${PLAN_NAMES[empresa.plano]} permite até ${quota.limite} ${quota.limite === 1 ? 'profissional ativo' : 'profissionais ativos'}. Desative um cadastro ou altere o plano para adicionar outro.`,
+          });
+        }
+        return tx.profissional.create({
+          data: { empresaId, nome: dto.nome, especialidade: dto.especialidade },
+        });
+      },
+      { maxWait: 5000, timeout: 10000 },
+    );
   }
 
   async atualizar(id: string, dto: AtualizarProfissionalDto) {

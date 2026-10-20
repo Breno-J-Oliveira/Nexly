@@ -22,7 +22,7 @@ import { useAuthDestination } from '@/lib/use-auth-destination';
 
 const PASSO_COUNT = 5;
 
-const planos = [{ id: 'FREE', nome: 'Acesso gratuito', preco: 0, periodo: '', descricao: 'Comece a organizar seu negócio sem informar cartão.', recursos: ['Agenda e clientes', 'Estoque e PDV', 'Relatórios e gestão'], destaque: false }];
+const planos = [{ id: 'FREE', nome: 'Acesso gratuito', preco: 0, periodo: '', descricao: 'Comece a organizar seu negócio sem informar cartão.', recursos: ['1 profissional ativo', 'Agenda e clientes', 'Estoque e PDV', 'Relatórios e gestão'], destaque: false }];
 
 const schemaPasso1 = z
   .object({

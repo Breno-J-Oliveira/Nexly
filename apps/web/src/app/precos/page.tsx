@@ -47,7 +47,7 @@ export default function PrecosPage() {
         </div>
 
         <p className="mx-auto mt-12 max-w-2xl text-center text-[14px]" style={{ color: '#71717A' }}>
-          Crie sua conta gratuitamente, sem cartão. Para contratar, entre no Nexly e confira o valor no checkout seguro do Stripe. A assinatura é mensal, com renovação automática e cancelamento pelo portal.
+          Crie sua conta gratuitamente, sem cartão, com 1 profissional ativo. Para contratar, entre no Nexly e confira o valor no checkout seguro do Stripe. A assinatura é mensal, com renovação automática e cancelamento pelo portal.
         </p>
         <section className="mx-auto mt-24 max-w-3xl">
           <h2 className="mb-8 text-center text-2xl font-semibold">Perguntas comuns sobre os planos</h2>
