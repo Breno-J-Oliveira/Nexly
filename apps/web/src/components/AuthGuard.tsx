@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/Button';
+import { authLink } from '@/lib/auth-navigation';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading, sessionError, retryAt, retrySession } = useAuth();
@@ -20,7 +21,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user && !sessionError) {
-      router.replace('/login');
+      router.replace(authLink('/login', window.location.pathname + window.location.search));
     }
   }, [loading, user, sessionError, router]);
 

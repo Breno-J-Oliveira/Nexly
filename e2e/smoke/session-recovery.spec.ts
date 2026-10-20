@@ -56,14 +56,14 @@ test('sessão confirmada como inválida retorna ao login', async ({ page, baseUR
     }),
   );
   await page.goto('/clientes');
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Fclientes$/);
   await expect(page.getByRole('button', { name: 'Entrar no painel', exact: true })).toBeVisible();
 });
 
 test('visitante sem cookie chega ao login ao abrir a assinatura publicada', async ({ page }) => {
   await page.context().clearCookies();
   await page.goto('/assinatura');
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Fassinatura$/);
   await expect(page.getByRole('button', { name: 'Entrar no painel', exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Recuperar acesso', exact: true })).toHaveCount(0);
 });

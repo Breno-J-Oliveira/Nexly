@@ -74,6 +74,37 @@ test('cadastro com Google de usuário existente leva ao segundo fator', async ({
   await expect(page.getByLabel('Código de verificação em dois fatores')).toBeVisible();
 });
 
+test('plano escolhido é preservado quando Google pede segundo fator', async ({ page }) => {
+  await googleUi(page);
+  await page.route('**/api/auth/google/login', (route) =>
+    route.fulfill({
+      json: { requiresTwoFactor: true, tempToken: 'challenge-only' },
+    }),
+  );
+  await page.goto('/login?next=%2Fassinatura%3Fplano%3DPRO');
+  await page.getByRole('button', { name: 'Entrar com Google', exact: true }).click();
+  await expect(page.getByLabel('Código de verificação em dois fatores')).toBeVisible();
+  await expect(page).toHaveURL(/\/login\?next=%2Fassinatura%3Fplano%3DPRO$/);
+});
+
+test('novo usuário Google mantém plano ao continuar o cadastro', async ({ page }) => {
+  await googleUi(page);
+  await page.route('**/api/auth/google/login', (route) =>
+    route.fulfill({
+      json: {
+        requiresRegistration: true,
+        registrationToken: 'a'.repeat(64),
+        email: 'novo@gmail.com',
+        nome: 'Pessoa Google',
+      },
+    }),
+  );
+  await page.goto('/login?next=%2Fassinatura%3Fplano%3DENTERPRISE');
+  await page.getByRole('button', { name: 'Entrar com Google', exact: true }).click();
+  await expect(page).toHaveURL(/\/cadastro\?next=%2Fassinatura%3Fplano%3DENTERPRISE$/);
+  await expect(page.getByLabel('E-mail', { exact: true })).toHaveValue('novo@gmail.com');
+});
+
 test('erro de vinculação explica a ação e permite reiniciar Google', async ({ page }) => {
   await googleUi(page);
   await page.route('**/api/auth/google/login', (route) =>

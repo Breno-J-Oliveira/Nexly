@@ -41,6 +41,7 @@ export default function AssinaturaPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [retorno, setRetorno] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState('');
   const load = useCallback(
     async (reconcile = false) => {
       if (user?.role !== 'ADMIN') return;
@@ -66,6 +67,7 @@ export default function AssinaturaPage() {
   }, [load]);
   useEffect(() => {
     setRetorno(new URLSearchParams(window.location.search).get('retorno') ?? '');
+    setSelectedPlan(new URLSearchParams(window.location.search).get('plano') ?? '');
   }, []);
 
   async function open(path: 'checkout' | 'portal', plano?: string) {
@@ -158,6 +160,11 @@ export default function AssinaturaPage() {
       )}
       {data && (
         <>
+          {data.planos.some((plan) => plan.id === selectedPlan) && (
+            <p role="status" className="rounded-xl border border-indigo-400/25 bg-indigo-400/5 p-5 text-sm leading-7 text-indigo-100">
+              Você escolheu {data.planos.find((plan) => plan.id === selectedPlan)?.nome}. Confira os detalhes abaixo. Nenhuma cobrança foi iniciada.
+            </p>
+          )}
           <section
             aria-label="Sua assinatura"
             className="rounded-2xl border border-white/10 bg-[#111116] p-6"
@@ -232,7 +239,7 @@ export default function AssinaturaPage() {
             {data.planos.map((plan) => (
               <article
                 key={plan.id}
-                className={`flex flex-col rounded-2xl border bg-[#111116] p-6 ${plan.id === 'PRO' ? 'border-indigo-400/50' : 'border-white/10'}`}
+                className={`flex flex-col rounded-2xl border bg-[#111116] p-6 ${plan.id === (selectedPlan || 'PRO') ? 'border-indigo-400/50' : 'border-white/10'}`}
               >
                 <h2 className="text-xl font-semibold">{plan.nome}</h2>
                 <p className="mt-5 text-3xl font-semibold">
@@ -278,6 +285,9 @@ export default function AssinaturaPage() {
             do período. Reduções de plano ficam para o próximo período; aumentos mostram o ajuste
             proporcional antes da confirmação.
           </p>
+          <Link href="/suporte" className="inline-flex min-h-11 items-center text-sm font-medium text-indigo-300 hover:underline">
+            Precisa de ajuda? Fale com o suporte →
+          </Link>
         </>
       )}
     </div>

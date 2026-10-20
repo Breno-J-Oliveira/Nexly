@@ -18,6 +18,7 @@ const colunas = [
       { href: '/cadastro', label: 'Começar grátis' },
       { href: '/funcionalidades', label: 'Baixa automática' },
       { href: '/precos', label: 'Comparar planos' },
+      { href: '/suporte', label: 'Ajuda e suporte' },
     ],
   },
   {

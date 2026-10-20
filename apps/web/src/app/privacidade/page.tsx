@@ -19,7 +19,7 @@ export default function PrivacidadePage() {
           <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>3. Proteção</h2>
           <p>Adotamos medidas de segurança técnicas e administrativas para proteger suas informações contra acessos não autorizados.</p>
           <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>4. Seus direitos</h2>
-          <p>Você pode solicitar acesso, correção ou exclusão dos seus dados a qualquer momento entrando em contato conosco.</p>
+          <p>Você pode solicitar acesso, correção ou exclusão dos seus dados a qualquer momento entrando em contato pela nossa <Link href="/suporte" className="text-indigo-300 underline">página de suporte</Link>.</p>
         </div>
         <Link href="/" className="mt-6 block rounded-lg bg-[#6366F1] py-3 text-center text-sm font-medium text-white" >Voltar para o início</Link>
       </main>

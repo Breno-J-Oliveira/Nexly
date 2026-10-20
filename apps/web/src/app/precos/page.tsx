@@ -2,11 +2,12 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { LandingFooter } from '@/components/LandingFooter';
 import { LandingHeader } from '@/components/LandingHeader';
+import { subscriptionDestination } from '@/lib/auth-navigation';
 
 const planos = [
-  { id: 'essencial', nome: 'Essencial', preco: 49, periodo: '/mês', descricao: 'Ideal para autônomos e pequenos negócios.', recursos: ['Agenda ilimitada', 'Até 2 profissionais', 'Controle de clientes', 'Suporte por e-mail'], destaque: false },
-  { id: 'pro', nome: 'Profissional', preco: 99, periodo: '/mês', descricao: 'Para negócios em crescimento.', recursos: ['Tudo do Essencial', 'Até 10 profissionais', 'Estoque e PDV', 'Relatórios financeiros', 'Suporte prioritário'], destaque: true },
-  { id: 'empresarial', nome: 'Empresarial', preco: 199, periodo: '/mês', descricao: 'Para redes e franquias.', recursos: ['Tudo do Profissional', 'Profissionais ilimitados', 'Multiunidade', 'API e integrações', 'Suporte dedicado'], destaque: false },
+  { id: 'BASIC', nome: 'Essencial', preco: 49, periodo: '/mês', descricao: 'Ideal para autônomos e pequenos negócios.', recursos: ['Agenda ilimitada', 'Até 2 profissionais', 'Controle de clientes', 'Suporte por e-mail'], destaque: false },
+  { id: 'PRO', nome: 'Profissional', preco: 99, periodo: '/mês', descricao: 'Para negócios em crescimento.', recursos: ['Tudo do Essencial', 'Até 10 profissionais', 'Estoque e PDV', 'Relatórios financeiros', 'Suporte prioritário'], destaque: true },
+  { id: 'ENTERPRISE', nome: 'Empresarial', preco: 199, periodo: '/mês', descricao: 'Para redes e franquias.', recursos: ['Tudo do Profissional', 'Profissionais ilimitados', 'Multiunidade', 'API e integrações', 'Suporte dedicado'], destaque: false },
 ];
 
 export default function PrecosPage() {
@@ -26,7 +27,7 @@ export default function PrecosPage() {
               {plano.destaque && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide" style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}>Mais popular</span>
               )}
-              <h3 className="text-[18px] font-semibold" style={{ color: '#FAFAFA' }}>{plano.nome}</h3>
+              <h2 className="text-[18px] font-semibold" style={{ color: '#FAFAFA' }}>{plano.nome}</h2>
               <p className="mt-1 text-[14px]" style={{ color: '#A1A1AA' }}>{plano.descricao}</p>
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="text-4xl font-bold" style={{ color: '#FAFAFA' }}>R$ {plano.preco}</span>
@@ -40,19 +41,20 @@ export default function PrecosPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/cadastro" className="mt-6 block w-full rounded-xl py-2.5 text-center text-[14px] font-semibold transition-colors" style={{ backgroundColor: plano.destaque ? '#6366F1' : 'transparent', color: plano.destaque ? '#FAFAFA' : '#FAFAFA', border: `1px solid ${plano.destaque ? '#6366F1' : 'rgba(255,255,255,0.10)'}` }}>Escolher {plano.nome}</Link>
+              <Link href={subscriptionDestination(plano.id)} className="mt-6 block w-full rounded-xl py-2.5 text-center text-[14px] font-semibold transition-colors" style={{ backgroundColor: plano.destaque ? '#6366F1' : 'transparent', color: plano.destaque ? '#FAFAFA' : '#FAFAFA', border: `1px solid ${plano.destaque ? '#6366F1' : 'rgba(255,255,255,0.10)'}` }}>Escolher {plano.nome}</Link>
             </div>
           ))}
         </div>
 
         <p className="mx-auto mt-12 max-w-2xl text-center text-[14px]" style={{ color: '#71717A' }}>
-          O cadastro disponível hoje é gratuito e não exige cartão. Os planos pagos estão em preparação; a contratação ainda não está habilitada.
+          Crie sua conta gratuitamente, sem cartão. Para contratar, entre no Nexly e confira o valor no checkout seguro do Stripe. A assinatura é mensal, com renovação automática e cancelamento pelo portal.
         </p>
         <section className="mx-auto mt-24 max-w-3xl">
           <h2 className="mb-8 text-center text-2xl font-semibold">Perguntas comuns sobre os planos</h2>
           <div className="space-y-3">{[
             ['Preciso de cartão para começar?', 'Não. Você pode criar sua conta gratuita sem informar dados de cartão.'],
-            ['Como escolho o plano ideal?', 'Comece pelo acesso gratuito e conheça os módulos. Os planos pagos serão disponibilizados quando a contratação estiver pronta.'],
+            ['Como escolho o plano ideal?', 'Compare os recursos e escolha um plano. Após entrar ou criar sua conta, você poderá conferir a assinatura antes de pagar.'],
+            ['Como cancelo minha assinatura?', 'Acesse Plano e assinatura no Nexly e abra Gerenciar assinatura. O cancelamento é agendado para o fim do período vigente.'],
             ['Posso usar no celular?', 'Sim. A interface se adapta ao computador, tablet e celular.'],
             ['O estoque é integrado às vendas?', 'Sim. As vendas registradas no PDV atualizam o estoque dos produtos vendidos.'],
           ].map(([question, answer]) => <details key={question} className="rounded-lg border border-white/10 bg-[#111116] px-5 py-4"><summary className="cursor-pointer text-sm font-medium">{question}</summary><p className="mt-3 text-sm leading-relaxed text-[#A1A1AA]">{answer}</p></details>)}</div>

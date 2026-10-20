@@ -280,6 +280,13 @@ export function Shell({ children }: { children: ReactNode }) {
                   >
                     <Icon name="user" size="xs" color="#A1A1AA" /> Minha conta
                   </Link>
+                  <Link
+                    href="/suporte"
+                    onClick={() => setMenuAberto(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-[13px] text-[#E4E4E7] transition-colors hover:bg-white/5"
+                  >
+                    Ajuda e suporte
+                  </Link>
                   <div className="my-1 h-px" style={{ backgroundColor: 'rgba(255,255,255,0.10)' }} />
                   <button
                     type="button"

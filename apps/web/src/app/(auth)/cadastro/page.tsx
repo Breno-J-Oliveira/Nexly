@@ -17,6 +17,8 @@ import { api, waitForSessionRefresh } from '@/lib/api';
 import { GoogleRegistration, LoginResponse, useAuth } from '@/lib/auth';
 import { ErrorCodes, parseApiError } from '@/lib/errors';
 import { maskCnpj, maskTelefone, soDigitos } from '@/lib/format';
+import { authLink } from '@/lib/auth-navigation';
+import { useAuthDestination } from '@/lib/use-auth-destination';
 
 const PASSO_COUNT = 5;
 
@@ -72,6 +74,7 @@ function StepIndicator({ passoAtual }: { passoAtual: number }) {
 
 export default function CadastroPage() {
   const ready = useAuthReady();
+  const destination = useAuthDestination();
   const router = useRouter();
   const { completeLogin, googleRegistration, setGoogleRegistration, setGoogleTwoFactorToken } = useAuth();
   const [passo, setPasso] = useState(1);
@@ -141,7 +144,7 @@ export default function CadastroPage() {
       };
       const res = await api.post<{ accessToken: string; usuario: UsuarioPublico }>(googleRegistration ? '/auth/google/register' : '/auth/register', { ...payload, ...(googleRegistration ? { registrationToken: googleRegistration.registrationToken } : {}) });
       completeLogin(res.data.accessToken, res.data.usuario);
-      router.push('/dashboard');
+      router.push(destination);
     } catch (e) {
       const err = parseApiError(e);
       if (err.code === ErrorCodes.EMAIL_TAKEN) setError('Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.');
@@ -249,8 +252,8 @@ export default function CadastroPage() {
       <h1 className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>{['Boas-vindas ao Nexly', 'Configure seu negócio', 'O Nexly se adapta ao seu negócio.', 'Seu Nexly está quase pronto.', 'Complete seu perfil'][passo - 1]}</h1>
       <p className="mt-2 text-center text-[14px]" style={{ color: '#A1A1AA' }}>{passo === 3 ? 'Escolha os recursos que você precisa e crie uma experiência sob medida.' : passo === 5 ? 'Confira seus dados antes de criar a conta' : 'Gerencie seu negócio de forma inteligente'}</p>
       <div className="mt-8 flex rounded-xl border p-1" style={{ borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#0C0C10' }}>
-        <Link href="/login" className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ color: '#A1A1AA' }}>Entrar</Link>
-        <Link href="/cadastro" className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}>Criar Conta</Link>
+        <Link href={authLink('/login', destination)} className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ color: '#A1A1AA' }}>Entrar</Link>
+        <Link href={authLink('/cadastro', destination)} className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}>Criar Conta</Link>
       </div>
       <StepIndicator passoAtual={passo} />
       <form method="post" onSubmit={(e) => { e.preventDefault(); if (passo === PASSO_COUNT) void finalizar(); else void avancar(); }} className="space-y-4">
@@ -273,10 +276,10 @@ export default function CadastroPage() {
         if (data.requiresRegistration && data.registrationToken && data.email) {
           setGoogleRegistration({ registrationToken: data.registrationToken, email: data.email, nome: data.nome ?? '' });
         } else if (data.accessToken && data.usuario) {
-          completeLogin(data.accessToken, data.usuario); router.push('/dashboard');
+          completeLogin(data.accessToken, data.usuario); router.push(destination);
         } else if (data.requiresTwoFactor && data.tempToken) {
           setGoogleTwoFactorToken(data.tempToken);
-          router.push('/login');
+          router.push(authLink('/login', destination));
         } else throw new Error('Resposta de autenticação inválida.');
       }} /></div>}
       <p className="mt-6 text-center text-[12px] leading-relaxed" style={{ color: '#71717A' }}>

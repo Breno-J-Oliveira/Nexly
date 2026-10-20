@@ -4,7 +4,7 @@ import { getAllPosts } from '@/lib/blog';
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://nexly-web.vercel.app';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticRoutes = ['/', '/funcionalidades', '/precos', '/privacidade', '/termos'].map(
+  const staticRoutes = ['/', '/funcionalidades', '/precos', '/suporte', '/privacidade', '/termos'].map(
     (route) => ({
       url: `${BASE_URL}${route}`,
       lastModified: new Date(),

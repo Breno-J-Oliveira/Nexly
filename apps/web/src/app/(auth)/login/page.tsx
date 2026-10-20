@@ -14,6 +14,8 @@ import { GoogleSignIn } from '@/components/GoogleSignIn';
 import { api, waitForSessionRefresh } from '@/lib/api';
 import { GoogleRegistration, LoginResponse, useAuth } from '@/lib/auth';
 import { ErrorCodes, parseApiError } from '@/lib/errors';
+import { authLink } from '@/lib/auth-navigation';
+import { useAuthDestination } from '@/lib/use-auth-destination';
 import {
   UsuarioPublico,
   AUTHENTICATOR_CODE_PATTERN,
@@ -30,6 +32,7 @@ type FormData = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const ready = useAuthReady();
+  const destination = useAuthDestination();
   const { login, completeLogin, setGoogleRegistration, googleTwoFactorToken, setGoogleTwoFactorToken } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +68,7 @@ export default function LoginPage() {
         setTwoFactor({ tempToken: res.tempToken });
         return;
       }
-      router.push('/dashboard');
+      router.push(destination);
     } catch (e) {
       const err = parseApiError(e);
       if (err.code === ErrorCodes.LOGIN_TOO_MANY_ATTEMPTS) {
@@ -88,7 +91,7 @@ export default function LoginPage() {
         { tempToken: twoFactor.tempToken, code: twoFactorCode },
       );
       completeLogin(res.data.accessToken, res.data.usuario);
-      router.push('/dashboard');
+      router.push(destination);
     } catch (error) {
       const failure = error as { response?: { data?: { message?: string } } };
       setError(
@@ -131,14 +134,14 @@ export default function LoginPage() {
         style={{ borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#0C0C10' }}
       >
         <Link
-          href="/login"
+          href={authLink('/login', destination)}
           className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors"
           style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}
         >
           Entrar
         </Link>
         <Link
-          href="/cadastro"
+          href={authLink('/cadastro', destination)}
           className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors"
           style={{ color: '#A1A1AA' }}
         >
@@ -290,11 +293,11 @@ export default function LoginPage() {
         const { data } = await api.post<LoginResponse & Partial<GoogleRegistration> & { requiresRegistration?: boolean }>('/auth/google/login', { credential });
         if (data.requiresRegistration && data.registrationToken && data.email) {
           setGoogleRegistration({ registrationToken: data.registrationToken, email: data.email, nome: data.nome ?? '' });
-          router.push('/cadastro');
+          router.push(authLink('/cadastro', destination));
         } else if (data.requiresTwoFactor && data.tempToken) {
           setError(null); setTwoFactor({ tempToken: data.tempToken });
         } else if (data.accessToken && data.usuario) {
-          completeLogin(data.accessToken, data.usuario); router.push('/dashboard');
+          completeLogin(data.accessToken, data.usuario); router.push(destination);
         } else throw new Error('Resposta de autenticação inválida.');
       }} /></div>}
       <p className="mt-6 text-center text-[12px] leading-relaxed" style={{ color: '#71717A' }}>
