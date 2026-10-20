@@ -14,6 +14,7 @@ const SENSITIVE_KEYS = new Set([
   'twoFactorChallengeHash',
   'twoFactorChallengeExpiresAt',
   'twoFactorLastUsedStep',
+  'lastRotationResponse',
 ]);
 
 function toPlain(value: unknown): unknown {

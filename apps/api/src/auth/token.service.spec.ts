@@ -1,8 +1,9 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../database/prisma.service';
 import { TokenService } from './token.service';
+import { RotationResponse } from './rotation-response';
 
 describe('TokenService', () => {
   let service: TokenService;
@@ -111,7 +112,7 @@ describe('TokenService', () => {
     expect(prisma.client.refreshToken.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ id: 'rt1', revogado: false }),
-        data: { revogado: true },
+        data: expect.objectContaining({ revogado: true }),
       }),
     );
     expect(result.newToken).toBeDefined();
@@ -187,7 +188,7 @@ describe('TokenService', () => {
     await service.revokeRefreshToken('old-cookie');
     expect(prisma.client.authSession.updateMany).toHaveBeenCalledWith({
       where: { id: 's1', usuarioId: 'u1' },
-      data: { revogado: true },
+      data: { revogado: true, lastRotationResponse: null },
     });
   });
   it('refresh após logout não revoga outras sessões legítimas', async () => {
@@ -201,7 +202,8 @@ describe('TokenService', () => {
   });
 
   it('recupera só a rotação mais recente dentro da janela sem prolongá-la', async () => {
-    prisma.client.refreshToken.findUnique.mockResolvedValue({
+    const rotatedAt = new Date(Date.now() - 100);
+    const parent = {
       id: 'rt1',
       usuarioId: 'u1',
       sessionId: 's1',
@@ -211,11 +213,24 @@ describe('TokenService', () => {
         revogado: false,
         expiresAt: new Date(Date.now() + 60000),
         lastRotationTokenId: 'rt1',
-        lastRotationAt: new Date(Date.now() - 100),
+        lastRotationAt: rotatedAt,
+        lastRotationResponse: new RotationResponse().seal('same-successor', 's1', 'rt1', rotatedAt),
       },
+    };
+    prisma.client.refreshToken.findUnique
+      .mockResolvedValueOnce(parent)
+      .mockResolvedValueOnce(parent)
+      .mockResolvedValueOnce({
+        usuarioId: 'u1',
+        sessionId: 's1',
+        revogado: false,
+        expiresAt: new Date(Date.now() + 60000),
+      });
+    await expect(service.rotateRefreshToken('recent')).resolves.toMatchObject({
+      sessionId: 's1',
+      newToken: 'same-successor',
     });
-    prisma.client.refreshToken.create.mockResolvedValue({ sessionId: 's1' });
-    await expect(service.rotateRefreshToken('recent')).resolves.toMatchObject({ sessionId: 's1' });
+    expect(prisma.client.refreshToken.create).not.toHaveBeenCalled();
     expect(prisma.client.authSession.updateMany).not.toHaveBeenCalled();
     expect(prisma.client.refreshToken.updateMany).not.toHaveBeenCalled();
   });
@@ -237,8 +252,28 @@ describe('TokenService', () => {
     await expect(service.rotateRefreshToken('replay')).rejects.toThrow(UnauthorizedException);
     expect(prisma.client.authSession.updateMany).toHaveBeenCalledWith({
       where: { usuarioId: 'u1', revogado: false },
-      data: { revogado: true },
+      data: expect.objectContaining({ revogado: true }),
     });
     expect(prisma.client.refreshToken.create).not.toHaveBeenCalled();
+  });
+
+  it('não cria outro sucessor quando a resposta cifrada está ausente ou inválida', async () => {
+    prisma.client.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt1',
+      usuarioId: 'u1',
+      sessionId: 's1',
+      revogado: true,
+      expiresAt: new Date(Date.now() + 60000),
+      sessao: {
+        revogado: false,
+        expiresAt: new Date(Date.now() + 60000),
+        lastRotationTokenId: 'rt1',
+        lastRotationAt: new Date(),
+        lastRotationResponse: 'invalid',
+      },
+    });
+    await expect(service.rotateRefreshToken('recent')).rejects.toThrow(ServiceUnavailableException);
+    expect(prisma.client.refreshToken.create).not.toHaveBeenCalled();
+    expect(prisma.client.authSession.updateMany).not.toHaveBeenCalled();
   });
 });

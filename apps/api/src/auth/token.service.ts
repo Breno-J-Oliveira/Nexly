@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, Usuario } from '@prisma/client';
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
+import { RotationResponse } from './rotation-response';
 
 // Apenas o último token rotacionado pode repetir por 3s; logout/expiração nunca têm tolerância.
 // https://auth0.com/docs/secure/tokens/refresh-tokens/configure-refresh-token-rotation
@@ -11,6 +12,7 @@ const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
 
 @Injectable()
 export class TokenService {
+  private readonly rotationResponse = new RotationResponse();
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -48,7 +50,7 @@ export class TokenService {
     return { token, sessionId: stored.sessionId };
   }
 
-  /** Serializa rotações por sessão, inclusive em réplicas distintas. Só hashes são persistidos. */
+  /** Rotações são serializadas; tokens ficam em hash e a resposta de recuperação fica cifrada. */
   async rotateRefreshToken(
     refreshToken: string,
   ): Promise<{ usuario: Usuario; newToken: string; sessionId: string }> {
@@ -89,7 +91,7 @@ export class TokenService {
         if (!concorrente) {
           await tx.authSession.updateMany({
             where: { usuarioId: stored.usuarioId, revogado: false },
-            data: { revogado: true },
+            data: { revogado: true, lastRotationResponse: null },
           });
           await tx.refreshToken.updateMany({
             where: { usuarioId: stored.usuarioId, revogado: false },
@@ -98,23 +100,63 @@ export class TokenService {
           // Retorna para COMMITAR a revogação; lançar dentro da transação a desfaria.
           return { kind: 'reused' as const };
         }
-        // Recupera uma resposta perdida sem prolongar a janela nem expor tokens em cache/log.
+        // Uma repetição recupera o MESMO sucessor, nunca abre outro ramo da sessão.
+        let recovered: string;
+        try {
+          recovered = this.rotationResponse.open(
+            stored.sessao.lastRotationResponse ?? '',
+            stored.sessionId,
+            stored.id,
+            rotationAt!,
+          );
+        } catch {
+          throw new ServiceUnavailableException(
+            'Não foi possível recuperar a rotação. Tente novamente.',
+          );
+        }
+        const successor = await tx.refreshToken.findUnique({
+          where: { tokenHash: this.hashToken(recovered) },
+        });
+        if (
+          !successor ||
+          successor.sessionId !== stored.sessionId ||
+          successor.usuarioId !== stored.usuarioId ||
+          successor.revogado ||
+          successor.expiresAt <= now
+        ) {
+          throw new UnauthorizedException('Refresh token inválido');
+        }
+        return {
+          kind: 'issued' as const,
+          usuario,
+          newToken: recovered,
+          sessionId: stored.sessionId,
+        };
       } else {
         const claimed = await tx.refreshToken.updateMany({
           where: { id: stored.id, revogado: false, expiresAt: { gt: now } },
           data: { revogado: true },
         });
         if (claimed.count !== 1) throw new UnauthorizedException('Refresh token já utilizado');
-        await tx.authSession.updateMany({
-          where: { id: stored.sessionId, usuarioId: stored.usuarioId, revogado: false },
-          data: { lastRotationTokenId: stored.id, lastRotationAt: now },
-        });
       }
       const issued = await this.issueRefreshToken(
         usuario.id,
         stored.sessionId,
         tx as unknown as Prisma.TransactionClient,
       );
+      await tx.authSession.updateMany({
+        where: { id: stored.sessionId, usuarioId: stored.usuarioId, revogado: false },
+        data: {
+          lastRotationTokenId: stored.id,
+          lastRotationAt: now,
+          lastRotationResponse: this.rotationResponse.seal(
+            issued.token,
+            stored.sessionId,
+            stored.id,
+            now,
+          ),
+        },
+      });
       return {
         kind: 'issued' as const,
         usuario,
@@ -134,7 +176,7 @@ export class TokenService {
     await this.prisma.client.$transaction([
       this.prisma.client.authSession.updateMany({
         where: { id: stored.sessionId, usuarioId: stored.usuarioId },
-        data: { revogado: true },
+        data: { revogado: true, lastRotationResponse: null },
       }),
       this.prisma.client.refreshToken.updateMany({
         where: { sessionId: stored.sessionId, usuarioId: stored.usuarioId, revogado: false },
