@@ -14,7 +14,7 @@ export function LegalPage({
   sections: { title: string; content: ReactNode }[];
 }) {
   return (
-    <div className="min-h-screen bg-[#08080C] text-white">
+    <div className="min-h-screen bg-[#060608] text-white">
       <LandingHeader />
       <main id="conteudo-principal">
         <PublicIntro eyebrow="Informações do serviço" title={title} description={description} />
@@ -23,7 +23,7 @@ export function LegalPage({
             aria-label={`Seções: ${title}`}
             className="self-start rounded-2xl border border-white/10 p-5 lg:sticky lg:top-24"
           >
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#BDB6D5]">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#A1A1AA]">
               Nesta página
             </p>
             <ol className="mt-4 space-y-3">
@@ -31,7 +31,7 @@ export function LegalPage({
                 <li key={section.title}>
                   <a
                     href={`#secao-${index + 1}`}
-                    className="inline-block rounded py-1 text-sm leading-6 text-[#B8B3C8] hover:text-[#C7C5FF]"
+                    className="inline-block rounded py-1 text-sm leading-6 text-[#A1A1AA] hover:text-[#818CF8]"
                   >
                     {index + 1}. {section.title}
                   </a>
@@ -49,12 +49,12 @@ export function LegalPage({
                 <h2 className="text-xl font-medium tracking-tight">
                   {index + 1}. {section.title}
                 </h2>
-                <div className="mt-4 text-sm leading-8 text-[#B8B3C8]">{section.content}</div>
+                <div className="mt-4 text-sm leading-8 text-[#A1A1AA]">{section.content}</div>
               </section>
             ))}
             <Link
               href="/"
-              className="mt-8 inline-flex rounded-xl border border-white/15 px-5 py-3 text-sm font-medium text-[#C7C5FF] hover:bg-white/5"
+              className="mt-8 inline-flex rounded-xl border border-white/15 px-5 py-3 text-sm font-medium text-[#818CF8] hover:bg-white/5"
             >
               Voltar para o início
             </Link>

@@ -142,6 +142,18 @@ header:has(#page-toolbar .page-toolbar) .shell-global-search { display: none; }
 }
 
 #print-document { display: none; }
+/* Acabamento das páginas públicas, sem alterar o painel de gestão. */
+@keyframes public-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .public-polish h1 { animation: public-enter 450ms ease-out both; }
+  .public-polish .auth-content { animation: public-enter 350ms ease-out both; }
+  .public-polish a { transition: color 180ms ease, background-color 180ms ease, transform 180ms ease; }
+  .public-polish .public-card { transition: transform 180ms ease, box-shadow 180ms ease; }
+  .public-polish .public-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px -18px rgba(99,102,241,.25); }
+}
 @media print {
   @page { margin: 20mm; }
   body:has(> #print-document) > *:not(#print-document) { display: none !important; }

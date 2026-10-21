@@ -100,14 +100,14 @@ export default function AceitarConvitePage() {
   return (
     <AuthShell>
       <div className="rounded-2xl border border-white/10 bg-[#111116] p-6 sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C7C5FF]">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#818CF8]">
           Seu novo espaço de trabalho
         </p>
         <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-white">
           Aceitar convite
         </h1>
         {loading ? (
-          <p role="status" className="mt-6 text-sm leading-7 text-[#AAA7BA]">
+          <p role="status" className="mt-6 text-sm leading-7 text-[#A1A1AA]">
             Consultando seu convite…
           </p>
         ) : erro ? (
@@ -118,13 +118,13 @@ export default function AceitarConvitePage() {
             <button
               type="button"
               onClick={() => setTentativa((value) => value + 1)}
-              className="mt-5 min-h-11 rounded-xl border border-white/15 px-4 text-sm font-medium text-[#C7C5FF] hover:bg-white/5"
+              className="mt-5 min-h-11 rounded-xl border border-white/15 px-4 text-sm font-medium text-[#818CF8] hover:bg-white/5"
             >
               Tentar novamente
             </button>
             <Link
               href="/login"
-              className="mt-4 block rounded py-2 text-sm text-[#B8B3C8] hover:text-white"
+              className="mt-4 block rounded py-2 text-sm text-[#A1A1AA] hover:text-white"
             >
               Já tenho conta. Ir para o login →
             </Link>
@@ -132,18 +132,18 @@ export default function AceitarConvitePage() {
         ) : (
           convite && (
             <>
-              <div className="mt-6 rounded-xl border border-[#C7C5FF]/15 bg-[#C7C5FF]/5 p-4">
-                <p className="text-sm leading-7 text-[#B8B3C8]">
+              <div className="mt-6 rounded-xl border border-[#818CF8]/15 bg-[#818CF8]/5 p-4">
+                <p className="text-sm leading-7 text-[#A1A1AA]">
                   Você foi convidado para{' '}
                   <strong className="font-medium text-white">{convite.empresaNome}</strong>.
                 </p>
                 <dl className="mt-3 space-y-2 text-xs leading-6">
                   <div>
-                    <dt className="text-[#AAA7BA]">Acesso como</dt>
+                    <dt className="text-[#A1A1AA]">Acesso como</dt>
                     <dd className="text-[#DBD6EB]">{roles[convite.role] || convite.role}</dd>
                   </div>
                   <div>
-                    <dt className="text-[#AAA7BA]">E-mail da conta</dt>
+                    <dt className="text-[#A1A1AA]">E-mail da conta</dt>
                     <dd className="break-all text-[#DBD6EB]">{convite.email}</dd>
                   </div>
                 </dl>
@@ -178,7 +178,7 @@ export default function AceitarConvitePage() {
                   disabled={salvando}
                   aria-describedby="invite-password-help"
                 />
-                <p id="invite-password-help" className="text-xs leading-6 text-[#AAA7BA]">
+                <p id="invite-password-help" className="text-xs leading-6 text-[#A1A1AA]">
                   Use de 8 a 72 caracteres. Prefira uma senha única para o Nexly.
                 </p>
                 <AuthInput
@@ -205,12 +205,12 @@ export default function AceitarConvitePage() {
                   type="submit"
                   disabled={!ready || salvando}
                   aria-busy={salvando || undefined}
-                  className="min-h-12 w-full rounded-xl bg-[#C7C5FF] px-4 py-3 text-sm font-semibold text-[#151326] transition-colors hover:bg-[#DAD9FF] disabled:cursor-wait disabled:opacity-60"
+                  className="min-h-12 w-full rounded-xl bg-[#6366F1] px-4 py-3 text-sm font-semibold text-[#FAFAFA] transition-colors hover:bg-[#4F46E5] disabled:cursor-wait disabled:opacity-60"
                 >
                   {salvando ? 'Criando sua conta…' : 'Criar conta'}
                 </button>
               </form>
-              <p className="mt-5 text-xs leading-6 text-[#AAA7BA]">
+              <p className="mt-5 text-xs leading-6 text-[#A1A1AA]">
                 O convite cria seu acesso ao negócio indicado acima. Não é necessário informar
                 cartão de crédito.
               </p>

@@ -28,7 +28,7 @@ export default function PrivacidadePage() {
             <>
               Você pode solicitar acesso, correção ou exclusão dos seus dados entrando em contato
               pela nossa{' '}
-              <Link href="/suporte" className="rounded text-[#C7C5FF] underline underline-offset-4">
+              <Link href="/suporte" className="rounded text-[#818CF8] underline underline-offset-4">
                 página de suporte
               </Link>
               .

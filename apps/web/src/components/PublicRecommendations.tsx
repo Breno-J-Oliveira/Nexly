@@ -54,12 +54,12 @@ export function PublicRecommendations() {
   }, [attempt]);
   if (erro)
     return (
-      <div className="mt-8 rounded-xl border border-white/10 p-6 text-sm text-[#AAA7BA]">
+      <div className="mt-8 rounded-xl border border-white/10 p-6 text-sm text-[#A1A1AA]">
         <p role="status">As recomendações estão temporariamente indisponíveis.</p>
         <button
           type="button"
           onClick={() => setAttempt((value) => value + 1)}
-          className="mt-3 min-h-11 rounded text-sm font-medium text-[#C7C5FF] underline underline-offset-4"
+          className="mt-3 min-h-11 rounded text-sm font-medium text-[#818CF8] underline underline-offset-4"
         >
           Carregar recomendações novamente
         </button>

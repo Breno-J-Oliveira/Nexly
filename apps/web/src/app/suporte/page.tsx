@@ -36,17 +36,17 @@ const topics = [
 
 export default function SuportePage() {
   return (
-    <div className="min-h-screen bg-[#08080C] text-[#FAFAFA]">
+    <div className="min-h-screen bg-[#060608] text-[#FAFAFA]">
       <LandingHeader />
       <main id="conteudo-principal" className="mx-auto max-w-6xl px-5 py-14 sm:px-8 sm:py-24">
         <Link
           href="/"
-          className="inline-flex rounded-lg py-2 text-sm text-[#C7C5FF] hover:underline"
+          className="inline-flex rounded-lg py-2 text-sm text-[#818CF8] hover:underline"
         >
           ← Voltar para o início
         </Link>
         <header className="mt-8 max-w-2xl">
-          <p className="text-sm font-medium text-[#C7C5FF]">Estamos por aqui</p>
+          <p className="text-sm font-medium text-[#818CF8]">Estamos por aqui</p>
           <h1 className="mt-3 text-[clamp(2.5rem,6vw,4.75rem)] font-semibold leading-[1.05] tracking-[-0.055em]">
             Como podemos ajudar?
           </h1>
@@ -64,7 +64,7 @@ export default function SuportePage() {
               <p className="mt-3 flex-1 text-sm leading-7 text-[#A1A1AA]">{topic.description}</p>
               <Link
                 href={topic.href}
-                className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-[#C7C5FF] hover:underline"
+                className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-[#818CF8] hover:underline"
               >
                 {topic.action} →
               </Link>
@@ -85,7 +85,7 @@ export default function SuportePage() {
           </p>
           <a
             href={SUPPORT_MAILTO}
-            className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#C7C5FF] px-5 py-3 text-sm font-semibold text-[#151326] hover:bg-[#DAD9FF]"
+            className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#6366F1] px-5 py-3 text-sm font-semibold text-[#FAFAFA] hover:bg-[#4F46E5]"
           >
             Enviar e-mail ao suporte
           </a>

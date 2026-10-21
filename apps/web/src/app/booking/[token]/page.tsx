@@ -132,9 +132,9 @@ function IniciaisAvatar({ nome }: { nome: string }) {
 
 function BookingFooter() {
   return (
-    <footer className="mx-auto max-w-5xl px-4 pb-8 text-center text-xs leading-6 text-[#AAA7BA]">
+    <footer className="mx-auto max-w-5xl px-4 pb-8 text-center text-xs leading-6 text-[#A1A1AA]">
       Agendamento com{' '}
-      <Link href="/" className="rounded font-medium text-[#C7C5FF] underline underline-offset-4">
+      <Link href="/" className="rounded font-medium text-[#818CF8] underline underline-offset-4">
         Nexly
       </Link>{' '}
       ·{' '}
@@ -415,7 +415,7 @@ export default function BookingPage() {
         Verifique o endereço ou tente carregar novamente.
       </p>
       <button type="button" className="mt-5 rounded-xl bg-[#6366F1] px-5 py-3 text-sm text-white" onClick={() => setTentativa(v=>v+1)}>Tentar novamente</button>
-      <Link href="/" className="mt-5 rounded py-2 text-sm text-[#C7C5FF] hover:underline">Voltar para o início do Nexly</Link>
+      <Link href="/" className="mt-5 rounded py-2 text-sm text-[#818CF8] hover:underline">Voltar para o início do Nexly</Link>
     </div>
   );
 
@@ -499,7 +499,7 @@ export default function BookingPage() {
   });
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#08080C' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#060608' }}>
       {/* Header fixo */}
       <header
         className="fixed inset-x-0 top-0 z-20 flex h-14 items-center border-b px-4"
@@ -515,29 +515,29 @@ export default function BookingPage() {
 
       <main className="mx-auto grid w-full max-w-5xl gap-10 px-4 pb-10 pt-24 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14 lg:pb-16 lg:pt-28">
         <aside className="lg:sticky lg:top-28 lg:self-start">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C7C5FF]">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#818CF8]">
             Reserve seu horário
           </p>
           <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-[-0.04em] text-white sm:text-4xl">
             Seu próximo atendimento começa aqui.
           </h1>
-          <p className="mt-4 text-sm leading-7 text-[#AAA7BA]">
+          <p className="mt-4 text-sm leading-7 text-[#A1A1AA]">
             Escolha o serviço e o profissional, consulte os horários e confira os detalhes antes de
             confirmar.
           </p>
           <div className="mt-7 hidden rounded-2xl border border-white/10 bg-[#111116] p-6 lg:block">
-            <p className="text-xs font-medium uppercase tracking-widest text-[#BDB6D5]">
+            <p className="text-xs font-medium uppercase tracking-widest text-[#A1A1AA]">
               Sua escolha
             </p>
             <dl className="mt-5 space-y-5 text-sm">
               <div>
-                <dt className="text-[#AAA7BA]">Serviço</dt>
+                <dt className="text-[#A1A1AA]">Serviço</dt>
                 <dd className="mt-1 break-words text-[#E6E1F1]">
                   {servicoSelecionado?.nome || 'Escolha na próxima etapa'}
                 </dd>
               </div>
               <div>
-                <dt className="text-[#AAA7BA]">Profissional</dt>
+                <dt className="text-[#A1A1AA]">Profissional</dt>
                 <dd className="mt-1 break-words text-[#E6E1F1]">
                   {profissionalId === 'qualquer'
                     ? 'Qualquer profissional disponível'
@@ -545,7 +545,7 @@ export default function BookingPage() {
                 </dd>
               </div>
               <div>
-                <dt className="text-[#AAA7BA]">Data e horário</dt>
+                <dt className="text-[#A1A1AA]">Data e horário</dt>
                 <dd className="mt-1 text-[#E6E1F1]">
                   {data ? formatarDataBR(data) : 'A definir'}
                   {horario ? ` · ${horario}` : ''}

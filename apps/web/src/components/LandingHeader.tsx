@@ -38,7 +38,7 @@ export function LandingHeader() {
     >
       <a
         href={pathname.startsWith('/blog') ? '#blog-content' : '#conteudo-principal'}
-        className="sr-only rounded-lg bg-[#C7C5FF] p-3 text-sm font-semibold text-[#151326] focus:not-sr-only focus:absolute focus:left-4 focus:top-3"
+        className="sr-only rounded-lg bg-[#6366F1] p-3 text-sm font-semibold text-[#FAFAFA] focus:not-sr-only focus:absolute focus:left-4 focus:top-3"
       >
         Pular para o conteúdo
       </a>
@@ -68,7 +68,7 @@ export function LandingHeader() {
               key={href}
               href={href}
               aria-current={pathname === href ? 'page' : undefined}
-              className={`rounded py-2 text-[14px] font-medium transition-colors ${isActive(href) ? 'text-[#C7C5FF]' : 'text-[#A1A1AA] hover:text-white'}`}
+              className={`rounded py-2 text-[14px] font-medium transition-colors ${isActive(href) ? 'text-[#818CF8]' : 'text-[#A1A1AA] hover:text-white'}`}
             >
               {label}
             </Link>
@@ -86,7 +86,7 @@ export function LandingHeader() {
           <Link
             href="/cadastro"
             className="rounded-lg px-4 py-2 text-[14px] font-semibold"
-            style={{ backgroundColor: '#C7C5FF', color: '#151326' }}
+            style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}
           >
             Criar conta
           </Link>
@@ -136,7 +136,7 @@ export function LandingHeader() {
               href="/cadastro"
               onClick={() => setMenuOpen(false)}
               className="rounded-lg px-4 py-2 text-center text-[14px] font-semibold"
-              style={{ backgroundColor: '#C7C5FF', color: '#151326' }}
+              style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}
             >
               Criar conta
             </Link>

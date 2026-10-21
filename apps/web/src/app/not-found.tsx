@@ -4,10 +4,10 @@ import { LandingFooter } from '@/components/LandingFooter';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-[#08080C] text-white">
+    <div className="min-h-screen bg-[#060608] text-white">
       <LandingHeader />
       <main id="conteudo-principal" className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C7C5FF]">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#818CF8]">
           Página não encontrada · 404
         </p>
         <div className="mt-8 grid gap-10 sm:grid-cols-[1fr_auto] sm:items-center">
@@ -17,14 +17,14 @@ export default function NotFound() {
               <br />
               outro caminho.
             </h1>
-            <p className="mt-6 max-w-md text-base leading-8 text-[#AAA7BA]">
+            <p className="mt-6 max-w-md text-base leading-8 text-[#A1A1AA]">
               O endereço pode ter mudado ou estar incompleto. Volte para o início ou acesse sua
               conta para continuar.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/"
-                className="rounded-xl bg-[#C7C5FF] px-5 py-3.5 text-sm font-semibold text-[#151326] hover:bg-[#DAD9FF]"
+                className="rounded-xl bg-[#6366F1] px-5 py-3.5 text-sm font-semibold text-[#FAFAFA] hover:bg-[#4F46E5]"
               >
                 Voltar para o início
               </Link>
@@ -35,9 +35,9 @@ export default function NotFound() {
                 Acessar minha conta
               </Link>
             </div>
-            <p className="mt-6 text-sm text-[#AAA7BA]">
+            <p className="mt-6 text-sm text-[#A1A1AA]">
               Precisa de ajuda?{' '}
-              <Link href="/suporte" className="rounded text-[#C7C5FF] underline underline-offset-4">
+              <Link href="/suporte" className="rounded text-[#818CF8] underline underline-offset-4">
                 Fale com o suporte.
               </Link>
             </p>

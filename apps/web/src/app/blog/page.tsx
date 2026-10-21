@@ -27,31 +27,29 @@ export default function BlogPage() {
     <div className="mx-auto max-w-6xl px-5 sm:px-8">
       <section className="relative pb-12 pt-14 sm:pb-16 sm:pt-20" aria-labelledby="blog-title">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.10),transparent_70%)]" />
-        <div className="relative max-w-3xl">
+        <div className="public-polish relative mx-auto max-w-3xl text-center">
           <Link
             href="/"
             className="inline-flex rounded py-2 text-sm text-[#A1A1AA] hover:text-white"
           >
             ← Página inicial
           </Link>
-          <p className="mt-7 text-xs font-semibold uppercase tracking-[0.22em] text-[#BCBAFF]">
+          <p className="mt-7 text-xs font-semibold uppercase tracking-[0.22em] text-[#818CF8]">
             Blog Nexly
           </p>
           <h1
             id="blog-title"
-            className="mt-5 text-[clamp(2.5rem,6vw,4.75rem)] font-semibold leading-[1.05] tracking-[-0.055em]"
+            className="mt-5 text-3xl font-bold leading-tight tracking-tight sm:text-5xl"
           >
-            Ideias claras.
-            <br />
-            <span className="text-[#BCBAFF]">Uma gestão mais leve.</span>
+            Ideias para cuidar melhor do seu negócio
           </h1>
-          <p className="mt-6 max-w-xl text-base leading-8 text-[#A1A1AA]">
+          <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-[#A1A1AA]">
             Menos dúvidas na rotina, mais espaço para cuidar do seu negócio. Encontre orientações
             práticas para organizar a agenda, os números e o próximo passo.
           </p>
           <a
             href="#artigos"
-            className="mt-7 inline-flex min-h-11 items-center gap-3 rounded text-sm font-semibold text-[#C7C5FF] hover:text-white"
+            className="mt-7 inline-flex min-h-11 items-center gap-3 rounded text-sm font-semibold text-[#818CF8] hover:text-white"
           >
             Explorar os artigos <span aria-hidden="true">↓</span>
           </a>
@@ -66,7 +64,7 @@ export default function BlogPage() {
             <BlogArtwork category={featured.categoria} large />
             <div className="flex flex-col justify-center p-6 sm:p-9 lg:p-11">
               <div className="flex flex-wrap items-center gap-3 text-xs">
-                <span className="rounded-full border border-indigo-400/25 bg-indigo-400/10 px-3 py-1 font-medium text-[#C7C5FF]">
+                <span className="rounded-full border border-indigo-400/25 bg-indigo-400/10 px-3 py-1 font-medium text-[#818CF8]">
                   Em destaque
                 </span>
                 <span className="text-[#A1A1AA]">
@@ -74,7 +72,7 @@ export default function BlogPage() {
                 </span>
               </div>
               <h2 className="mt-5 text-2xl font-semibold leading-snug tracking-tight sm:text-3xl">
-                <Link href={`/blog/${featured.slug}`} className="rounded hover:text-[#C7C5FF]">
+                <Link href={`/blog/${featured.slug}`} className="rounded hover:text-[#818CF8]">
                   {featured.title}
                 </Link>
               </h2>
@@ -87,7 +85,7 @@ export default function BlogPage() {
                 )}
                 <Link
                   href={`/blog/${featured.slug}`}
-                  className="inline-flex min-h-11 items-center gap-3 rounded-xl bg-[#C7C5FF] px-5 py-3 text-sm font-semibold text-[#151326] transition-colors hover:bg-[#DAD9FF]"
+                  className="inline-flex min-h-11 items-center gap-3 rounded-xl bg-[#6366F1] px-5 py-3 text-sm font-semibold text-[#FAFAFA] transition-colors hover:bg-[#4F46E5]"
                 >
                   Ler o guia <span aria-hidden="true">↗</span>
                 </Link>
@@ -112,7 +110,7 @@ export default function BlogPage() {
         className="mb-20 flex flex-col justify-between gap-7 rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/10 to-[#111116] p-7 sm:p-10 md:flex-row md:items-center"
       >
         <div className="max-w-xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#BCBAFF]">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#818CF8]">
             Da leitura para a rotina
           </p>
           <h2 id="blog-cta-title" className="mt-3 text-2xl font-semibold tracking-tight">
