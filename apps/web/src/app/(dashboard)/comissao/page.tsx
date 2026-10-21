@@ -14,10 +14,11 @@ interface ProfissionalComissao {
   faturamento: number;
   comissao: number;
   totalServicos: number;
+  ativo?: boolean;
 }
 interface ResumoComissao {
   profissionais: ProfissionalComissao[];
-  total: { faturamento: number; comissao: number; servicos: number };
+  total: { faturamento: number; comissao: number; servicos: number; estimados?: number };
 }
 
 function fmt(v: number): string {
@@ -74,7 +75,11 @@ export default function ComissaoPage() {
           Comissões
         </h2>
         <p className="mt-1 text-sm" style={{ color: '#71717A' }}>
-          Cálculo de comissão por profissional no período
+          Valores e percentuais registrados na conclusão de cada atendimento
+        </p>
+        <p className="mt-2 max-w-2xl text-xs leading-6 text-[#A1A1AA]">
+          Base do cálculo: preço do serviço ao concluir o atendimento. Esta tela não confirma
+          recebimentos nem realiza pagamentos.
         </p>
       </PageToolbar>
 
@@ -125,6 +130,16 @@ export default function ComissaoPage() {
             Período: {new Date(inicio + 'T00:00:00').toLocaleDateString('pt-BR')} até{' '}
             {new Date(fim + 'T00:00:00').toLocaleDateString('pt-BR')}
           </p>
+          {Boolean(dados.total.estimados) && (
+            <p
+              role="status"
+              className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm leading-7 text-amber-200"
+            >
+              Este período contém {dados.total.estimados} atendimento(s) antigo(s) sem os valores da
+              conclusão. Para eles, o cálculo usa o preço e a comissão atuais como estimativa.
+              Confira os registros antes de realizar pagamentos.
+            </p>
+          )}
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div
               className="rounded-xl p-4"
@@ -165,14 +180,21 @@ export default function ComissaoPage() {
             className="mt-6 overflow-x-auto rounded-xl"
             style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}
           >
-            <table className="w-full text-left text-[13px]">
-              <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <table
+              role="table"
+              aria-label="Comissões por profissional"
+              className="block w-full text-left text-[13px] sm:table"
+            >
+              <thead
+                className="sr-only sm:not-sr-only"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+              >
                 <tr>
                   <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>
                     Profissional
                   </th>
                   <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>
-                    Comissão
+                    Taxa atual
                   </th>
                   <th className="px-4 py-3 font-medium" style={{ color: '#71717A' }}>
                     Serviços
@@ -185,7 +207,7 @@ export default function ComissaoPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="grid gap-3 p-3 sm:table-row-group sm:p-0">
                 {dados.profissionais.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center" style={{ color: '#71717A' }}>
@@ -194,20 +216,46 @@ export default function ComissaoPage() {
                   </tr>
                 )}
                 {dados.profissionais.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td className="px-4 py-3" style={{ color: '#FAFAFA' }}>
+                  <tr
+                    key={p.id}
+                    className="grid grid-cols-2 rounded-xl border border-white/10 p-2 sm:table-row sm:rounded-none sm:border-0 sm:p-0"
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                  >
+                    <td
+                      className="col-span-2 min-w-0 break-words px-3 py-3 sm:px-4"
+                      style={{ color: '#FAFAFA' }}
+                    >
                       {p.nome}
+                      {p.ativo === false && (
+                        <span className="ml-2 text-xs text-[#A1A1AA]">Inativo</span>
+                      )}
                     </td>
-                    <td className="px-4 py-3" style={{ color: '#818CF8' }}>
+                    <td
+                      data-label="Taxa atual"
+                      className="min-w-0 px-3 py-3 before:mb-1 before:block before:text-[11px] before:font-normal before:text-[#A1A1AA] before:content-[attr(data-label)] sm:px-4 sm:before:hidden"
+                      style={{ color: '#818CF8' }}
+                    >
                       {p.comissaoPercentual}%
                     </td>
-                    <td className="px-4 py-3" style={{ color: '#A1A1AA' }}>
+                    <td
+                      data-label="Serviços"
+                      className="min-w-0 px-3 py-3 before:mb-1 before:block before:text-[11px] before:content-[attr(data-label)] sm:px-4 sm:before:hidden"
+                      style={{ color: '#A1A1AA' }}
+                    >
                       {p.totalServicos}
                     </td>
-                    <td className="px-4 py-3" style={{ color: '#FAFAFA' }}>
+                    <td
+                      data-label="Faturamento"
+                      className="min-w-0 break-words px-3 py-3 before:mb-1 before:block before:text-[11px] before:font-normal before:text-[#A1A1AA] before:content-[attr(data-label)] sm:px-4 sm:before:hidden"
+                      style={{ color: '#FAFAFA' }}
+                    >
                       {fmt(p.faturamento)}
                     </td>
-                    <td className="px-4 py-3 font-semibold" style={{ color: '#22C55E' }}>
+                    <td
+                      data-label="Comissão"
+                      className="min-w-0 break-words px-3 py-3 font-semibold before:mb-1 before:block before:text-[11px] before:font-normal before:text-[#A1A1AA] before:content-[attr(data-label)] sm:px-4 sm:before:hidden"
+                      style={{ color: '#22C55E' }}
+                    >
                       {fmt(p.comissao)}
                     </td>
                   </tr>

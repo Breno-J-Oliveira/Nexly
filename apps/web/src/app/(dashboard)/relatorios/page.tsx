@@ -13,7 +13,8 @@ function fmt(v: number|null): string { if(v===null)return 'Indisponível'; retur
 interface DRE { periodo: { dataInicio: string; dataFim: string }; receitaBruta: number; descontos: number; receitaLiquida: number; cmv: number|null; margemBruta: number|null; margemPercentual: number|null; qtdVendas: number; ticketMedio: number; }
 interface Fluxo { periodo: { dataInicio: string; dataFim: string }; fluxo: { data: string; entradas: number; total: number; saldoAcumulado: number }[]; saldoFinal: number; }
 interface AgendaRel { total: number; concluidos: number; cancelados: number; taxaConclusao: number; taxaCancelamento: number; heatmap: number[][]; rankingProfissionais: { nome: string; total: number }[]; }
-interface ProfRel { id: string; nome: string; avatar: string; agendamentos: number; receita: number; comissao: number; avaliacaoMedia: number; }
+interface ProfRel { id: string; nome: string; avatar: string; agendamentos: number; receita: number; comissao: number; avaliacaoMedia: number; estimados?: number; }
+type ProfSortKey = 'agendamentos' | 'receita' | 'comissao' | 'avaliacaoMedia';
 interface EstoqueRel { produtosMaisConsumidos: { nome: string; quantidade: number }[]; movimentacoes: number; alertas: { id: string; nome: string; estoqueAtual: number; estoqueMinimo: number }[]; }
 
 const TABS = [
@@ -39,7 +40,7 @@ export default function RelatoriosPage() {
   const [carregando, setCarregando] = useState(true);
   const [inicio, setInicio] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10); });
   const [fim, setFim] = useState(() => new Date().toISOString().slice(0, 10));
-  const [ordem, setOrdem] = useState<{ key: keyof ProfRel; dir: 1 | -1 }>({ key: 'receita', dir: -1 });
+  const [ordem, setOrdem] = useState<{ key: ProfSortKey; dir: 1 | -1 }>({ key: 'receita', dir: -1 });
 
   useEffect(() => {
     const controller=new AbortController();
@@ -72,7 +73,7 @@ export default function RelatoriosPage() {
     });
   }, [profs, ordem]);
 
-  const ordenar = (key: keyof ProfRel) => {
+  const ordenar = (key: ProfSortKey) => {
     setOrdem((o) => (o.key === key ? { key, dir: o.dir === 1 ? -1 : 1 } : { key, dir: -1 }));
   };
 
@@ -263,13 +264,14 @@ export default function RelatoriosPage() {
       )}
 
       {/* ── Profissionais ── */}
+      {!carregando && aba === 'profissionais' && profs.some((item) => (item.estimados ?? 0) > 0) && <p role="status" className="mt-6 rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm leading-7 text-amber-200">Este período inclui atendimentos antigos sem os valores da conclusão. A receita e a comissão desses registros são estimadas pelos valores atuais do cadastro.</p>}
       {!carregando && aba === 'profissionais' && (
         <div className="mt-6 overflow-x-auto rounded-xl" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
           <table className="w-full text-left text-[13px]">
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <th className="px-4 py-3 font-medium" style={{ color: '#A1A1AA' }}>Profissional</th>
-                {([['agendamentos', 'Agendamentos'], ['receita', 'Receita'], ['comissao', 'Comissão'], ['avaliacaoMedia', 'Avaliação']] as [keyof ProfRel, string][]).map(([key, label]) => (
+                {([['agendamentos', 'Agendamentos'], ['receita', 'Receita'], ['comissao', 'Comissão'], ['avaliacaoMedia', 'Avaliação']] as [ProfSortKey, string][]).map(([key, label]) => (
                   <th key={key} className="cursor-pointer px-4 py-3 font-medium" style={{ color: ordem.key === key ? '#818CF8' : '#A1A1AA' }} onClick={() => ordenar(key)}>
                     {label} {ordem.key === key ? (ordem.dir === -1 ? '↓' : '↑') : ''}
                   </th>

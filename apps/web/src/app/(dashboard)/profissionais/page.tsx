@@ -33,6 +33,7 @@ export default function ProfissionaisPage() {
   const podeCriar = hasPermission(user?.role, 'profissionais:create');
   const podeEditar = hasPermission(user?.role, 'profissionais:update');
   const podeExcluir = hasPermission(user?.role, 'profissionais:delete');
+  const podeVerComissoes = hasPermission(user?.role, 'comissao:read');
   const [detalhesAbertos, setDetalhesAbertos] = useState(false);
   const [busca, setBusca] = useState('');
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
@@ -49,6 +50,7 @@ export default function ProfissionaisPage() {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [nome, setNome] = useState('');
   const [especialidade, setEspecialidade] = useState('');
+  const [comissao, setComissao] = useState('0');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [erroLimite, setErroLimite] = useState(false);
@@ -57,6 +59,7 @@ export default function ProfissionaisPage() {
     setEditandoId(null);
     setNome('');
     setEspecialidade('');
+    setComissao('0');
     setErro(null);
     setErroLimite(false);
     setModalAberto(true);
@@ -67,16 +70,27 @@ export default function ProfissionaisPage() {
     setEditandoId(p.id);
     setNome(p.nome);
     setEspecialidade(p.especialidade ?? '');
+    setComissao(String(p.comissaoPercentual ?? 0));
     setErro(null);
     setErroLimite(false);
     setModalAberto(true);
   };
 
   const salvar = async (): Promise<void> => {
+    if (salvando) return;
+    const rate = Number(comissao);
+    if (!/^\d+(?:\.\d{0,2})?$/.test(comissao) || !Number.isFinite(rate) || rate < 0 || rate > 100) {
+      setErro('Informe uma comissão de 0 a 100%, com até duas casas decimais.');
+      return;
+    }
     setSalvando(true);
     setErro(null);
     try {
-      const payload = { nome, especialidade: especialidade.trim() || null };
+      const payload = {
+        nome,
+        especialidade: especialidade.trim() || null,
+        comissaoPercentual: rate,
+      };
       if (editandoId) {
         await api.put(`/profissionais/${editandoId}`, payload);
       } else {
@@ -178,18 +192,26 @@ export default function ProfissionaisPage() {
       <MetricGrid
         items={[
           { label: 'Total Profissionais', value: profissionais.length },
-          {
-            label: 'Comissão Média',
-            value: `${profissionais.length ? Math.round(profissionais.reduce((sum, p) => sum + (p.comissaoPercentual || 0), 0) / profissionais.length) : 0}%`,
-          },
+          ...(podeVerComissoes
+            ? [
+                {
+                  label: 'Comissão Média',
+                  value: `${profissionais.length ? Math.round(profissionais.reduce((sum, p) => sum + (p.comissaoPercentual || 0), 0) / profissionais.length) : 0}%`,
+                },
+              ]
+            : []),
           {
             label: 'Especialidades',
             value: new Set(profissionais.map((p) => p.especialidade).filter(Boolean)).size,
           },
-          {
-            label: 'Comissão Configurada',
-            value: profissionais.filter((p) => p.comissaoPercentual).length,
-          },
+          ...(podeVerComissoes
+            ? [
+                {
+                  label: 'Comissão Configurada',
+                  value: profissionais.filter((p) => p.comissaoPercentual).length,
+                },
+              ]
+            : []),
         ]}
       />
       {erroCarga ? (
@@ -283,8 +305,14 @@ export default function ProfissionaisPage() {
                   {selecionado.especialidade || 'Sem especialidade'}
                 </p>
               </div>
-              <p className="mt-6 text-xs text-[#71717A]">COMISSÃO</p>
-              <p className="mt-2 text-2xl font-semibold">{selecionado.comissaoPercentual || 0}%</p>
+              {podeVerComissoes && (
+                <>
+                  <p className="mt-6 text-xs text-[#71717A]">COMISSÃO</p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {selecionado.comissaoPercentual || 0}%
+                  </p>
+                </>
+              )}
               <div className="mt-8 flex flex-wrap gap-3">
                 {podeEditar && (
                   <Button variant="secondary" onClick={() => abrirEdicao(selecionado)}>
@@ -322,6 +350,20 @@ export default function ProfissionaisPage() {
               onChange={(e) => setEspecialidade(e.target.value)}
               placeholder="Ex: cabeleireiro, manicure"
             />
+            <Input
+              label="Comissão sobre serviços (%)"
+              type="number"
+              min={0}
+              max={100}
+              step="0.01"
+              value={comissao}
+              onChange={(event) => setComissao(event.target.value)}
+              aria-describedby="professional-commission-help"
+            />
+            <p id="professional-commission-help" className="text-xs leading-6 text-[#A1A1AA]">
+              Aplicada aos atendimentos concluídos a partir da configuração. Valores já registrados
+              na conclusão são preservados. Use 0 para não calcular comissão.
+            </p>
             {erro && (
               <p role="alert" className="text-sm text-red-400">
                 {erro}

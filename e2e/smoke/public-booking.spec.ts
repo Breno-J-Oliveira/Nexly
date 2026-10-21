@@ -98,6 +98,13 @@ test('agendamento público respeita profissional e fuso, recupera conflito e con
     await page.getByRole('button', { name: 'Próximo →', exact: true }).click();
     await page.getByLabel('Seu nome completo', { exact: true }).fill('Cliente de outro fuso');
     await page.getByLabel('WhatsApp', { exact: true }).fill('11999992222');
+    await page.screenshot({ path: 'docs/redesign-agendamento-390.png', fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.screenshot({ path: 'docs/redesign-agendamento-1440.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.route(`**/api/booking/${token}`, (route) =>
       route.request().method() === 'POST'
         ? route.fulfill({
