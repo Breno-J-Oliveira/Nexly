@@ -27,6 +27,11 @@ import { LoginThrottleService } from './login-throttle.service';
 import { RegisterDto } from './dto/register.dto';
 import { TokenService } from './token.service';
 
+// Hash de dados aleatórios descartados, nunca associado a uma conta.
+// Mantém o custo Argon2id padrão também quando o e-mail não existe.
+const DUMMY_PASSWORD_HASH =
+  '$argon2id$v=19$m=65536,t=3,p=4$ppqT65AdQ2KQRVP3TCDNiQ$Nxylj6xsfpMjTbYT1K/9l2VIlaXMTvETmEfzj6VNaCw';
+
 export interface AuthResult {
   accessToken: string;
   refreshToken: string;
@@ -213,14 +218,9 @@ export class AuthService {
       where: { email: dto.email },
     });
 
-    // Mensagem genérica para não revelar se o e-mail existe
-    if (!usuario || !usuario.ativo) {
-      await this.throttle.registerFailure(throttleKey);
-      throw new UnauthorizedException('E-mail ou senha incorretos');
-    }
-
-    const senhaValida = await argon2.verify(usuario.senhaHash, dto.senha);
-    if (!senhaValida) {
+    // Não basta a mensagem genérica: todos os casos passam pela verificação cara.
+    const senhaValida = await argon2.verify(usuario?.senhaHash ?? DUMMY_PASSWORD_HASH, dto.senha);
+    if (!usuario?.ativo || !senhaValida) {
       await this.throttle.registerFailure(throttleKey);
       throw new UnauthorizedException('E-mail ou senha incorretos');
     }

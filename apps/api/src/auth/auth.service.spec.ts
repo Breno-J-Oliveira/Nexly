@@ -100,10 +100,40 @@ describe('AuthService', () => {
 
   it('login com e-mail inexistente retorna 401 com mensagem genérica', async () => {
     prisma.client.usuario.findUnique.mockResolvedValue(null);
+    verifyMock.mockReset().mockResolvedValue(false);
 
     await expect(
       service.login({ email: 'nao@existe.com', senha: 'qualquer' }, KEY),
     ).rejects.toThrow('E-mail ou senha incorretos');
+    expect(verifyMock).toHaveBeenCalledWith(expect.stringMatching(/^\$argon2id\$/), 'qualquer');
+    expect(tokenService.issueRefreshToken).not.toHaveBeenCalled();
+    const realArgon2 = jest.requireActual<typeof argon2>('argon2');
+    const dummyHash = verifyMock.mock.calls[0]![0];
+    await expect(realArgon2.verify(dummyHash, 'qualquer')).resolves.toBe(false);
+  });
+
+  it('conta inativa verifica a senha mas nunca emite uma sessão', async () => {
+    prisma.client.usuario.findUnique.mockResolvedValue({ ...usuarioMock, ativo: false });
+    verifyMock.mockReset().mockResolvedValue(true);
+
+    await expect(
+      service.login({ email: usuarioMock.email, senha: 'correta' }, KEY),
+    ).rejects.toThrow('E-mail ou senha incorretos');
+    expect(verifyMock).toHaveBeenCalledWith(usuarioMock.senhaHash, 'correta');
+    expect(throttle.registerFailure).toHaveBeenCalledWith(KEY);
+    expect(throttle.registerSuccess).not.toHaveBeenCalled();
+    expect(tokenService.issueRefreshToken).not.toHaveBeenCalled();
+  });
+
+  it('resultado positivo do hash fictício nunca autentica um e-mail inexistente', async () => {
+    prisma.client.usuario.findUnique.mockResolvedValue(null);
+    verifyMock.mockReset().mockResolvedValue(true);
+
+    await expect(
+      service.login({ email: 'nao@existe.com', senha: 'qualquer' }, KEY),
+    ).rejects.toThrow('E-mail ou senha incorretos');
+    expect(tokenService.generateAccessToken).not.toHaveBeenCalled();
+    expect(tokenService.issueRefreshToken).not.toHaveBeenCalled();
   });
 
   describe('login com throttle', () => {
