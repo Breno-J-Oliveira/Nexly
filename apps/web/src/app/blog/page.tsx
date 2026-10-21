@@ -26,7 +26,7 @@ export default function BlogPage() {
   return (
     <div className="mx-auto max-w-6xl px-5 sm:px-8">
       <section className="relative pb-12 pt-14 sm:pb-16 sm:pt-20" aria-labelledby="blog-title">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.10),transparent_70%)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-transparent" />
         <div className="public-polish relative mx-auto max-w-3xl text-center">
           <Link
             href="/"
@@ -41,7 +41,7 @@ export default function BlogPage() {
             id="blog-title"
             className="mt-5 text-3xl font-bold leading-tight tracking-tight sm:text-5xl"
           >
-            Ideias para cuidar melhor do seu negócio
+            Boas ideias para uma gestão melhor.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-[#A1A1AA]">
             Menos dúvidas na rotina, mais espaço para cuidar do seu negócio. Encontre orientações
@@ -58,7 +58,7 @@ export default function BlogPage() {
       {featured && (
         <section
           aria-label="Artigo em destaque"
-          className="overflow-hidden rounded-3xl border border-indigo-400/20 bg-[#111116]"
+          className="overflow-hidden rounded-2xl border border-white/10 bg-[#111116]"
         >
           <div className="grid md:grid-cols-2">
             <BlogArtwork category={featured.categoria} large />

@@ -49,7 +49,7 @@ const funcionalidades = [
 
 export default function FuncionalidadesPage() {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#0C0C10' }}>
+    <div className="public-site min-h-screen" style={{ backgroundColor: '#0C0C10' }}>
       <LandingHeader />
 
       <main id="conteudo-principal" className="public-polish px-4 py-16 md:px-6 md:py-24">
@@ -73,9 +73,13 @@ export default function FuncionalidadesPage() {
             funcionalidades[4],
             funcionalidades[6],
           ].map((f, i) => (
-            <section key={f.title} className="grid items-center gap-10 lg:grid-cols-2">
+            <section
+              id={['agenda', 'clientes', 'vendas', 'estoque', 'relatorios'][i]}
+              key={f.title}
+              className="public-reveal scroll-mt-24 grid items-center gap-10 lg:grid-cols-2"
+            >
               <figure
-                className={`overflow-hidden rounded-xl border border-white/10 bg-[#111116] p-3 shadow-2xl ${i % 2 === 1 ? 'lg:order-2' : ''}`}
+                className={`overflow-hidden rounded-xl border border-white/10 bg-[#111116] p-2 ${i % 2 === 1 ? 'lg:order-2' : ''}`}
               >
                 <Image
                   src={`/images/product/${['agenda', 'clientes', 'pdv', 'estoque', 'relatorios'][i]}.webp`}
@@ -116,8 +120,22 @@ export default function FuncionalidadesPage() {
           ))}
         </div>
 
+        <section aria-labelledby="mais-recursos" className="mx-auto mt-20 max-w-6xl">
+          <h2 id="mais-recursos" className="text-2xl font-medium tracking-tight">
+            Um lugar para cada parte do trabalho
+          </h2>
+          <div className="mt-8 grid gap-8 md:grid-cols-3">
+            {[funcionalidades[2], funcionalidades[3], funcionalidades[7]].map((resource) => (
+              <article key={resource.title} className="border-t border-white/10 pt-6">
+                <Icon name={resource.icon} color="#818CF8" />
+                <h3 className="mt-4 font-medium">{resource.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-[#A1A1AA]">{resource.desc}</p>
+              </article>
+            ))}
+          </div>
+        </section>
         <div
-          className="mx-auto mt-24 max-w-6xl rounded-xl p-10 text-center"
+          className="mx-auto mt-20 max-w-6xl rounded-xl p-8 text-center"
           style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.08)' }}
         >
           <h2 className="text-2xl font-bold" style={{ color: '#FAFAFA' }}>

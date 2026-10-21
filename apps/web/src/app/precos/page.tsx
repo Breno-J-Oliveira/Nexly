@@ -63,12 +63,12 @@ const questions = [
 
 export default function PrecosPage() {
   return (
-    <div className="min-h-screen bg-[#060608] text-white">
+    <div className="public-site min-h-screen bg-[#0C0C10] text-white">
       <LandingHeader />
       <main id="conteudo-principal">
         <PublicIntro
           eyebrow="Planos Nexly"
-          title="Planos que cabem no seu bolso"
+          title="O próximo passo do seu negócio."
           description="Comece gratuitamente com 1 profissional ativo. Quando precisar de mais espaço para a equipe, escolha uma assinatura mensal."
         />
         <section aria-label="Planos de assinatura" className="mx-auto max-w-6xl px-5 sm:px-8">
@@ -76,7 +76,7 @@ export default function PrecosPage() {
             {planos.map((plano) => (
               <article
                 key={plano.id}
-                className={`relative flex flex-col rounded-2xl border p-6 sm:p-8 ${plano.destaque ? 'border-[#818CF8]/60 bg-[#111116]' : 'border-white/10 bg-[#111116]'}`}
+                className={`pricing-card relative flex flex-col rounded-2xl border p-6 sm:p-8 ${plano.destaque ? 'border-[#818CF8]/60 bg-[#111116]' : 'border-white/10 bg-[#111116]'}`}
               >
                 <p className="mb-6 text-[11px] font-medium uppercase tracking-[0.15em] text-[#A1A1AA]">
                   {plano.destaque ? 'Para equipes em crescimento' : 'Assinatura mensal'}
@@ -84,7 +84,7 @@ export default function PrecosPage() {
                 <h2 className="text-xl font-medium tracking-tight">{plano.nome}</h2>
                 <p className="mt-3 min-h-12 text-sm leading-6 text-[#A1A1AA]">{plano.descricao}</p>
                 <p className="mt-6 flex items-baseline gap-1">
-                  <span className="text-5xl font-semibold tracking-[-0.05em]">
+                  <span className="text-4xl font-semibold tracking-[-0.05em]">
                     R$ {plano.preco}
                   </span>
                   <span className="text-sm text-[#A1A1AA]">/mês</span>

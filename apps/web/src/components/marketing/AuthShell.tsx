@@ -2,11 +2,7 @@ import Link from 'next/link';
 
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="public-polish relative flex min-h-screen items-center justify-center bg-[#060608] px-4 py-8 sm:py-10">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(99,102,241,0.08),transparent_55%)]"
-      />
+    <main className="public-site public-auth public-polish relative flex min-h-screen items-center justify-center bg-[#0C0C10] px-4 py-8 sm:py-10">
       <div className="auth-content relative z-10 w-full max-w-[440px]">
         <Link
           href="/"

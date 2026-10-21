@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Brand } from '@/components/marketing/Brand';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthInput, useAuthReady } from '@/components/ui/AuthField';
@@ -100,6 +101,9 @@ export default function AceitarConvitePage() {
   return (
     <AuthShell>
       <div className="rounded-2xl border border-white/10 bg-[#111116] p-6 sm:p-8">
+        <div className="mb-7">
+          <Brand />
+        </div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#818CF8]">
           Seu novo espaço de trabalho
         </p>

@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
-import Image from 'next/image';
+import { Brand } from '@/components/marketing/Brand';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -33,16 +33,26 @@ type FormData = z.infer<typeof schema>;
 export default function LoginPage() {
   const ready = useAuthReady();
   const destination = useAuthDestination();
-  const { login, completeLogin, setGoogleRegistration, googleTwoFactorToken, setGoogleTwoFactorToken } = useAuth();
+  const {
+    login,
+    completeLogin,
+    setGoogleRegistration,
+    googleTwoFactorToken,
+    setGoogleTwoFactorToken,
+  } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [twoFactor, setTwoFactor] = useState<{ tempToken: string } | null>(googleTwoFactorToken ? { tempToken: googleTwoFactorToken } : null);
+  const [twoFactor, setTwoFactor] = useState<{ tempToken: string } | null>(
+    googleTwoFactorToken ? { tempToken: googleTwoFactorToken } : null,
+  );
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [backupMode, setBackupMode] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const twoFactorInputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (googleTwoFactorToken) setGoogleTwoFactorToken(null); }, [googleTwoFactorToken, setGoogleTwoFactorToken]);
+  useEffect(() => {
+    if (googleTwoFactorToken) setGoogleTwoFactorToken(null);
+  }, [googleTwoFactorToken, setGoogleTwoFactorToken]);
 
   // Foca o campo do código quando a etapa de 2FA aparece. Equivale ao
   // `autoFocus`, mas sem o atributo (que prejudica leitores de tela).
@@ -104,29 +114,21 @@ export default function LoginPage() {
 
   return (
     <div
-      className="rounded-2xl border px-6 py-8 shadow-2xl sm:p-10"
+      className="rounded-2xl border px-6 py-8 sm:p-10"
       style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}
     >
       <div className="flex justify-center">
-        <div className="flex h-12 w-12 items-center justify-center">
-          <Image
-            src="/logo.svg"
-            alt="Nexly"
-            width={40}
-            height={40}
-            className="h-10 w-10 object-contain"
-          />
-        </div>
+        <Brand />
       </div>
 
       <h1
-        className="mt-8 text-center text-[28px] font-bold tracking-tight sm:text-[30px]"
+        className="mt-8 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]"
         style={{ color: '#FAFAFA' }}
       >
-        Boas-vindas ao Nexly
+        Bom ter você de volta.
       </h1>
       <p className="mt-2 text-center text-[14px]" style={{ color: '#A1A1AA' }}>
-        Gerencie seu negócio de forma inteligente
+        Entre para cuidar do seu negócio.
       </p>
 
       <div
@@ -288,18 +290,32 @@ export default function LoginPage() {
         <div className="flex-1 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
       </div>
 
-      {!twoFactor && <div className="mt-6"><GoogleSignIn onCredential={async (credential) => {
-        await waitForSessionRefresh();
-        const { data } = await api.post<LoginResponse & Partial<GoogleRegistration> & { requiresRegistration?: boolean }>('/auth/google/login', { credential });
-        if (data.requiresRegistration && data.registrationToken && data.email) {
-          setGoogleRegistration({ registrationToken: data.registrationToken, email: data.email, nome: data.nome ?? '' });
-          router.push(authLink('/cadastro', destination));
-        } else if (data.requiresTwoFactor && data.tempToken) {
-          setError(null); setTwoFactor({ tempToken: data.tempToken });
-        } else if (data.accessToken && data.usuario) {
-          completeLogin(data.accessToken, data.usuario); router.push(destination);
-        } else throw new Error('Resposta de autenticação inválida.');
-      }} /></div>}
+      {!twoFactor && (
+        <div className="mt-6">
+          <GoogleSignIn
+            onCredential={async (credential) => {
+              await waitForSessionRefresh();
+              const { data } = await api.post<
+                LoginResponse & Partial<GoogleRegistration> & { requiresRegistration?: boolean }
+              >('/auth/google/login', { credential });
+              if (data.requiresRegistration && data.registrationToken && data.email) {
+                setGoogleRegistration({
+                  registrationToken: data.registrationToken,
+                  email: data.email,
+                  nome: data.nome ?? '',
+                });
+                router.push(authLink('/cadastro', destination));
+              } else if (data.requiresTwoFactor && data.tempToken) {
+                setError(null);
+                setTwoFactor({ tempToken: data.tempToken });
+              } else if (data.accessToken && data.usuario) {
+                completeLogin(data.accessToken, data.usuario);
+                router.push(destination);
+              } else throw new Error('Resposta de autenticação inválida.');
+            }}
+          />
+        </div>
+      )}
       <p className="mt-6 text-center text-[12px] leading-relaxed" style={{ color: '#71717A' }}>
         Ao continuar, você concorda com os{' '}
         <Link

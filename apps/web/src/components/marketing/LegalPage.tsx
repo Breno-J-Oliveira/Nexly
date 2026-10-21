@@ -14,14 +14,14 @@ export function LegalPage({
   sections: { title: string; content: ReactNode }[];
 }) {
   return (
-    <div className="min-h-screen bg-[#060608] text-white">
+    <div className="public-site min-h-screen bg-[#0C0C10] text-white">
       <LandingHeader />
       <main id="conteudo-principal">
         <PublicIntro eyebrow="Informações do serviço" title={title} description={description} />
         <div className="mx-auto grid max-w-6xl gap-10 px-5 pb-20 sm:px-8 lg:grid-cols-[240px_1fr]">
           <nav
             aria-label={`Seções: ${title}`}
-            className="self-start rounded-2xl border border-white/10 p-5 lg:sticky lg:top-24"
+            className="self-start border-l border-white/10 pl-5 lg:sticky lg:top-24"
           >
             <p className="text-xs font-semibold uppercase tracking-widest text-[#A1A1AA]">
               Nesta página
@@ -39,7 +39,7 @@ export function LegalPage({
               ))}
             </ol>
           </nav>
-          <article className="min-w-0 rounded-2xl border border-white/10 bg-[#111116] p-6 sm:p-10">
+          <article className="min-w-0 max-w-3xl">
             {sections.map((section, index) => (
               <section
                 key={section.title}
@@ -49,7 +49,7 @@ export function LegalPage({
                 <h2 className="text-xl font-medium tracking-tight">
                   {index + 1}. {section.title}
                 </h2>
-                <div className="mt-4 text-sm leading-8 text-[#A1A1AA]">{section.content}</div>
+                <div className="mt-4 text-[15px] leading-8 text-[#A1A1AA]">{section.content}</div>
               </section>
             ))}
             <Link

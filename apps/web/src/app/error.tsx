@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { Brand } from '@/components/marketing/Brand';
 
 /** Erros de uma rota preservam o layout raiz e oferecem recuperação explícita. */
 export default function RouteError({
@@ -17,8 +18,11 @@ export default function RouteError({
   }, [error]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#060608] px-5 py-16 text-white">
+    <main className="public-site flex min-h-screen items-center justify-center bg-[#0C0C10] px-5 py-16 text-white">
       <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#111116] p-7 sm:p-10">
+        <div className="mb-8">
+          <Brand />
+        </div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#818CF8]">
           Vamos retomar
         </p>

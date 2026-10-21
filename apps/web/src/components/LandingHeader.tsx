@@ -34,7 +34,7 @@ export function LandingHeader() {
   return (
     <header
       className="sticky top-0 z-50 border-b backdrop-blur-md"
-      style={{ backgroundColor: 'rgba(8,8,12,0.92)', borderColor: 'rgba(255,255,255,0.06)' }}
+      style={{ backgroundColor: 'rgba(12,12,16,0.94)', borderColor: 'rgba(255,255,255,0.06)' }}
     >
       <a
         href={pathname.startsWith('/blog') ? '#blog-content' : '#conteudo-principal'}

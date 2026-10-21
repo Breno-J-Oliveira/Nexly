@@ -35,7 +35,7 @@ export function LandingFooter() {
   return (
     <footer
       className="border-t"
-      style={{ backgroundColor: '#060608', borderColor: 'rgba(255,255,255,0.06)' }}
+      style={{ backgroundColor: '#0C0C10', borderColor: 'rgba(255,255,255,0.06)' }}
     >
       <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-5">

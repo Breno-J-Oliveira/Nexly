@@ -44,7 +44,7 @@ test('endereço inexistente mantém identidade visual e oferece retorno ao iníc
   await expect(main.getByRole('heading', { level: 1 })).toContainText('Vamos encontrar');
   await main.getByRole('link', { name: 'Voltar para o início', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Gestão inteligente');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Seu negócio conectado.');
 });
 
 test('recomendações inválidas não quebram a landing e podem ser recarregadas', async ({ page }) => {

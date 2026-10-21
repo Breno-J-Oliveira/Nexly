@@ -1,4 +1,5 @@
 'use client';
+import { Brand } from '@/components/marketing/Brand';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -134,8 +135,8 @@ function BookingFooter() {
   return (
     <footer className="mx-auto max-w-5xl px-4 pb-8 text-center text-xs leading-6 text-[#A1A1AA]">
       Agendamento com{' '}
-      <Link href="/" className="rounded font-medium text-[#818CF8] underline underline-offset-4">
-        Nexly
+      <Link href="/" className="inline-flex rounded align-middle font-medium text-[#818CF8]">
+        <Brand compact />
       </Link>{' '}
       ·{' '}
       <Link href="/privacidade" className="rounded hover:text-white">
@@ -499,7 +500,7 @@ export default function BookingPage() {
   });
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#060608' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#0C0C10' }}>
       {/* Header fixo */}
       <header
         className="fixed inset-x-0 top-0 z-20 flex h-14 items-center border-b px-4"
@@ -525,7 +526,7 @@ export default function BookingPage() {
             Escolha o serviço e o profissional, consulte os horários e confira os detalhes antes de
             confirmar.
           </p>
-          <div className="mt-7 hidden rounded-2xl border border-white/10 bg-[#111116] p-6 lg:block">
+          <div className="mt-7 hidden border-t border-white/10 pt-6 lg:block">
             <p className="text-xs font-medium uppercase tracking-widest text-[#A1A1AA]">
               Sua escolha
             </p>

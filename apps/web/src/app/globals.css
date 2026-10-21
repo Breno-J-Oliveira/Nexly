@@ -142,6 +142,19 @@ header:has(#page-toolbar .page-toolbar) .shell-global-search { display: none; }
 }
 
 #print-document { display: none; }
+.public-container { width: 100%; max-width: 1216px; margin-inline: auto; padding-inline: 24px; }
+.public-eyebrow { color: var(--brand-400); font-size: 11px; line-height: 1.6; font-weight: 500; letter-spacing: .13em; text-transform: uppercase; }
+.public-button, .public-button-secondary { display: inline-flex; min-height: 46px; align-items: center; justify-content: center; gap: 12px; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 500; }
+.public-button { background: var(--brand-500); color: var(--text-primary); }
+.public-button:hover { background: var(--brand-600); }
+.public-button-secondary { border: 1px solid var(--border-default); color: var(--text-primary); }
+.public-button-secondary:hover { background: rgba(255,255,255,.04); }
+.public-site summary { scroll-margin-top: 90px; }
+.public-auth .auth-content > div { box-shadow: none; }
+.pricing-card { transition: border-color 180ms ease; }
+.pricing-card:hover { border-color: rgba(129,140,248,.5); }
+@media (min-width: 640px) { .public-container { padding-inline: 32px; } }
+@media (max-width: 639px) { .public-container { padding-inline: 20px; } .public-button, .public-button-secondary { font-size: 13px; } }
 /* Acabamento das páginas públicas, sem alterar o painel de gestão. */
 @keyframes public-enter {
   from { opacity: 0; transform: translateY(10px); }
@@ -153,6 +166,10 @@ header:has(#page-toolbar .page-toolbar) .shell-global-search { display: none; }
   .public-polish a { transition: color 180ms ease, background-color 180ms ease, transform 180ms ease; }
   .public-polish .public-card { transition: transform 180ms ease, box-shadow 180ms ease; }
   .public-polish .public-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px -18px rgba(99,102,241,.25); }
+  .preview-chart { animation: public-enter 500ms ease-out both; }
+  @supports (animation-timeline: view()) {
+    .public-reveal { animation: public-enter linear both; animation-timeline: view(); animation-range: entry 0% entry 20%; }
+  }
 }
 @media print {
   @page { margin: 20mm; }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useRef, useState, type KeyboardEvent } from 'react';
-import Image from 'next/image';
+import { Brand } from './Brand';
 
 const tabs = [
   { id: 'overview', label: 'Visão geral', icon: 'chart-column' },
@@ -33,7 +33,11 @@ export function ProductPreview({ initialTab = 'overview' }: { initialTab?: Previ
     buttons.current[next]?.focus();
   }
   return (
-    <figure className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-[#111116] shadow-2xl shadow-indigo-500/5">
+    <figure className="product-preview min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#111116]">
+      <div className="flex items-center justify-between gap-4 border-b border-white/[0.06] px-5 py-5 sm:px-6">
+        <Brand compact />
+        <span className="text-xs text-[#A1A1AA]">Seu dia, organizado</span>
+      </div>
       <div className="flex">
         <div className="min-w-0 flex-1">
           <div
@@ -69,18 +73,53 @@ export function ProductPreview({ initialTab = 'overview' }: { initialTab?: Previ
               aria-labelledby={`${id}-${tab.id}-tab`}
               hidden={active !== tab.id}
               tabIndex={0}
-              className="min-h-[265px]"
+              className="min-h-[320px]"
             >
               {tab.id === 'overview' ? (
-                <Image
-                  src="/images/product/dashboard.webp"
-                  alt="Prévia do painel Nexly com indicadores, agenda e alertas de estoque — dados de exemplo"
-                  width={1200}
-                  height={750}
-                  priority
-                  sizes="(max-width: 768px) 100vw, 896px"
-                  className="h-auto w-full"
-                />
+                <div className="p-5 sm:p-6">
+                  <dl className="grid grid-cols-3 divide-x divide-white/10">
+                    {[
+                      ['Hoje', '8 atendimentos'],
+                      ['Clientes', '124'],
+                      ['Produtos', '56'],
+                    ].map(([label, value]) => (
+                      <div key={label} className="min-w-0 px-3 first:pl-0 last:pr-0">
+                        <dt className="text-[11px] text-[#A1A1AA]">{label}</dt>
+                        <dd className="mt-2 text-sm font-medium sm:text-base">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <div className="mt-7 border-t border-white/[0.06] pt-5">
+                    <p className="text-xs text-[#A1A1AA]">Movimento da semana</p>
+                    <svg
+                      viewBox="0 0 440 126"
+                      className="preview-chart mt-4 h-32 w-full"
+                      aria-hidden="true"
+                      fill="none"
+                    >
+                      <path
+                        d="M0 20H440M0 63H440M0 106H440"
+                        stroke="white"
+                        strokeOpacity=".06"
+                        strokeDasharray="3 5"
+                      />
+                      <path
+                        d="M2 100C30 96 35 57 72 62S118 104 147 77S196 44 222 49S267 70 294 44S343 12 367 31S408 43 438 15"
+                        stroke="#818CF8"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="mt-1 flex justify-between text-[10px] text-[#A1A1AA]">
+                      {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((day) => (
+                        <span key={day}>{day}</span>
+                      ))}
+                    </div>
+                    <p className="sr-only">
+                      Gráfico ilustrativo de movimento ao longo da semana, com dados de exemplo.
+                    </p>
+                  </div>
+                </div>
               ) : tab.id === 'agenda' ? (
                 <div className="p-5 sm:p-6">
                   <p className="mb-4 text-xs text-[#B4B0C3]">Próximos atendimentos · exemplo</p>

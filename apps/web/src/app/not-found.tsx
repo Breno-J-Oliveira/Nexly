@@ -4,7 +4,7 @@ import { LandingFooter } from '@/components/LandingFooter';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-[#060608] text-white">
+    <div className="public-site min-h-screen bg-[#0C0C10] text-white">
       <LandingHeader />
       <main id="conteudo-principal" className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#818CF8]">
@@ -44,7 +44,7 @@ export default function NotFound() {
           </div>
           <span
             aria-hidden="true"
-            className="hidden select-none text-[180px] font-semibold leading-none tracking-[-0.08em] text-[#282333] sm:block"
+            className="hidden select-none text-[180px] font-semibold leading-none tracking-[-0.08em] text-[#27272A] sm:block"
           >
             404
           </span>

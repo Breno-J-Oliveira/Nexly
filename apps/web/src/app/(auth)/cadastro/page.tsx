@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
-import Image from 'next/image';
+import { Brand } from '@/components/marketing/Brand';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -243,13 +243,9 @@ export default function CadastroPage() {
   };
 
   return (
-    <div data-onboarding-modules={passo === 3 ? 'true' : undefined} className="rounded-2xl border px-6 py-8 shadow-2xl sm:p-10" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
-      <div className="flex justify-center">
-        <div className="flex h-12 w-12 items-center justify-center">
-          <Image src="/logo.svg" alt="Nexly" width={40} height={40} className="h-10 w-10 object-contain" />
-        </div>
-      </div>
-      <h1 className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>{['Boas-vindas ao Nexly', 'Configure seu negócio', 'O Nexly se adapta ao seu negócio.', 'Seu Nexly está quase pronto.', 'Complete seu perfil'][passo - 1]}</h1>
+    <div data-onboarding-modules={passo === 3 ? 'true' : undefined} className="rounded-2xl border px-6 py-8 sm:p-10" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div className="flex justify-center"><Brand /></div>
+      <h1 className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>{['Comece pelo seu acesso', 'Configure seu negócio', 'O Nexly se adapta ao seu negócio.', 'Seu Nexly está quase pronto.', 'Complete seu perfil'][passo - 1]}</h1>
       <p className="mt-2 text-center text-[14px]" style={{ color: '#A1A1AA' }}>{passo === 3 ? 'Escolha os recursos que você precisa e crie uma experiência sob medida.' : passo === 5 ? 'Confira seus dados antes de criar a conta' : 'Gerencie seu negócio de forma inteligente'}</p>
       <div className="mt-8 flex rounded-xl border p-1" style={{ borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#0C0C10' }}>
         <Link href={authLink('/login', destination)} className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ color: '#A1A1AA' }}>Entrar</Link>

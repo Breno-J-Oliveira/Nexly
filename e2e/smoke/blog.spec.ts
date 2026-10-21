@@ -30,7 +30,7 @@ for (const width of [390, 1440]) {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto('/blog');
     await expect(page).toHaveTitle('Blog — Nexly');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Uma gestão mais leve.');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Boas ideias para uma gestão melhor.');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );

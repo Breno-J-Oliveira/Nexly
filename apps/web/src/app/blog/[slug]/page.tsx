@@ -122,7 +122,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </div>
         </article>
         <aside aria-label="Conheça o Nexly" className="min-w-0">
-          <div className="rounded-2xl border border-indigo-400/20 bg-gradient-to-br from-indigo-500/10 to-[#111116] p-6 lg:sticky lg:top-24">
+          <div className="rounded-2xl border border-white/10 bg-[#111116] p-6 lg:sticky lg:top-24">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-300">
               Sua rotina, mais simples
             </p>
