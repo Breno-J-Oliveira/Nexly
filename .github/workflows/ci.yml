@@ -139,6 +139,8 @@ jobs:
       - run: npm run build --workspace @nexly/shared
       - run: npx prisma generate --schema apps/api/prisma/schema.prisma
       - run: npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+      - name: Confere isolamento de privilégios da Data API
+        run: node scripts/test-database-privacy.cjs
       - run: cd apps/api && npx jest --passWithNoTests
 
   backup-scripts:
