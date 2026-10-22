@@ -58,6 +58,7 @@ test('novas áreas funcionam com dados reais e preservam saldos no navegador', a
     await page.getByLabel('Senha', { exact: true }).fill(senha);
     await page.getByRole('button', { name: 'Entrar no painel', exact: true }).click();
     await page.waitForURL('**/dashboard');
+    await page.getByText('Seu Nexly · atalhos e primeiros passos', { exact: true }).click();
     await expect(page.getByRole('heading', { name: /Seus primeiros passos/ })).toBeVisible();
     await page.goto('/meu-nexly');
     await page.getByLabel('Segmento do negócio').selectOption('psicologia');
