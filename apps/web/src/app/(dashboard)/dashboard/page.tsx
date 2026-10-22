@@ -1,6 +1,7 @@
 'use client';
 import { useWorkspace } from '@/lib/workspace';
 import { WorkspaceWelcome } from '@/components/WorkspaceWelcome';
+import { DashboardAlerts } from '@/components/DashboardAlerts';
 
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
@@ -210,6 +211,16 @@ export default function DashboardPage() {
         ))}
       </dl>
 
+      {(estoqueAtivo || agendaAtiva || financeiroAtivo) && (
+        <DashboardAlerts
+          stockCount={estoqueAtivo ? dados.alertasEstoque.length : 0}
+          agenda={agendaAtiva}
+          financeiro={
+            profile.modulos.includes('relatorios') && Boolean(dados.permissoes.financeiro)
+          }
+        />
+      )}
+
       <div
         className={
           financeiroAtivo && agendaAtiva
@@ -234,7 +245,7 @@ export default function DashboardPage() {
               <span className="text-xs text-[#A1A1AA]">Valores em R$</span>
             </div>
             <div
-              className="mt-5 h-64"
+              className="mt-5 h-64 overflow-hidden"
               role="img"
               aria-label="Gráfico de vendas por dia nos últimos 7 dias"
             >
@@ -356,7 +367,11 @@ export default function DashboardPage() {
       </div>
 
       {estoqueAtivo && (
-        <section aria-label="Atenção ao estoque" className="mt-5 border-y border-white/[0.06] py-4">
+        <section
+          id="alertas-estoque"
+          aria-label="Atenção ao estoque"
+          className="mt-5 scroll-mt-24 border-y border-white/[0.06] py-4"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="flex items-center gap-2 text-sm font-medium">
               <Icon name="box-open" size="sm" color="#A1A1AA" />

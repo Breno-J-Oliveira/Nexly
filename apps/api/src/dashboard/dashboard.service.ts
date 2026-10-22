@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
+import { AuthUser, hasPermission } from '@nexly/shared';
+import { diaNoFuso, periodoNoFuso } from '../booking/booking-time';
 
 const TTL_SEGUNDOS = 5 * 60;
 
@@ -10,6 +12,94 @@ export class DashboardService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
   ) {}
+
+  /** Pendências recentes, sem reutilizar o cache financeiro entre papéis. */
+  async getAlertas(user: AuthUser) {
+    const financeiro = hasPermission(user.role, 'financeiro:read');
+    const agenda = hasPermission(user.role, 'agenda:read');
+    const alertas: {
+      id: string;
+      titulo: string;
+      quantidade: number;
+      href: string;
+      modulo: string;
+    }[] = [];
+    if (!financeiro && !agenda) return { alertas };
+    const empresaId = user.empresaId;
+    const empresa = await this.prisma.client.empresa.findFirstOrThrow({
+      where: { id: empresaId },
+      select: { fusoHorario: true },
+    });
+    const agora = new Date();
+    const hoje = diaNoFuso(agora, empresa.fusoHorario);
+    // Contas usam datas civis armazenadas em UTC; agenda usa instantes no fuso da empresa.
+    const inicioHoje = new Date(`${hoje}T00:00:00.000Z`);
+    const limite = new Date(inicioHoje.getTime() + 7 * 86400000);
+    const ontem = new Date(inicioHoje.getTime() - 86400000).toISOString().slice(0, 10);
+    const fim = new Date(limite.getTime() - 1).toISOString().slice(0, 10);
+    const [atrasadas, proximas, confirmacoes] = await Promise.all([
+      financeiro
+        ? this.prisma.client.lancamentoFinanceiro.groupBy({
+            by: ['tipo'],
+            where: {
+              empresaId,
+              status: { in: ['ABERTO', 'PARCIAL'] },
+              vencimento: { lt: inicioHoje },
+            },
+            _count: true,
+            _min: { vencimento: true },
+          })
+        : [],
+      financeiro
+        ? this.prisma.client.lancamentoFinanceiro.groupBy({
+            by: ['tipo'],
+            where: {
+              empresaId,
+              status: { in: ['ABERTO', 'PARCIAL'] },
+              vencimento: { gte: inicioHoje, lt: limite },
+            },
+            _count: true,
+            _min: { vencimento: true },
+          })
+        : [],
+      agenda
+        ? this.prisma.client.agendamento.count({
+            where: {
+              empresaId,
+              status: 'AGENDADO',
+              dataHora: { gte: agora, lt: periodoNoFuso(hoje, empresa.fusoHorario).fimExclusivo },
+            },
+          })
+        : 0,
+    ]);
+    for (const [grupos, vencidas] of [
+      [atrasadas, true],
+      [proximas, false],
+    ] as const) {
+      for (const grupo of grupos) {
+        if (!grupo._count || !grupo._min.vencimento || !['DESPESA', 'RECEITA'].includes(grupo.tipo))
+          continue;
+        const pagar = grupo.tipo === 'DESPESA';
+        const inicio = vencidas ? grupo._min.vencimento.toISOString().slice(0, 10) : hoje;
+        alertas.push({
+          id: `${vencidas ? 'atrasadas' : 'proximas'}-${grupo.tipo}`,
+          titulo: `Contas a ${pagar ? 'pagar' : 'receber'} ${vencidas ? 'atrasadas' : 'nos próximos 7 dias'}`,
+          quantidade: grupo._count,
+          href: `/financeiro?inicio=${inicio}&fim=${vencidas ? ontem : fim}`,
+          modulo: 'relatorios',
+        });
+      }
+    }
+    if (confirmacoes > 0)
+      alertas.push({
+        id: 'confirmacoes',
+        titulo: 'Atendimentos de hoje aguardando confirmação',
+        quantidade: confirmacoes,
+        href: '/agenda',
+        modulo: 'agenda',
+      });
+    return { alertas };
+  }
 
   async getDashboard(empresaId: string) {
     const cacheKey = `dashboard:${empresaId}`;

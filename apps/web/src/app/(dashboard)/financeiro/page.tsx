@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useApi } from '@/lib/useApi';
 import { formatarMoeda, formatarDataHora } from '@/lib/format';
@@ -41,9 +42,35 @@ type Resumo = {
   custosDisponiveis: boolean;
 };
 export default function FinanceiroPage() {
+  return (
+    <Suspense fallback={<p role="status">Carregando financeiro…</p>}>
+      <FinanceiroRoute />
+    </Suspense>
+  );
+}
+
+function FinanceiroRoute() {
+  const search = useSearchParams();
+  const inicio = search.get('inicio'),
+    fim = search.get('fim');
+  const valid = (value: string | null): value is string => {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  };
+  const periodo = valid(inicio) && valid(fim) && inicio <= fim ? { inicio, fim } : undefined;
+  return (
+    <FinanceiroContent
+      key={periodo ? `${periodo.inicio}:${periodo.fim}` : 'padrao'}
+      periodo={periodo}
+    />
+  );
+}
+
+function FinanceiroContent({ periodo }: { periodo?: { inicio: string; fim: string } }) {
   const hoje = new Date().toISOString().slice(0, 10);
-  const [inicio, setInicio] = useState(`${hoje.slice(0, 7)}-01`),
-    [fim, setFim] = useState(hoje),
+  const [inicio, setInicio] = useState(periodo?.inicio ?? `${hoje.slice(0, 7)}-01`),
+    [fim, setFim] = useState(periodo?.fim ?? hoje),
     [filialId, setFilial] = useState('');
   const [pagina, setPagina] = useState(1);
   const params = { inicio, fim, filialId: filialId || undefined };

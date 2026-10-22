@@ -8,6 +8,11 @@ import { DashboardService } from './dashboard.service';
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
+  @Get('alertas')
+  getAlertas(@CurrentUser() user: AuthUser) {
+    return this.dashboardService.getAlertas(user);
+  }
+
   @Get()
   async getDashboard(@CurrentUser() user: AuthUser) {
     const data = await this.dashboardService.getDashboard(user.empresaId);

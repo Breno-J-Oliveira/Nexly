@@ -83,10 +83,15 @@ test('visão geral mantém agenda, valores acessíveis e atalhos recolhíveis no
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' }));
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-      true,
-    );
-    await page.screenshot({ path: `docs/clean-dashboard-${width}.png`, fullPage: true, animations: 'disabled' });
+    // Aguarda a transição responsiva da navegação ao alternar desktop/celular.
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+      .toBe(true);
+    await page.screenshot({
+      path: `docs/clean-dashboard-${width}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
   }
 });
 
