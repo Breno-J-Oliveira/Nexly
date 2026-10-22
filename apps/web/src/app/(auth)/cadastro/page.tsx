@@ -51,24 +51,25 @@ interface FormData extends Passo1, Passo2, Passo3, z.infer<typeof schemaPerfil> 
 function StepIndicator({ passoAtual }: { passoAtual: number }) {
   const labels = ['Conta', 'Negócio', 'Recursos', 'Plano', 'Perfil'];
   return (
-    <div className="mb-8">
-      <div className="flex items-center justify-between">
+    <nav aria-label="Etapas do cadastro" className="my-8 border-y border-white/[0.06] py-6 sm:my-9">
+      <p className="mb-5 text-center text-xs text-[#A1A1AA]">Etapa {passoAtual} de {PASSO_COUNT} · {labels[passoAtual - 1]}</p>
+      <ol className="flex items-center justify-between gap-2">
         {Array.from({ length: PASSO_COUNT }).map((_, idx) => {
           const num = idx + 1;
           const ativo = num <= passoAtual;
           const atual = num === passoAtual;
           return (
-            <div key={num} className="flex flex-1 flex-col items-center gap-2">
+            <li key={num} aria-current={atual ? 'step' : undefined} aria-label={`${num}. ${labels[idx]}`} className="flex min-w-0 flex-1 flex-col items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold transition-colors" style={{ backgroundColor: ativo ? '#6366F1' : '#18181F', color: ativo ? '#FAFAFA' : '#71717A', border: `1px solid ${ativo ? '#6366F1' : 'rgba(255,255,255,0.10)'}`, boxShadow: atual ? '0 0 0 4px rgba(99,102,241,0.15)' : undefined }}>{num}</div>
               <span className="hidden text-[11px] font-medium sm:block" style={{ color: atual ? '#FAFAFA' : ativo ? '#A1A1AA' : '#71717A' }}>{labels[idx]}</span>
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ol>
       <div className="relative mt-3 h-1 rounded-full" style={{ backgroundColor: '#18181F' }}>
         <div className="absolute left-0 top-0 h-1 rounded-full transition-all" style={{ width: `${((passoAtual - 1) / (PASSO_COUNT - 1)) * 100}%`, backgroundColor: '#6366F1' }} />
       </div>
-    </div>
+    </nav>
   );
 }
 

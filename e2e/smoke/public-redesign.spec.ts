@@ -77,39 +77,27 @@ test('recomendações inválidas não quebram a landing e podem ser recarregadas
   expect(errors).toEqual([]);
 });
 
-test('prévia demonstra os módulos com clique e teclado sem acionar a operação real', async ({
+test('landing mostra o produto, dez dúvidas e um caminho para falar com a equipe', async ({
   page,
 }) => {
-  const mutations: string[] = [];
-  page.on('request', (request) => {
-    // O provedor global verifica a sessão ao abrir a página; a demonstração não altera dados.
-    if (
-      request.url().includes('/api/') &&
-      !request.url().endsWith('/api/auth/refresh') &&
-      request.method() !== 'GET' &&
-      request.method() !== 'OPTIONS'
-    )
-      mutations.push(request.url());
-  });
   await page.goto('/');
-  const preview = page.getByRole('tablist', { name: 'Explorar prévia do Nexly' });
-  const overview = preview.getByRole('tab', { name: 'Visão geral' });
-  await expect(overview).toHaveAttribute('aria-selected', 'true');
-  await overview.focus();
-  await page.keyboard.press('ArrowRight');
-  await expect(preview.getByRole('tab', { name: 'Agenda', exact: true })).toBeFocused();
-  await expect(page.getByRole('tabpanel')).toContainText('Marina Souza');
-  await page.keyboard.press('End');
-  await expect(preview.getByRole('tab', { name: 'Estoque', exact: true })).toBeFocused();
-  await expect(page.getByRole('tabpanel')).toContainText('Óleo finalizador');
-  await page.keyboard.press('ArrowRight');
-  await expect(overview).toBeFocused();
-  await preview.getByRole('tab', { name: 'Agenda', exact: true }).click();
-  await expect(page.getByRole('tabpanel')).toContainText('Corte e finalização');
+  await expect(page.getByRole('tablist', { name: 'Explorar prévia do Nexly' })).toHaveCount(0);
+  const photos = page.locator('main img[src*="-demo.webp"]');
+  await expect(photos).toHaveCount(4);
+  for (const photo of await photos.all()) {
+    await photo.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => photo.evaluate((img) => (img as HTMLImageElement).naturalWidth))
+      .toBeGreaterThan(0);
+  }
+  await expect(page.locator('main details')).toHaveCount(10);
+  await page.getByText('Meus clientes podem agendar pela internet?', { exact: true }).click();
   await expect(
-    page.getByText('Prévia interativa · dados de exemplo', { exact: true }),
+    page.getByText('Sim. Configure sua página de agendamento', { exact: false }),
   ).toBeVisible();
-  expect(mutations).toEqual([]);
+  await page.getByRole('link', { name: 'Tirar uma dúvida com a equipe' }).click();
+  await expect(page).toHaveURL(/suporte#contato-suporte$/);
+  await expect(page.getByRole('link', { name: 'Enviar e-mail ao suporte' })).toBeVisible();
 });
 
 for (const width of [390, 1440]) {

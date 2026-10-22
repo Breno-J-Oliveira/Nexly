@@ -49,13 +49,16 @@ export function PublicCTA() {
     <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
       <div className="grid items-center gap-8 border-y border-white/10 py-10 sm:py-12 lg:grid-cols-[1fr_auto]">
         <div>
-          <p className="public-eyebrow">Seu próximo passo</p>
+          <p className="public-eyebrow">Comece com o que você precisa hoje</p>
           <h2 className="mt-4 max-w-xl text-3xl font-medium leading-tight tracking-[-0.035em] text-white sm:text-4xl">
-            Mais tempo para cuidar do seu negócio.
+            Sua próxima agenda já pode estar organizada.
           </h2>
           <p className="mt-4 max-w-xl leading-7 text-[#A1A1AA]">
-            Comece com uma conta gratuita para 1 profissional ativo. Sem cartão de crédito no
-            cadastro.
+            Crie sua conta, escolha os recursos e cadastre seu primeiro cliente. Um passo de cada
+            vez para tirar a gestão do improviso.
+          </p>
+          <p className="mt-5 text-sm text-[#A1A1AA]">
+            Grátis para 1 profissional · Sem cartão no cadastro · Acesso pelo celular
           </p>
         </div>
         <div className="flex flex-col gap-3">
@@ -63,7 +66,7 @@ export function PublicCTA() {
             href="/cadastro"
             className="rounded-xl bg-[#6366F1] px-6 py-3.5 text-center text-sm font-semibold text-[#FAFAFA] transition-colors hover:bg-[#4F46E5]"
           >
-            Criar conta grátis
+            Começar meu Nexly grátis
           </Link>
           <Link
             href="/precos"

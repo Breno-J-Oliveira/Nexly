@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { LandingFooter } from '@/components/LandingFooter';
 import { LandingHeader } from '@/components/LandingHeader';
-import { PublicCTA, PublicIntro } from '@/components/marketing/PublicUI';
+import { PublicIntro } from '@/components/marketing/PublicUI';
 import { subscriptionDestination } from '@/lib/auth-navigation';
 
 const planos = [
@@ -126,7 +126,7 @@ export default function PrecosPage() {
             cobrança ao clicar em escolher um plano.
           </p>
         </section>
-        <section className="mx-auto grid max-w-6xl gap-8 px-5 pt-16 sm:px-8 sm:pt-24 lg:grid-cols-[0.8fr_1.2fr]">
+        <section className="mx-auto grid max-w-6xl gap-8 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[0.8fr_1.2fr]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#818CF8]">
               Antes de escolher
@@ -152,7 +152,6 @@ export default function PrecosPage() {
             ))}
           </div>
         </section>
-        <PublicCTA />
       </main>
       <LandingFooter />
     </div>
