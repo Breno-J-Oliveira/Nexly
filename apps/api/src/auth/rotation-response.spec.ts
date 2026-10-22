@@ -28,4 +28,10 @@ describe('Resposta cifrada da rotação de sessão', () => {
       expect(() => cipher.open(value, 'session-a', 'parent-a', rotatedAt)).toThrow();
     }
   });
+
+  it.each([4, 12, 15])('rejeita tag válida truncada para %i bytes', (length) => {
+    const parts = cipher.seal(token, 'session-a', 'parent-a', rotatedAt).split('.');
+    parts[2] = Buffer.from(parts[2]!, 'base64url').subarray(0, length).toString('base64url');
+    expect(() => cipher.open(parts.join('.'), 'session-a', 'parent-a', rotatedAt)).toThrow();
+  });
 });

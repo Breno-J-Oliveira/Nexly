@@ -67,7 +67,9 @@ export class RecuperacaoService implements OnModuleInit {
   }
   private cifrar(data: { hash: string; url: string }) {
     const iv = randomBytes(12),
-      cipher = createCipheriv('aes-256-gcm', Buffer.from(process.env.EMAIL_QUEUE_KEY!, 'hex'), iv);
+      cipher = createCipheriv('aes-256-gcm', Buffer.from(process.env.EMAIL_QUEUE_KEY!, 'hex'), iv, {
+        authTagLength: 16,
+      });
     const encrypted = Buffer.concat([cipher.update(JSON.stringify(data), 'utf8'), cipher.final()]);
     return {
       iv: iv.toString('hex'),
@@ -81,6 +83,7 @@ export class RecuperacaoService implements OnModuleInit {
       'aes-256-gcm',
       Buffer.from(process.env.EMAIL_QUEUE_KEY!, 'hex'),
       Buffer.from(data.iv, 'hex'),
+      { authTagLength: 16 },
     );
     cipher.setAuthTag(Buffer.from(data.tag, 'hex'));
     return JSON.parse(

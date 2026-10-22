@@ -124,4 +124,31 @@ describe('Recuperação segura de senha', () => {
     expect(payload).toHaveProperty('tag');
     expect(JSON.stringify(payload)).not.toContain('https://');
   });
+
+  it.each([4, 12, 15])(
+    'fila rejeita tag truncada para %i bytes antes de consultar o destinatário',
+    async (length) => {
+      process.env.EMAIL_PROVIDER = 'resend';
+      process.env.RESEND_API_KEY = 'somente-fixture';
+      process.env.EMAIL_FROM = 'Nexly <teste@example.test>';
+      process.env.EMAIL_QUEUE_KEY = 'a'.repeat(64);
+      process.env.PUBLIC_APP_URL = 'https://example.test';
+      const { service, client, jobs } = fixture();
+      client.usuario.findUnique.mockResolvedValue({ id: 'u', empresaId: 'e', ativo: true });
+      await service.solicitar('a@example.test', 'ip');
+      const payload = jobs.adicionar.mock.calls[0]?.[3];
+      service.onModuleInit();
+      const handle = jobs.register.mock.calls[0]?.[1];
+      await expect(
+        handle({ ...payload, tag: payload.tag.slice(0, length * 2) }, { empresaId: 'e', id: 'j' }),
+      ).rejects.toThrow();
+      expect(client.recuperacaoSenha.findUnique).not.toHaveBeenCalled();
+      // A mensagem original continua legível; não existe destinatário nesta fixture.
+      await expect(handle(payload, { empresaId: 'e', id: 'j' })).resolves.toBeUndefined();
+      expect(client.recuperacaoSenha.findUnique).toHaveBeenCalledWith({
+        where: { tokenHash: client.recuperacaoSenha.create.mock.calls[0]?.[0].data.tokenHash },
+        include: { usuario: { select: { email: true, ativo: true, empresaId: true } } },
+      });
+    },
+  );
 });

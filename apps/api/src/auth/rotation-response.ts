@@ -15,7 +15,7 @@ export class RotationResponse {
 
   seal(token: string, sessionId: string, parentId: string, rotatedAt: Date): string {
     const iv = randomBytes(12);
-    const cipher = createCipheriv('aes-256-gcm', this.key(), iv);
+    const cipher = createCipheriv('aes-256-gcm', this.key(), iv, { authTagLength: 16 });
     cipher.setAAD(this.context(sessionId, parentId, rotatedAt));
     const encrypted = Buffer.concat([cipher.update(token, 'utf8'), cipher.final()]);
     return [
@@ -33,7 +33,7 @@ export class RotationResponse {
     const iv = Buffer.from(encodedIv!, 'base64url');
     const tag = Buffer.from(encodedTag!, 'base64url');
     if (iv.length !== 12 || tag.length !== 16) throw new Error('Invalid rotation response');
-    const decipher = createDecipheriv('aes-256-gcm', this.key(), iv);
+    const decipher = createDecipheriv('aes-256-gcm', this.key(), iv, { authTagLength: 16 });
     decipher.setAAD(this.context(sessionId, parentId, rotatedAt));
     decipher.setAuthTag(tag);
     return Buffer.concat([
