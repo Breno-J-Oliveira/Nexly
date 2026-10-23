@@ -1,7 +1,9 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
-import { raw, json, Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
+import { registerRequestBodyParsers } from '../common/middleware/request-body-parsers';
+import { HttpExceptionFilter } from '../common/filters/http-exception.filter';
 import request from 'supertest';
 import { AssinaturasController } from './assinaturas.controller';
 import { AssinaturasService } from './assinaturas.service';
@@ -25,8 +27,7 @@ describe('Fronteiras HTTP de assinaturas', () => {
       ],
     }).compile();
     app = module.createNestApplication({ bodyParser: false });
-    app.use('/assinaturas/webhook', raw({ type: 'application/json' }));
-    app.use(json());
+    registerRequestBodyParsers(app, '');
     app.use((req: Request, _res: Response, next: NextFunction) => {
       const role = String(req.headers['test-role'] ?? '');
       if (role)
@@ -41,12 +42,41 @@ describe('Fronteiras HTTP de assinaturas', () => {
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     );
+    app.useGlobalFilters(new HttpExceptionFilter());
     await app.init();
   });
   afterAll(async () => {
     await app.close();
   });
   beforeEach(() => jest.clearAllMocks());
+
+  it('mantém erros de JSON e tamanho como 400 e 413 com o filtro real', async () => {
+    await request(app.getHttpServer())
+      .post('/assinaturas/checkout')
+      .set('Content-Type', 'application/json')
+      .send('{invalid')
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/assinaturas/webhook')
+      .set('Content-Type', 'application/json')
+      .send(JSON.stringify({ text: 'a'.repeat(120_000) }))
+      .expect(413);
+    expect(service.webhook).not.toHaveBeenCalled();
+    expect(service.checkout).not.toHaveBeenCalled();
+  });
+
+  it.each(['br', 'gzip', 'deflate'])(
+    'rejeita webhook comprimido com %s antes de chamar o serviço',
+    async (encoding) => {
+      await request(app.getHttpServer())
+        .post('/assinaturas/webhook')
+        .set('Content-Type', 'application/json')
+        .set('Content-Encoding', encoding)
+        .send('{"id":"evt_compressed"}')
+        .expect(415);
+      expect(service.webhook).not.toHaveBeenCalled();
+    },
+  );
 
   it.each(['GESTOR', 'PROFISSIONAL', 'RECEPCIONISTA', 'CAIXA'])(
     'nega operações de cobrança para %s',

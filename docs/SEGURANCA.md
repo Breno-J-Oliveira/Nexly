@@ -53,3 +53,15 @@ Na verificação de 22/10/2026, a auditoria de produção retornou zero vulnerab
 ## Segurança de cobrança
 
 Webhooks exigem assinatura sobre o corpo original. A API rejeita ambiente incompatível e conta conectada, confere o catálogo e resolve a empresa pelo customer persistido. O retorno do navegador não comprova pagamento. Operações de administração exigem ADMIN e usam cota distribuída. Credenciais ficam no backend. Consulte [Pagamentos](PAGAMENTOS.md) para as condições de acesso, idempotência e limites operacionais.
+
+## Atualização de segurança do Node.js em outubro de 2026
+
+O [aviso oficial de 21/10/2026](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases) inclui a CVE-2026-111497, que permite corrupção de memória ao descomprimir determinados dados Brotli. A configuração do Nexly exige Node.js `>=24.22.1 <25`; `.nvmrc`, CI e imagens Docker usam `24.22.1`. Os containers separados do NexusAuth usam a versão corrigida `22.23.4`.
+
+No Railway/Nixpacks, `scripts/install-node-runtime.sh` instala o binário oficial para x64 ou arm64 e verifica um SHA-256 fixado antes de utilizá-lo. `scripts/check-node-version.cjs` rejeita versões fora da faixa permitida na instalação e no build. Como a Vercel controla o patch do runtime dentro de `24.x`, confirme também a versão do ambiente publicado; a validação do build não substitui essa conferência.
+
+Os parsers HTTP da API rejeitam corpos comprimidos com status 415 (`inflate: false`), incluindo importação, JSON, formulário e webhook Stripe. Corpos sem compressão continuam aceitos, com os limites anteriores e preservação dos bytes originais do webhook. Essa proteção não substitui atualizar o runtime, pois outras bibliotecas também podem descomprimir respostas externas.
+
+Um alerta de versão não comprova invasão. Preserve e revise logs do servidor e do Stripe, reconstrua e publique o ambiente corrigido e trate possíveis credenciais expostas. A substituição das chaves precisa ocorrer nos painéis dos provedores, seguida da atualização dos consumidores e revogação das antigas. Não registre valores de chaves nos arquivos ou no chat. Atualizar este repositório não comprova que a hospedagem foi corrigida ou que as credenciais já foram substituídas.
+
+Na consulta de 23/10/2026, `npm audit --omit=dev` apontou um aviso alto no Zod 3.25.76 ([GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)), relacionado ao consumo excessivo de memória na validação de coleções. A correção informada requer Zod 4.6.6 ou posterior. Essa migração de versão principal exige revisar validadores e a integração dos formulários; não está resolvida pela atualização do Node nem deve ser ocultada com `audit fix --force`.

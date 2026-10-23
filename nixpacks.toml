@@ -1,6 +1,11 @@
 # Nexly API — configuração de build para Railway/Nixpacks
+[phases.setup]
+aptPkgs = ["...", "curl", "xz-utils", "ca-certificates"]
+cmds = ["bash scripts/install-node-runtime.sh", "..."]
+paths = ["/opt/nexly-node/bin"]
+
 [phases.install]
-cmds = ["npm ci --include=dev"]
+cmds = ["node scripts/check-node-version.cjs", "npm ci --include=dev"]
 
 [phases.build]
 cmds = [

@@ -13,7 +13,7 @@ Esta documentação descreve o código disponível no repositório em 23 de outu
 | Rotas implementadas na API               | [Referência da API](REFERENCIA_API.md)                                      |
 | Entidades e relações persistidas         | [Modelo de dados](MODELO_DADOS.md)                                          |
 | O que mudou nas últimas entregas         | [Histórico](HISTORICO.md)                                                   |
-| Documentação acadêmica em Word           | [Documentação completa](documentacao/Nexly_Documentacao_Completa_ABNT.docx) |
+| Documentação acadêmica em Word           | [Documentação completa](documentacao/Nexly_Documentação.docx) |
 | Plano acadêmico e matriz GOT em Word     | [Plano de testes](documentacao/Nexly_Plano_de_Testes_e_GOT_ABNT.docx)       |
 
 O código e as migrações são a referência executável. As referências de API e banco acompanham esta revisão, sem substituir os DTOs, as permissões e o schema. Os documentos Word apresentam o sistema para leitores sem formação em programação; os guias Markdown facilitam manutenção e revisão pelo GitHub.

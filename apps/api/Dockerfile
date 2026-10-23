@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Build context: raiz do monorepo (nexly/)
-FROM node:24.18.0-alpine AS base
+FROM node:24.22.1-alpine AS base
 RUN apk add --no-cache gcompat openssl
 WORKDIR /app
 
@@ -10,6 +10,7 @@ COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/tsconfig/package.json packages/tsconfig/package.json
+COPY scripts/check-node-version.cjs scripts/check-node-version.cjs
 RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 
 FROM deps AS runtime-deps

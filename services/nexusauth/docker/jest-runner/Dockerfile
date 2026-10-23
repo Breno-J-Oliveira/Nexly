@@ -1,5 +1,5 @@
 # Stage 1: build deps only (avoid any Prisma generate/write at runtime)
-FROM node:20-alpine AS build
+FROM node:22.23.4-alpine AS build
 
 RUN apk add --no-cache openssl
 
@@ -17,7 +17,7 @@ COPY nest-cli.json tsconfig*.json ./
 RUN mkdir -p /app/keys
 
 # Stage 2: runtime/test
-FROM node:20-alpine
+FROM node:22.23.4-alpine
 
 RUN apk add --no-cache openssl
 

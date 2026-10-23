@@ -444,7 +444,7 @@ O histórico de contribuições e a participação técnica podem ser acompanhad
 | [`docs/MODELO_DADOS.md`](docs/MODELO_DADOS.md) | Esquema e relacionamentos de dados |
 | [`docs/TESTES.md`](docs/TESTES.md) | Testes, resultados e evidências |
 | [`docs/HISTORICO.md`](docs/HISTORICO.md) | Evolução e alterações registradas |
-| [`docs/documentacao/Nexly_Documentacao_Completa_ABNT.docx`](docs/documentacao/Nexly_Documentacao_Completa_ABNT.docx) | Documentação acadêmica; verificar arquivo no repositório |
+| [`docs/documentacao/Nexly_Documentação.docx`](docs/documentacao/Nexly_Documentação.docx) | Documentação acadêmica; verificar arquivo no repositório |
 | [`docs/documentacao/Nexly_Plano_de_Testes_e_GOT_ABNT.docx`](docs/documentacao/Nexly_Plano_de_Testes_e_GOT_ABNT.docx) | Plano de testes e GOT; verificar arquivo no repositório |
 
 ### Checklist de envio — Sprint 2

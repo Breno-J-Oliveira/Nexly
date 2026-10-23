@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22.23.4-alpine
 
 # C31 FIX: Run as non-root user. Compromised container processes
 # should never have root privileges on the host.

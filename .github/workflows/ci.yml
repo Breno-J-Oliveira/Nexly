@@ -61,7 +61,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '24.18.0'
+          node-version: '24.22.1'
           cache: 'npm'
       - run: npm ci
       - run: npm run build --workspace @nexly/shared
@@ -76,7 +76,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '24.18.0'
+          node-version: '24.22.1'
           cache: 'npm'
       - run: npm ci
       - run: npm run build --workspace @nexly/shared
@@ -89,7 +89,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '24.18.0'
+          node-version: '24.22.1'
           cache: 'npm'
       - run: npm ci
       - run: npm run build --workspace @nexly/shared
@@ -135,7 +135,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '24.18.0'
+          node-version: '24.22.1'
           cache: 'npm'
       - run: npm ci
       - run: npm run build --workspace @nexly/shared
@@ -172,7 +172,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '24.18.0'
+          node-version: '24.22.1'
           cache: 'npm'
       - uses: ./.github/actions/backup-tools
       - run: npm ci
@@ -261,7 +261,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '24.18.0'
+          node-version: '24.22.1'
           cache: 'npm'
       - run: npm ci
       - run: npm run build --workspace @nexly/shared

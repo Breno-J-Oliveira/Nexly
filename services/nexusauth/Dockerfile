@@ -1,5 +1,5 @@
 # ---- Build stage ----
-FROM node:20-alpine AS builder
+FROM node:22.23.4-alpine AS builder
 
 RUN apk add --no-cache openssl
 
@@ -20,7 +20,7 @@ RUN npm run build
 # via a persistent volume or Docker/k8s secret. Do NOT rely on the ad-hoc
 # key generation below — each replica would generate different keys,
 # breaking JWT verification across instances.
-FROM node:20-alpine AS production
+FROM node:22.23.4-alpine AS production
 
 RUN apk add --no-cache openssl
 
