@@ -150,7 +150,7 @@ test('falha de carregamento permite tentar novamente e a tela cabe no celular', 
   await page.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Planos mensais' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: 'docs/assinatura-390.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/manual/assinatura-390.png', fullPage: true });
 });
 
 test('produção mostra contratação real e não apresenta instruções de Sandbox', async ({

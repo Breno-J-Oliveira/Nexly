@@ -203,7 +203,10 @@ test('comissões preservam valores da conclusão, aceitam configuração e mant�
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({ path: 'docs/comissoes-historico-390.png', fullPage: true });
+    await page.screenshot({
+      path: 'test-results/manual/comissoes-historico-390.png',
+      fullPage: true,
+    });
   } finally {
     await db.agendamento.deleteMany({ where: { empresaId: company.id } });
     await db.servico.deleteMany({ where: { empresaId: company.id } });

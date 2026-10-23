@@ -150,7 +150,10 @@ test('inventory supports complete search, real alerts, mobile entries and date-o
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({ path: 'docs/review-estoque-mobile.png', fullPage: true });
+    await page.screenshot({
+      path: 'test-results/manual/review-estoque-mobile.png',
+      fullPage: true,
+    });
   } finally {
     await p.empresa.delete({ where: { id: empresa.id } });
     await p.$disconnect();

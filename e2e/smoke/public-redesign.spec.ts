@@ -128,7 +128,7 @@ for (const width of [390, 1440]) {
       expect(await page.locator('a[href="/"]:visible').count(), path).toBeGreaterThan(0);
       if (['/', '/login', '/precos', '/privacidade'].includes(path))
         await page.screenshot({
-          path: `docs/redesign-${path === '/' ? 'inicio' : path.slice(1)}-${width}.png`,
+          path: `test-results/manual/redesign-${path === '/' ? 'inicio' : path.slice(1)}-${width}.png`,
           fullPage: true,
         });
     }

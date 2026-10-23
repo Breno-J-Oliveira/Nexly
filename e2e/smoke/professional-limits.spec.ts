@@ -130,7 +130,10 @@ for (const [plano, limite] of [
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
           true,
         );
-        await page.screenshot({ path: 'docs/profissionais-limite-390.png', fullPage: true });
+        await page.screenshot({
+          path: 'test-results/manual/profissionais-limite-390.png',
+          fullPage: true,
+        });
         for (const item of list)
           expect(
             (await request.delete(`${apiURL}/api/profissionais/${item.id}`, { headers })).status(),

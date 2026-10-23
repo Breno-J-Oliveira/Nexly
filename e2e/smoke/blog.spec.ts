@@ -30,7 +30,9 @@ for (const width of [390, 1440]) {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto('/blog');
     await expect(page).toHaveTitle('Blog — Nexly');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Boas ideias para uma gestão melhor.');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(
+      'Boas ideias para uma gestão melhor.',
+    );
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
@@ -47,7 +49,7 @@ for (const width of [390, 1440]) {
     );
     await page.getByRole('link', { name: '← Todos os artigos' }).click();
     await expect(page).toHaveURL(/\/blog$/);
-    await page.screenshot({ path: `docs/blog-${width}.png`, fullPage: true });
+    await page.screenshot({ path: `test-results/manual/blog-${width}.png`, fullPage: true });
     if (width < 768) {
       const menu = page.getByRole('button', { name: 'Menu', exact: true });
       await menu.click();

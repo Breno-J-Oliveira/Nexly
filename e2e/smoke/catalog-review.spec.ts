@@ -139,7 +139,10 @@ test('customer contacts are optional and catalogue actions follow role permissio
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({ path: 'docs/review-catalogo-mobile.png', fullPage: true });
+    await page.screenshot({
+      path: 'test-results/manual/review-catalogo-mobile.png',
+      fullPage: true,
+    });
     expect(errors).toEqual([]);
   } finally {
     await p.insumoServico.deleteMany({ where: { servico: { empresaId: empresa.id } } });

@@ -59,7 +59,7 @@ test('visitante escolhe plano, alterna cadastro e login e chega à assinatura se
   expect(checkoutRequests).toBe(0);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: 'docs/plano-escolhido-390.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/manual/plano-escolhido-390.png', fullPage: true });
 });
 
 test('cliente autenticado escolhe outro plano sem precisar entrar novamente', async ({ page }) => {

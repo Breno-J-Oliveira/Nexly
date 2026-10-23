@@ -98,12 +98,18 @@ test('agendamento público respeita profissional e fuso, recupera conflito e con
     await page.getByRole('button', { name: 'Próximo →', exact: true }).click();
     await page.getByLabel('Seu nome completo', { exact: true }).fill('Cliente de outro fuso');
     await page.getByLabel('WhatsApp', { exact: true }).fill('11999992222');
-    await page.screenshot({ path: 'docs/redesign-agendamento-390.png', fullPage: true });
+    await page.screenshot({
+      path: 'test-results/manual/redesign-agendamento-390.png',
+      fullPage: true,
+    });
     await page.setViewportSize({ width: 1440, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({ path: 'docs/redesign-agendamento-1440.png', fullPage: true });
+    await page.screenshot({
+      path: 'test-results/manual/redesign-agendamento-1440.png',
+      fullPage: true,
+    });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.route(`**/api/booking/${token}`, (route) =>
       route.request().method() === 'POST'
@@ -246,7 +252,10 @@ test('configuração de horários no celular valida intervalos e persiste o fuso
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({ path: 'docs/review-config-horarios-mobile.png', fullPage: true });
+    await page.screenshot({
+      path: 'test-results/manual/review-config-horarios-mobile.png',
+      fullPage: true,
+    });
   } finally {
     await p.empresa.delete({ where: { id: empresa.id } });
     await p.$disconnect();

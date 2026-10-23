@@ -7,7 +7,7 @@ async function main() {
   const base = process.env.BASE_URL || 'http://localhost:3002';
   if (!['localhost', '127.0.0.1'].includes(new URL(base).hostname))
     throw new Error('Local preview only');
-  const output = path.resolve('docs/ui-review');
+  const output = path.resolve('test-results/ui-review');
   fs.mkdirSync(output, { recursive: true });
   const browser = await chromium.launch();
   try {

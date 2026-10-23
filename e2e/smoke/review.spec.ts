@@ -53,7 +53,7 @@ test('reports export uses authentication and staff dashboard respects permission
     await page.getByRole('button', { name: 'Exportar CSV (até 500 vendas)', exact: true }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toBe('vendas-2026-10-14-2026-10-14.csv');
-    await download.saveAs('docs/review-export.csv');
+    await download.saveAs('test-results/manual/review-export.csv');
     await page.getByLabel('Data inicial', { exact: true }).fill('2026-10-15');
     await expect(
       page.getByRole('alert').filter({ hasText: 'Informe um período válido' }),
@@ -105,7 +105,7 @@ test('reports export uses authentication and staff dashboard respects permission
     });
     await expect(concluir).toBeVisible();
     await concluir.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: 'docs/review-agenda-mobile.png', fullPage: true });
+    await page.screenshot({ path: 'test-results/manual/review-agenda-mobile.png', fullPage: true });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );

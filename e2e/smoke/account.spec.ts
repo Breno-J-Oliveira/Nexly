@@ -62,7 +62,7 @@ test('staff can manage their own password and sessions on mobile', async ({ page
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({ path: 'docs/review-conta-mobile.png', fullPage: true });
+    await page.screenshot({ path: 'test-results/manual/review-conta-mobile.png', fullPage: true });
     await page.getByRole('button', { name: 'Salvar nova senha', exact: true }).click();
     await page.waitForURL('**/login');
     expect(

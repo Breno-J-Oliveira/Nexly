@@ -135,7 +135,10 @@ test('compras persistem fornecedor, reposição e estoque; comissões incluem at
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({ path: 'docs/revisao-compras-mobile.png', fullPage: true });
+    await page.screenshot({
+      path: 'test-results/manual/revisao-compras-mobile.png',
+      fullPage: true,
+    });
     await page.goto('/comissao');
     await page.getByLabel('Data inicial', { exact: true }).fill('2026-01-02');
     await page.getByLabel('Data final', { exact: true }).fill('2026-01-02');
@@ -151,7 +154,10 @@ test('compras persistem fornecedor, reposição e estoque; comissões incluem at
         )
       ).status(),
     ).toBe(400);
-    await page.screenshot({ path: 'docs/revisao-comissoes-mobile.png', fullPage: true });
+    await page.screenshot({
+      path: 'test-results/manual/revisao-comissoes-mobile.png',
+      fullPage: true,
+    });
   } finally {
     await prisma.agendamento.deleteMany({ where: { empresaId: company.id } });
     await prisma.pedidoCompra.deleteMany({ where: { empresaId: company.id } });

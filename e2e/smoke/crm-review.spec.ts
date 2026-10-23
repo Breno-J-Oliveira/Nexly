@@ -114,7 +114,10 @@ test('customers support pagination, notes, keyboard focus and recovery from a ne
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({ path: 'docs/review-clientes-mobile.png', fullPage: false });
+    await page.screenshot({
+      path: 'test-results/manual/review-clientes-mobile.png',
+      fullPage: false,
+    });
     expect(errors).toEqual([]);
   } finally {
     await p.cliente.deleteMany({ where: { empresaId: empresa.id } });

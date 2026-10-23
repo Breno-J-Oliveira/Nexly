@@ -120,8 +120,8 @@ test('six operational modules persist and complete their workflows', async ({ pa
     await dialog.getByRole('button', { name: 'Imprimir / Salvar PDF', exact: true }).click();
     await expect.poll(() => printed).toBe(true);
     await page.emulateMedia({ media: 'print' });
-    await page.screenshot({ path: 'docs/documento-print.png', fullPage: true });
-    const pdf = await page.pdf({ path: 'docs/documento-teste.pdf', format: 'A4' });
+    await page.screenshot({ path: 'test-results/manual/documento-print.png', fullPage: true });
+    const pdf = await page.pdf({ path: 'test-results/manual/documento-teste.pdf', format: 'A4' });
     expect((pdf.toString('latin1').match(/\/Type\s*\/Page\b/g) || []).length).toBeGreaterThan(1);
     await page.emulateMedia({ media: 'screen' });
     await dialog.getByRole('button', { name: 'Fechar janela', exact: true }).click();
@@ -193,7 +193,10 @@ test('six operational modules persist and complete their workflows', async ({ pa
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
       );
-      await page.screenshot({ path: `docs/operacoes-${path.slice(1)}-mobile.png`, fullPage: true });
+      await page.screenshot({
+        path: `test-results/manual/operacoes-${path.slice(1)}-mobile.png`,
+        fullPage: true,
+      });
     }
   } finally {
     await prisma.agendamento.deleteMany({ where: { empresaId: company.id } });

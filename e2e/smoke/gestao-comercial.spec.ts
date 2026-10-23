@@ -146,7 +146,10 @@ test('novas áreas funcionam com dados reais e preservam saldos no navegador', a
     await expect(pagar).toHaveCount(0);
     await expect(conta).toContainText('PARCIAL');
     await expect(page.getByText('A receber', { exact: true })).toBeVisible();
-    await page.screenshot({ path: 'docs/financeiro-comercial-desktop.png', fullPage: true });
+    await page.screenshot({
+      path: 'test-results/manual/financeiro-comercial-desktop.png',
+      fullPage: true,
+    });
     await page.goto('/operacao');
     await page.getByLabel('Tipo', { exact: true }).selectOption('HOMOLOGACAO');
     await page
@@ -181,7 +184,10 @@ test('novas áreas funcionam com dados reais e preservam saldos no navegador', a
     }
     await page.goto('/financeiro');
     await expect(page.getByText('A receber', { exact: true })).toBeVisible();
-    await page.screenshot({ path: 'docs/financeiro-comercial-mobile.png', fullPage: true });
+    await page.screenshot({
+      path: 'test-results/manual/financeiro-comercial-mobile.png',
+      fullPage: true,
+    });
     const token = randomUUID().replaceAll('-', '') + randomUUID().replaceAll('-', '');
     await p.recuperacaoSenha.create({
       data: {

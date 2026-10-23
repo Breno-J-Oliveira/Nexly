@@ -140,7 +140,10 @@ test('calendar filters, late appointments, mobile creation and cancellation work
     const tomorrow = new Date(dates.tomorrow);
     const local = dates.local;
     await modal.getByLabel('Data e hora', { exact: true }).fill(local);
-    await page.screenshot({ path: 'docs/review-agendamento-mobile.png', fullPage: false });
+    await page.screenshot({
+      path: 'test-results/manual/review-agendamento-mobile.png',
+      fullPage: false,
+    });
     await modal.getByRole('button', { name: 'Salvar', exact: true }).click();
     await expect(modal).toBeHidden();
     await page.getByRole('button', { name: 'Lista', exact: true }).click();

@@ -104,8 +104,8 @@ test('sales show complete totals, real product details and local-day CSV filters
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Exportar CSV (até 500 vendas)', exact: true }).click();
     const download = await downloadPromise;
-    await download.saveAs('docs/review-sales-filter.csv');
-    const csv = await readFile('docs/review-sales-filter.csv', 'utf8');
+    await download.saveAs('test-results/manual/review-sales-filter.csv');
+    const csv = await readFile('test-results/manual/review-sales-filter.csv', 'utf8');
     expect(csv.trim().split('\n')).toHaveLength(106);
     expect(csv).toContain('2026-10-16T02:59:00.000Z');
     expect(csv).not.toContain('2026-10-16T03:01:00.000Z');
@@ -115,7 +115,7 @@ test('sales show complete totals, real product details and local-day CSV filters
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    await page.screenshot({ path: 'docs/review-vendas-mobile.png', fullPage: true });
+    await page.screenshot({ path: 'test-results/manual/review-vendas-mobile.png', fullPage: true });
   } finally {
     await p.empresa.delete({ where: { id: empresa.id } });
     await p.$disconnect();

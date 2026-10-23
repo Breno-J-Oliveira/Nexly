@@ -18,7 +18,7 @@ test('suporte público mostra contato autorizado e navegação acessível no cel
     'mailto:breno.emailsenai@gmail.com?subject=Ajuda%20com%20o%20Nexly',
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: 'docs/suporte-390.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/manual/suporte-390.png', fullPage: true });
   await page.getByRole('link', { name: '← Voltar para o início', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 });

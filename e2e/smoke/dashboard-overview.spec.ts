@@ -88,7 +88,7 @@ test('visão geral mantém agenda, valores acessíveis e atalhos recolhíveis no
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
       .toBe(true);
     await page.screenshot({
-      path: `docs/clean-dashboard-${width}.png`,
+      path: `test-results/manual/clean-dashboard-${width}.png`,
       fullPage: true,
       animations: 'disabled',
     });

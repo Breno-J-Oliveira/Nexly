@@ -46,7 +46,7 @@ test('busca rápida aceita acentos, teclado e celular; conexão perdida tem orie
   await search.fill('estoque');
   await search.press('ArrowDown');
   await expect(dialog.getByRole('option', { selected: true })).toContainText('Pedidos');
-  await page.screenshot({ path: 'docs/comercial-busca-mobile.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/manual/comercial-busca-mobile.png', fullPage: true });
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
