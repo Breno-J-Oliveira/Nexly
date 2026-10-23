@@ -19,6 +19,8 @@
     "e2e:ui": "playwright test --ui",
     "e2e:report": "playwright show-report",
     "typecheck:e2e": "tsc -p e2e/tsconfig.json",
+    "docs:generate": "node scripts/documentation.cjs generate",
+    "docs:check": "node scripts/documentation.cjs",
     "db:migrate": "npm run migrate --workspace @nexly/api",
     "db:studio": "npm run studio --workspace @nexly/api",
     "db:seed": "npm run seed --workspace @nexly/api"

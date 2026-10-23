@@ -10,6 +10,7 @@
 *.pem binary
 *.key binary
 *.zip binary
+*.docx binary
 
 # Vetor e scripts: força LF explícito.
 *.svg text eol=lf

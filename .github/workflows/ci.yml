@@ -96,6 +96,8 @@ jobs:
       - run: npx prisma generate --schema apps/api/prisma/schema.prisma
       - run: npm run lint --if-present
       - run: node scripts/verify-sql-lint.cjs
+      - name: Confere documentação e referências
+        run: npm run docs:check
 
   test-api:
     name: Tests API

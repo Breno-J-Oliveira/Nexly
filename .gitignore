@@ -42,7 +42,24 @@ Thumbs.db
 apps/api/prisma/*.db
 
 # Arquivos internos do projeto (não publicar)
-docs/
+# Documentação pública: publicar somente os arquivos revisados abaixo.
+**/docs/
+!/docs/
+/docs/*
+!/docs/README.md
+!/docs/PRODUTO.md
+!/docs/ARQUITETURA.md
+!/docs/DESENVOLVIMENTO.md
+!/docs/OPERACAO.md
+!/docs/SEGURANCA.md
+!/docs/TESTES.md
+!/docs/HISTORICO.md
+!/docs/REFERENCIA_API.md
+!/docs/MODELO_DADOS.md
+!/docs/documentacao/
+/docs/documentacao/*
+!/docs/documentacao/Nexly_Documentacao_Completa_ABNT.docx
+!/docs/documentacao/Nexly_Plano_de_Testes_e_GOT_ABNT.docx
 .clinerules
 docs-deploy.md
 comunictionIA.md
