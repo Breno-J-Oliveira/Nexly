@@ -24,8 +24,8 @@ import {
 } from '@nexly/shared';
 
 const schema = z.object({
-  email: z.string({ required_error: 'E-mail obrigatório' }).email('E-mail inválido'),
-  senha: z.string({ required_error: 'Senha obrigatória' }).min(1, 'Senha obrigatória'),
+  email: z.string({ error: 'E-mail obrigatório' }).email('E-mail inválido'),
+  senha: z.string({ error: 'Senha obrigatória' }).min(1, 'Senha obrigatória'),
 });
 
 type FormData = z.infer<typeof schema>;
