@@ -33,6 +33,26 @@
   <img src="apps/web/public/images/product/dashboard-demo.webp" alt="Painel do Nexly com indicadores, agenda e alertas, usando dados fictícios de demonstração" width="1100">
 </p>
 
+## Equipe do projeto
+
+Desenvolvido pela **NexusTech**, no curso **Técnico em Desenvolvimento de Sistemas da Escola SENAI “A. Jacob Lafer”**, Santo André, 2026.
+
+| Integrantes            |
+| ---------------------- |
+| **Breno Oliveira**     |
+| **Felipe Bertaco**     |
+| **Gustavo Barreto**    |
+| **Mariana Nascimento** |
+| **Vinícius Vila Nova** |
+
+**Orientadores:** Prof. Raul Lopes e Prof. Paulo Camargo.
+
+**Breno J. Oliveira:** [GitHub](https://github.com/Breno-J-Oliveira) · [LinkedIn](https://www.linkedin.com/in/breno-j-oliveira-672619352/) · [Instagram](https://www.instagram.com/brenoov) · [X](https://x.com/BrenoJOliveira_)
+
+**Suporte e contato do Nexly:** [breno.emailsenai@gmail.com](mailto:breno.emailsenai@gmail.com)
+
+**Documentos completos:** [Documentação técnica e funcional em Word](docs/documentacao/Nexly_Documentacao_Completa_ABNT.docx) · [Plano de testes e GOT em Word](docs/documentacao/Nexly_Plano_de_Testes_e_GOT_ABNT.docx)
+
 ## O que é o Nexly?
 
 O **Nexly** é uma plataforma SaaS de gestão para pequenos negócios, como salões, barbearias, clínicas, petshops e estúdios. Reúne os dados do atendimento e da operação para reduzir o trabalho de conferir agendas, planilhas e controles separados.
@@ -80,6 +100,35 @@ Consulte o [guia do produto](docs/PRODUTO.md) para regras e limites. E-mail e Wh
 4. Marca e realiza o atendimento.
 5. Ao concluir, acompanha a baixa dos insumos e o histórico.
 6. Consulta agenda, vendas, pendências e indicadores no mesmo sistema.
+
+## Assinaturas e pagamentos
+
+O Stripe cobra as assinaturas do próprio Nexly. Isso é diferente de registrar as vendas dos estabelecimentos no PDV: a integração atual não transfere esses valores aos negócios nem utiliza divisão de pagamentos de marketplace.
+
+| Plano        | Código     | Mensalidade | Profissionais ativos                  |
+| ------------ | ---------- | ----------- | ------------------------------------- |
+| Gratuito     | FREE       | R$ 0        | 1                                     |
+| Essencial    | BASIC      | R$ 49       | 2                                     |
+| Profissional | PRO        | R$ 99       | 10                                    |
+| Empresarial  | ENTERPRISE | R$ 199      | Sem limite comercial de profissionais |
+
+### Como a contratação funciona
+
+1. O administrador autenticado escolhe um plano aprovado.
+2. O backend confere preço, moeda BRL, recorrência mensal e ambiente no Stripe.
+3. Uma sessão do Checkout hospedado pelo Stripe recebe os dados de pagamento.
+4. O webhook assinado ou a atualização autenticada consulta o estado atual da assinatura.
+5. O plano de produção é atualizado somente quando as condições pagas são confirmadas.
+
+O retorno de sucesso não libera acesso por conta própria. A regra exige assinatura ativa, fatura paga, período vigente e ausência de pausa de cobrança. Travas transacionais, idempotência e registro de eventos protegem repetições e concorrência. Uma simulação no ambiente test não concede um plano comercial live.
+
+### Trocas, cancelamentos e recebimento
+
+O Customer Portal permite gerenciar a assinatura conforme as opções habilitadas na conta Stripe. Proporcionalidade, troca de plano, forma de pagamento e cancelamento precisam ser homologados nessa configuração. Cancelamento agendado preserva o período pago enquanto as condições continuam válidas.
+
+O recebimento pelo responsável depende da ativação e verificação da conta Stripe, dos dados bancários e do saldo disponível. Pagamento aprovado e depósito bancário são etapas diferentes. Os prazos e taxas aplicáveis são consultados no provedor. O catálogo atual é mensal; não configura anuidade, cupom, período de teste gratuito ou cálculo automático de impostos.
+
+O [guia completo de pagamentos](docs/PAGAMENTOS.md) descreve estados, eventos, variáveis, endpoints, permissões, recebimento e diagnóstico. O acompanhamento de webhooks é necessário: este módulo não agenda reconciliação periódica de todas as assinaturas.
 
 ## Arquitetura
 
@@ -176,7 +225,7 @@ Testes integrados precisam de banco e Redis de teste preparados. O [plano de tes
 | [Testes](docs/TESTES.md)                   | Matriz GOT, evidências e critérios de aceite.  |
 | [Histórico](docs/HISTORICO.md)             | Entregas recentes documentadas.                |
 
-## Autoria e contato
+## Autoria, contatos e uso
 
 Trabalho acadêmico de **Breno Oliveira, Felipe Bertaco, Gustavo Barreto, Mariana Nascimento e Vinícius Vila Nova**, da Escola SENAI “A. Jacob Lafer”. O protótipo visual contou com a participação de Breno Oliveira, Felipe Bertaco e Gustavo Barreto.
 

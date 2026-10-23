@@ -95,3 +95,7 @@ npm run docs:check
 ```
 
 O primeiro comando atualiza rotas e modelos a partir dos arquivos TypeScript e Prisma. O segundo confere sincronização, links locais, padrões reconhecíveis de segredos e ausência de artefatos de teste em `docs`. O conteúdo explicativo continua exigindo revisão humana; o verificador não comprova veracidade completa nem substitui gitleaks.
+
+## Homologação de pagamentos
+
+Use exclusivamente credenciais de teste no ambiente local. Não substitua a proteção por uma chave live. O gateway é configurado na inicialização; reinicie a API após alterar variáveis. O [guia de pagamentos](PAGAMENTOS.md) lista configurações, rotas, eventos e critérios de homologação. Nenhuma cobrança real é necessária para validar a documentação.

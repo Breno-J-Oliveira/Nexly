@@ -92,3 +92,7 @@ Regras que precisam ocorrer juntas utilizam transações. Filtros por empresa, p
 O PostgreSQL mantém os dados de negócio e o estado dos trabalhos persistidos. Redis fornece rapidez para informações temporárias e limites compartilhados entre instâncias. Reiniciar a API não deve ser tratado como confirmação de que um trabalho externo foi concluído; estado, idempotência e retorno do provedor determinam seu resultado.
 
 O dashboard reaproveita cache de indicadores. A consulta de pendências é separada para respeitar permissões e atualização recente. Índices, paginação e limites evitam carregar todas as linhas em telas de listagem. O [modelo de dados](MODELO_DADOS.md) e a [referência de rotas](REFERENCIA_API.md) registram os elementos desta versão.
+
+## Arquitetura de assinaturas
+
+O módulo assinaturas separa controller, regras do serviço, catálogo e gateway Stripe. Checkout e Portal usam o vínculo persistido da empresa. A reconciliação consulta o estado atual do provedor em transação e registra o evento processado. Somente no ambiente live ela altera o plano comercial da empresa. Veja [Pagamentos](PAGAMENTOS.md).

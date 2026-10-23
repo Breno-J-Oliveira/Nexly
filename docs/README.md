@@ -20,8 +20,14 @@ O código e as migrações são a referência executável. As referências de AP
 
 Os documentos acadêmicos seguem a orientação do manual SENAI-SP fornecido para o trabalho: A4, Arial 12, margens superior/esquerda de 3 cm e inferior/direita de 2 cm, corpo em espaço 1,5 e recuo inicial de 1,25 cm. O plano usa paisagem no corpo para leitura da matriz. Atualize os campos de sumário e confira a paginação no Word antes de imprimir. Banca, assinaturas e ficha catalográfica dependem da escola; não foram fabricadas. Esta preparação não constitui certificação de conformidade com todas as revisões das normas ABNT.
 
-Na renderização LibreOffice da revisão de 23/10/2026, a documentação principal ficou com 32 páginas e o plano com sete. Foram conferidas margens, fonte, sumários, legendas de quadros e ausência de páginas vazias. A paginação pode variar ao atualizar os campos em outro editor.
+A edição integral foi recuperada e ampliada em 23/10/2026, preservando a estrutura acadêmica anterior e atualizando os apêndices e a integração de pagamentos. A paginação final é conferida por renderização; pode variar ao atualizar campos em outro editor.
 
 Logs, dados exportados, capturas de testes, dumps, chaves, prompts e rascunhos não fazem parte da documentação pública. Os testes gravam seus artefatos em `test-results`, que permanece ignorada pelo Git.
 
 O CI executa `npm run docs:check` para detectar referências desatualizadas e links locais quebrados. Ao alterar controllers ou schema, execute `npm run docs:generate` e revise os guias afetados antes de publicar.
+
+## Assinaturas e recebimento
+
+Leia o [guia completo de pagamentos](PAGAMENTOS.md) para catálogo, contratação, estados, webhooks, segurança, recebimento e homologação. Os documentos Word mantêm a explicação completa, além dos inventários atuais de API e dados.
+
+A edição integral foi conferida em LibreOffice com 126 páginas na documentação principal e 46 no plano de testes. O texto principal preserva 11 figuras, inclui o capítulo de pagamentos e os inventários de 41 modelos e 195 rotas. Os números descrevem esta renderização, não uma contagem garantida em todos os editores.

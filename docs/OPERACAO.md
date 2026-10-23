@@ -61,3 +61,7 @@ Valide recuperação em banco descartável, registre data e resultado sem dados 
 ## Suporte e prontidão comercial
 
 Contato público autorizado: **breno.emailsenai@gmail.com**. Antes de abrir o serviço, confirme atendimento desse canal, identificação do responsável, condições comerciais, termos, privacidade, testes de recebimento e cancelamento, backup restaurável e acompanhamento de um piloto. Pendências externas devem ser acompanhadas operacionalmente; não marcar como concluídas apenas porque há uma tela implementada.
+
+## Detalhamento de cobrança
+
+O [guia de pagamentos](PAGAMENTOS.md) detalha configuração test/live, permissões, eventos, reconciliação, renovação, troca, cancelamento, recebimento e diagnóstico. A atualização de variáveis exige reinício ou nova publicação da API. A monitoração de webhooks é necessária porque não há reconciliação periódica própria de todas as assinaturas.

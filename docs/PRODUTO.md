@@ -73,3 +73,7 @@ Depoimentos públicos dependem de relato real e autorização de publicação. O
 A marca usa a Inter, superfícies escuras e índigo nos destaques. A base é o [protótipo do Nexly no Figma](https://www.figma.com/design/nZXYARpSTmoeK3Gg7P0apb/Nexly?node-id=0-1). A evolução preserva a identidade, com hierarquia mais clara, espaços entre controles, imagens de demonstração e animações compatíveis com preferência por movimento reduzido.
 
 Labels associados aos campos, mensagens de erro, foco, navegação por teclado, modais e ausência de overflow integram a revisão. Essas medidas não equivalem a certificação formal de acessibilidade.
+
+## Jornada da assinatura
+
+O administrador contrata pelo Stripe Checkout e gerencia o vínculo no Customer Portal configurado. A assinatura do Nexly é distinta das vendas registradas no PDV. A modalidade implementada é mensal, sem configuração de teste gratuito, anuidade ou impostos automáticos. Regras de confirmação, limites e cancelamento estão em [Pagamentos](PAGAMENTOS.md).

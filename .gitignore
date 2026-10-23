@@ -51,6 +51,7 @@ apps/api/prisma/*.db
 !/docs/ARQUITETURA.md
 !/docs/DESENVOLVIMENTO.md
 !/docs/OPERACAO.md
+!/docs/PAGAMENTOS.md
 !/docs/SEGURANCA.md
 !/docs/TESTES.md
 !/docs/HISTORICO.md

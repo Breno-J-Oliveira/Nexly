@@ -49,3 +49,7 @@ Se um segredo tiver sido exposto, removê-lo do arquivo atual não o revoga. Sub
 O workflow de segurança executa gitleaks, audit de dependências e Semgrep. ZAP exige alvo informado e autorização de teste; não declarar que foi executado quando o job foi pulado. Auditar dependências de produção e ferramentas de desenvolvimento são verificações diferentes.
 
 Na verificação de 22/10/2026, a auditoria de produção retornou zero vulnerabilidades. O CI de ferramentas apontou `braces`, transitivo do conjunto Tailwind/ESLint, com [aviso sem versão corrigida naquela consulta](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm). O resultado é datado e pode mudar. Não foi aplicado `audit fix --force` nem reduzida a exigência do workflow para esconder o alerta.
+
+## Segurança de cobrança
+
+Webhooks exigem assinatura sobre o corpo original. A API rejeita ambiente incompatível e conta conectada, confere o catálogo e resolve a empresa pelo customer persistido. O retorno do navegador não comprova pagamento. Operações de administração exigem ADMIN e usam cota distribuída. Credenciais ficam no backend. Consulte [Pagamentos](PAGAMENTOS.md) para as condições de acesso, idempotência e limites operacionais.

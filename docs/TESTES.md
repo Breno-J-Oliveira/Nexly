@@ -67,3 +67,28 @@ O CI completo registrou 101 de 102 cenários aprovados antes de corrigir um sele
 ## Critérios de liberação
 
 Identidade visual consistente, jornadas afetadas verificadas, regras financeiras e de estoque preservadas, isolamento e permissões respeitados, migrações coerentes, segredos ausentes do diff, build e verificações relevantes aprovados. A liberação comercial também depende das configurações externas descritas em [Operação](OPERACAO.md).
+
+## Homologação detalhada de assinaturas
+
+| ID   | Operação                 | Procedimento e resultado esperado                                                           |
+| ---- | ------------------------ | ------------------------------------------------------------------------------------------- |
+| PG01 | Checkout aprovado        | No Sandbox, conferir plano, valor e ciclo; comprovar estado pela API e pelo Stripe.         |
+| PG02 | Retorno forjado          | Abrir retorno de sucesso sem pagar; não conceder plano comercial.                           |
+| PG03 | Cancelamento do checkout | Abandonar contratação; preservar ausência de assinatura paga.                               |
+| PG04 | Cliques simultâneos      | Repetir contratação; reutilizar sessão aberta do mesmo plano e não duplicar assinatura.     |
+| PG05 | Timeout                  | Simular interrupção após criação remota; recuperar tentativa com a mesma chave idempotente. |
+| PG06 | Webhook adulterado       | Alterar corpo ou assinatura; rejeitar sem gravar evento ou plano.                           |
+| PG07 | Evento repetido          | Reentregar evento válido; aplicar efeito uma única vez.                                     |
+| PG08 | Evento antigo            | Enviar aviso antigo após cancelamento; consultar estado atual sem reativação indevida.      |
+| PG09 | Ambiente incompatível    | Enviar evento de teste ao modo live; não alterar acesso comercial.                          |
+| PG10 | Autorização              | Outro perfil ou empresa não administra vínculo de cobrança alheio.                          |
+| PG11 | Oferta divergente        | Alterar preço, moeda, quantidade ou ciclo; rejeitar oferta não reconhecida.                 |
+| PG12 | Fatura pendente          | Assinatura active com fatura não paga não concede acesso novo.                              |
+| PG13 | Período vencido          | Fatura antiga paga não libera período já encerrado.                                         |
+| PG14 | Cancelamento agendado    | Manter período pago válido e reconciliar FREE após encerramento confirmado.                 |
+| PG15 | Aumento pendente         | Preservar plano anterior válido sem antecipar o novo antes do pagamento.                    |
+| PG16 | Portal                   | Usar customer da empresa e origem fixa; conferir opções configuradas no provedor.           |
+| PG17 | Cota e Redis             | Exceder dez chamadas por minuto; retornar 429; falha do Redis não autoriza operação.        |
+| PG18 | Atualização manual       | Simular webhook ausente; ação autenticada recupera estado atual.                            |
+
+Os casos PG são critérios de homologação; esta edição documental não os marca como executados. Dublês de unidade não comprovam ativação da conta real, entrega externa do webhook ou recebimento bancário. Nunca usar credenciais de produção em teste local.

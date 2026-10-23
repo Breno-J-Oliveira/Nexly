@@ -24,3 +24,7 @@ Documentação reorganizada em guias públicos com referências de API e banco e
 O histórico completo de implementação permanece no Git. Este arquivo reúne marcos de produto; não substitui changelog operacional de incidentes nem diário de execução.
 
 A revisão documental passou no verificador de referências e links, formatação, análise estática direcionada dos scripts e TypeScript dos testes. Os 14 testes de `e2e/unit` passaram. Os documentos Word foram renderizados e revisados, incluindo conferência das 60 referências dos sumários. A geração dos inventários e sua conferência foram disponibilizadas como comandos npm; a conferência passou a integrar o CI.
+
+## Recuperação da documentação integral — 23/10/2026
+
+A estrutura acadêmica anterior foi recuperada, mantendo capítulos, figuras e glossário. Os apêndices de dados e API foram atualizados a partir do código, e o conteúdo de assinaturas, recebimento, segurança e operação foi ampliado. O plano GOT original foi recuperado com critérios complementares de pagamentos. As evidências antigas mantêm sua data; revisão documental não equivale a nova homologação do sistema.
