@@ -175,7 +175,9 @@ export default function PdvPage() {
     setItens((prev) => prev.filter((i) => i.produto.id !== id));
   };
 
-  const total = itens.reduce((acc, i) => acc + Number(i.produto.preco) * i.quantidade, 0);
+  const total =
+    itens.reduce((acc, i) => acc + Math.round(Number(i.produto.preco) * 100) * i.quantidade, 0) /
+    100;
 
   // Cálculo do desconto (máximo: $ total, nunca negativo).
   const descontoNumerico = Number(String(descontoValor).replace(',', '.'));

@@ -43,6 +43,24 @@ test('PDV valida descontos, congela a venda em envio e recupera resposta perdida
         estoqueAtual: 5,
       },
     });
+    await db.produto.createMany({
+      data: [
+        {
+          empresaId: empresa.id,
+          nome: 'Item dez centavos',
+          sku: 'C10',
+          preco: 0.1,
+          estoqueAtual: 1,
+        },
+        {
+          empresaId: empresa.id,
+          nome: 'Item setenta centavos',
+          sku: 'C70',
+          preco: 0.7,
+          estoqueAtual: 1,
+        },
+      ],
+    });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/login');
     await page.getByLabel('E-mail', { exact: true }).fill(email);
@@ -95,6 +113,18 @@ test('PDV valida descontos, congela a venda em envio e recupera resposta perdida
     expect((await db.produto.findUniqueOrThrow({ where: { id: produto.id } })).estoqueAtual).toBe(
       4,
     );
+    await page.getByRole('button', { name: /Item dez centavos Estoque/ }).click();
+    await page.getByRole('button', { name: /Item setenta centavos Estoque/ }).click();
+    await page.getByRole('button', { name: 'Finalizar Venda', exact: true }).click();
+    await page.getByLabel('Desconto', { exact: true }).fill('0.80');
+    await expect(page.getByLabel('Desconto', { exact: true })).toHaveAttribute(
+      'aria-invalid',
+      'false',
+    );
+    await expect(page.getByRole('button', { name: /^Finalizar —/ })).toBeEnabled();
+    await expect(page.getByRole('button', { name: /^Finalizar —/ })).toContainText('0,00');
+    await page.getByLabel('Desconto', { exact: true }).fill('0.81');
+    await expect(page.getByRole('button', { name: /^Finalizar —/ })).toBeDisabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true,
     );
