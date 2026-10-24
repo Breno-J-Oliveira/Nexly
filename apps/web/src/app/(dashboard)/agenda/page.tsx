@@ -256,7 +256,7 @@ function AgendaContent() {
             aria-label="Filtrar por profissional"
             value={profissionalId}
             onChange={(e) => atualizarFiltro({ profissionalId: e.target.value })}
-            className="rounded-lg border border-[rgba(255,255,255,0.10)] bg-[#111116] px-3 py-2 text-sm text-[#FAFAFA] outline-none focus:ring-2 focus:ring-[#6366F1]/30"
+            className="w-full min-w-0 max-w-full rounded-lg border border-[rgba(255,255,255,0.10)] bg-[#111116] px-3 py-2 text-sm text-[#FAFAFA] outline-none focus:ring-2 focus:ring-[#6366F1]/30 sm:w-auto"
           >
             <option value="">Todos os profissionais</option>
             {profissionais.map((p) => (

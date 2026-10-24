@@ -45,6 +45,14 @@ O catálogo compartilhado está em [workspace.ts](../packages/shared/src/workspa
 
 As regras de concorrência e transação devem preservar consistência quando duas operações usam o mesmo produto. Uma tentativa recusada precisa devolver erro compreensível, sem confirmar uma baixa que não aconteceu.
 
+## Operação do PDV e recuperação de consultas
+
+O PDV diferencia catálogo carregando, busca sem resultados e falha de conexão, com novas tentativas na própria tela. A busca de clientes consulta o cadastro completo e preserva a pessoa selecionada ao trocar o filtro. O atalho `/` foca a busca de produtos sem interferir na digitação de outros campos.
+
+Descontos negativos, acima do total ou acima de 100% impedem a finalização e mostram uma orientação junto ao campo. Durante o envio, o carrinho e as condições da venda ficam bloqueados. Se a resposta se perder, a repetição da mesma venda reutiliza sua chave de operação para evitar duplicação. Essa proteção não significa que atualizar ou fechar a página recupere um carrinho não salvo.
+
+Consultas comuns à API têm prazo de 20 segundos; downloads, 60 segundos, salvo prazo específico da operação. A interface permite tentar novamente após falha. Gravações não são repetidas automaticamente.
+
 ## Alertas do painel
 
 O painel reúne produtos com estoque baixo, contas a pagar ou receber atrasadas, contas dos próximos sete dias e atendimentos de hoje aguardando confirmação. Contas abertas e parcialmente pagas entram na consulta; pagas e canceladas ficam fora. O fuso da empresa define o dia de referência. Links financeiros abrem o período correspondente; o estoque leva aos detalhes do próprio painel.

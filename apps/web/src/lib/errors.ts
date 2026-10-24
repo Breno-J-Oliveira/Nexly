@@ -12,7 +12,7 @@ import axios, { AxiosError } from 'axios';
 export interface ApiErrorBody {
   statusCode?: number;
   code?: string;
-  message?: string;
+  message?: string | string[];
   errors?: string[];
   timestamp?: string;
 }
@@ -30,8 +30,18 @@ export interface ApiError extends Error {
 export function parseApiError(e: unknown): ApiError {
   if (axios.isAxiosError(e)) {
     const data = e.response?.data as ApiErrorBody | undefined;
+    const message = Array.isArray(data?.message)
+      ? data.message.filter((item): item is string => typeof item === 'string').join('. ')
+      : typeof data?.message === 'string'
+        ? data.message
+        : '';
     const err = new Error(
-      data?.message ?? (e.code === 'ERR_NETWORK' ? 'Erro de rede' : e.message),
+      message ||
+        (e.code === 'ECONNABORTED' || e.code === 'ETIMEDOUT'
+          ? 'O servidor demorou para responder. Tente carregar novamente.'
+          : e.code === 'ERR_NETWORK'
+            ? 'Não foi possível conectar ao Nexly. Confira sua conexão e tente novamente.'
+            : 'Não foi possível concluir a solicitação. Tente novamente.'),
     ) as ApiError;
     err.statusCode = e.response?.status;
     err.code = data?.code;
@@ -56,4 +66,3 @@ export const ErrorCodes = {
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
 
 export { AxiosError };
-

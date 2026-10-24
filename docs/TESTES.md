@@ -44,6 +44,11 @@ A matriz organiza o **grupo**, a **operação** e o **teste esperado**, com iden
 | CT30 | Recuperação de erro       | Simular falha de consulta; mostrar tentativa novamente sem derrubar a página.             |
 | CT31 | Depoimentos               | Publicar somente relato real autorizado; não substituir falha por recomendação fictícia.  |
 | CT32 | Backup                    | Cifrar dump e restaurar em banco descartável; conferir dados e salvaguardas.              |
+| CT33 | PDV sob falha | Validar descontos, bloquear edição durante envio e repetir resposta perdida sem duplicar a venda. |
+| CT34 | Catálogo e clientes do PDV | Distinguir falha de busca de lista vazia, recuperar consulta e encontrar cliente além dos 100 primeiros. |
+| CT35 | Concorrência real | Disputar última unidade e mesmo horário; repetir venda e recebimento; conferir registros e saldos no PostgreSQL. |
+| CT36 | Nomes extensos | Percorrer os 29 caminhos internos em 320 px e abrir detalhes; nomes sem espaços não ampliam a página. |
+| CT37 | Consulta sem resposta | Manter conexão aberta sem resposta; sair do carregamento em até 20 segundos e recuperar a lista. |
 
 ## Como executar
 
@@ -52,9 +57,14 @@ npm test --workspace @nexly/api -- --runInBand dashboard
 npm test --workspace @nexly/api -- --runInBand rotation-response recuperacao.service token.service
 npm run typecheck:e2e
 npx playwright test e2e/smoke/conversion.spec.ts e2e/smoke/dashboard-alerts.spec.ts --workers=1
+npx playwright test e2e/smoke/pdv-resilience.spec.ts e2e/smoke/read-timeout.spec.ts e2e/smoke/transaction-stress.spec.ts e2e/smoke/system-traversal.spec.ts --workers=1
 ```
 
 O CI fornece PostgreSQL e Redis de teste, prepara schema, seed, builds e Chromium. Localmente, prepare as mesmas dependências e as variáveis das fixtures. As proteções dos scripts devem confirmar banco local ou descartável antes de cenários que alteram dados.
+
+Na bateria de 24/10, a concorrência foi exercitada contra uma API local e PostgreSQL descartável: 20 pedidos com a mesma chave criaram uma venda e uma saída de estoque; 12 disputas pela última unidade tiveram uma aprovação; 12 repetições de recebimento geraram uma baixa; oito pedidos para o mesmo horário criaram um agendamento. O acesso ao produto de outra empresa foi recusado. São testes de integridade sob concorrência limitada, não uma medição de capacidade máxima ou de múltiplas réplicas em produção.
+
+Os dois cenários novos de PDV passaram após as correções, incluindo perda da resposta depois da gravação e busca entre 110 clientes. A passagem inicial pelas 29 rotas em 320 px encontrou excesso de largura em agenda, profissionais, serviços e PDV com nomes extensos. As correções e o cenário de recuperação de consulta fazem parte da nova bateria; sua execução final completa deve ser conferida no CI, sem confundir a compilação aprovada com aprovação dos testes de navegador.
 
 ## Registro de evidências
 

@@ -29,6 +29,6 @@ export function ResponsiveDetailPanel({
       {children}
     </Modal>
   ) : (
-    <aside className="detail-panel hidden self-start xl:block">{children}</aside>
+    <aside className="detail-panel hidden self-start [overflow-wrap:anywhere] xl:block">{children}</aside>
   );
 }

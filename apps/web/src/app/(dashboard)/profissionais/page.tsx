@@ -242,7 +242,7 @@ export default function ProfissionaisPage() {
                   className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-5"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[rgba(99,102,241,0.15)] text-sm font-semibold text-[#A5B4FC]">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[rgba(99,102,241,0.15)] text-sm font-semibold text-[#A5B4FC]">
                       {p.nome.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
@@ -251,7 +251,8 @@ export default function ProfissionaisPage() {
                           setSelecionadoId(p.id);
                           setDetalhesAbertos(true);
                         }}
-                        className="truncate text-left font-medium text-[#FAFAFA] hover:text-[#818CF8]"
+                        title={p.nome}
+                        className="block max-w-full truncate text-left font-medium text-[#FAFAFA] hover:text-[#818CF8]"
                       >
                         {p.nome}
                       </button>

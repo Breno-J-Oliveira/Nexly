@@ -19,6 +19,11 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  // Consultas precisam terminar também quando a conexão fica aberta sem resposta.
+  // Não repete gravações automaticamente: a operação pode já ter sido concluída.
+  if (!config.timeout && ['get', 'head'].includes(config.method ?? 'get')) {
+    config.timeout = config.responseType === 'blob' ? 60_000 : 20_000;
+  }
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { isCancel } from 'axios';
 import { api, SessionRefreshError } from './api';
+import { parseApiError } from './errors';
 
 interface UseApiOptions {
   params?: Record<string, unknown>;
@@ -41,12 +42,7 @@ export function useApi<T>(url: string, options?: UseApiOptions): UseApiResult<T>
     } catch (e: unknown) {
       if (isCancel(e)) return;
       if (mountedRef.current && !controller.signal.aborted) {
-        const err = e as { response?: { data?: { message?: string } } };
-        setError(
-          e instanceof SessionRefreshError
-            ? e.message
-            : (err?.response?.data?.message ?? 'Erro ao carregar dados'),
-        );
+        setError(e instanceof SessionRefreshError ? e.message : parseApiError(e).message);
       }
     } finally {
       if (mountedRef.current && !controller.signal.aborted) setLoading(false);

@@ -305,7 +305,7 @@ export default function ServicosPage() {
                     <Icon name="scissors" color="#818CF8" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <strong className="block text-sm">{s.nome}</strong>
+                    <strong className="line-clamp-2 break-words text-sm" title={s.nome}>{s.nome}</strong>
                     <span className="mt-1 block text-xs text-[#71717A]">{s.duracaoMin} min</span>
                   </span>
                   <span className="shrink-0 text-sm font-semibold">

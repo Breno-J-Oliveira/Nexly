@@ -82,7 +82,7 @@ export function Modal({
         ref={dialogRef}
         tabIndex={-1}
         className={
-          'max-h-[calc(100dvh-2rem)] overflow-y-auto w-full ' +
+          'max-h-[calc(100dvh-2rem)] overflow-y-auto w-full [overflow-wrap:anywhere] ' +
           width +
           ' rounded-2xl p-5 sm:p-6 animate-slide-up'
         }

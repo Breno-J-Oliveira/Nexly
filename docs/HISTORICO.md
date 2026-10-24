@@ -1,5 +1,13 @@
 # Histórico das entregas documentadas
 
+## Usabilidade e testes de estresse — 24 de outubro de 2026
+
+- PDV: validação de descontos, bloqueio do carrinho durante envio, indicação correta do Pix selecionado, atalho de busca e recuperação de falhas do catálogo.
+- Busca de clientes no PDV com consulta ao cadastro completo e preservação da seleção ao alterar o filtro.
+- Consultas com prazo definido e mensagens legíveis para demora, conexão indisponível e validação.
+- Correções de largura em agenda, profissionais, serviços e PDV; detalhes e modais acomodam nomes extensos sem alterar a identidade visual.
+- Novos testes de resposta perdida, nomes extensos em 29 rotas, consultas sem resposta e concorrência real de estoque, agenda e recebimentos. Resultados e limites em [Testes](TESTES.md). Documentos Word preservados.
+
 ## Preparação comercial de 24 de outubro de 2026
 
 - Correções transitivas Multer 2.5.0 e fast-uri 3.1.9; auditoria de produção sem avisos conhecidos na nova consulta.
