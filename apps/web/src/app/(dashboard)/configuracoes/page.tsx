@@ -1553,7 +1553,20 @@ return (
                   Zona de perigo
                 </p>
                 <p className="mt-0.5 text-[13px]" style={{ color: '#A1A1AA' }}>
-                  A exclusão da conta é agendada em 30 dias, conforme LGPD
+                  A exclusão da conta é agendada para daqui a 30 dias. Você pode cancelar o pedido
+                  durante esse prazo.
+                </p>
+                <p className="mt-2 text-[13px] text-[#A1A1AA]">
+                  Se houver uma assinatura, primeiro cancele a renovação em{' '}
+                  <Link href="/assinatura" className="text-[#818CF8] underline underline-offset-4">
+                    Assinatura
+                  </Link>
+                  . A cobrança precisa encerrar antes da exclusão definitiva. Para ajuda com o
+                  encerramento ou seus dados,{' '}
+                  <Link href="/suporte" className="text-[#818CF8] underline underline-offset-4">
+                    fale com o suporte
+                  </Link>
+                  .
                 </p>
                 {exclusaoEtapa === 0 ? (
                   <Button variant="danger" onClick={() => setExclusaoEtapa(1)} className="mt-3">

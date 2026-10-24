@@ -32,6 +32,21 @@ describe('Health profundo', () => {
 });
 
 describe('Health sem vazamento', () => {
+  it('identifica o commit publicado e rejeita metadados inesperados', () => {
+    const previous = process.env.RAILWAY_GIT_COMMIT_SHA;
+    const controller = new HealthController({} as PrismaService, {} as RedisService);
+    try {
+      process.env.RAILWAY_GIT_COMMIT_SHA = 'a'.repeat(40);
+      expect(controller.version_().commit).toBe('a'.repeat(40));
+      process.env.RAILWAY_GIT_COMMIT_SHA = 'valor-invalido-nao-publicar';
+      expect(controller.version_().commit).toBeNull();
+      delete process.env.RAILWAY_GIT_COMMIT_SHA;
+      expect(controller.version_().commit).toBeNull();
+    } finally {
+      if (previous === undefined) delete process.env.RAILWAY_GIT_COMMIT_SHA;
+      else process.env.RAILWAY_GIT_COMMIT_SHA = previous;
+    }
+  });
   it('nao publica migrations sem autenticacao', () => {
     expect(
       Reflect.getMetadata(

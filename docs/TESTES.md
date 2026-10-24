@@ -66,6 +66,10 @@ O CI completo registrou 101 de 102 cenários aprovados antes de corrigir um sele
 
 ## Critérios de liberação
 
+Em 24/10/2026, foi conferido o [CI completo do commit fb5a66d](https://github.com/Breno-J-Oliveira/Nexly/actions/runs/40035495519): todos os jobs concluídos com sucesso, incluindo E2E, tipos, lint, API, containers e backup/restore. É uma evidência da versão anterior a esta revisão de cobrança; os testes da revisão atual devem ser registrados separadamente. O CI usa serviços de teste e não comprova saúde da API ou backup externo em produção.
+
+Nesta revisão, a execução local com Node 24.22.1 aprovou 642 testes em 59 suítes da API. Após os ajustes finais de validação da fila, as quatro suítes afetadas foram repetidas: 66 testes aprovados. Também passaram typecheck API/web, lint API e da página de configurações, build da API, validação documental e regra contra SQL inseguro. Os novos casos de Stripe usam dublês, sem chamadas ou cobranças na conta real. Os testes de concorrência entre processos e transações reais devem ser complementados pela homologação do ambiente; as verificações unitárias não representam uma simulação completa de múltiplas instâncias.
+
 Identidade visual consistente, jornadas afetadas verificadas, regras financeiras e de estoque preservadas, isolamento e permissões respeitados, migrações coerentes, segredos ausentes do diff, build e verificações relevantes aprovados. A liberação comercial também depende das configurações externas descritas em [Operação](OPERACAO.md).
 
 ## Homologação detalhada de assinaturas
@@ -90,5 +94,9 @@ Identidade visual consistente, jornadas afetadas verificadas, regras financeiras
 | PG16 | Portal                   | Usar customer da empresa e origem fixa; conferir opções configuradas no provedor.           |
 | PG17 | Cota e Redis             | Exceder dez chamadas por minuto; retornar 429; falha do Redis não autoriza operação.        |
 | PG18 | Atualização manual       | Simular webhook ausente; ação autenticada recupera estado atual.                            |
+| PG19 | Reconciliação agendada | Sem webhook, recuperar pagamento/cancelamento pela fila; em teste, não alterar plano live. |
+| PG20 | Réplicas e retomada | Repetir varredura na mesma hora; mesma chave por empresa/ambiente; consultar mais de 100 vínculos e retomar após falha. |
+| PG21 | Exclusão e cobrança | Recusar remoção com assinatura em andamento, checkout aberto, ambiente incorreto ou Stripe indisponível. |
+| PG22 | Cancelamento do pedido | Revalidar pedido na transação; outro worker ou cancelamento pelo titular impede remoção duplicada/indevida. |
 
 Os casos PG são critérios de homologação; esta edição documental não os marca como executados. Dublês de unidade não comprovam ativação da conta real, entrega externa do webhook ou recebimento bancário. Nunca usar credenciais de produção em teste local.

@@ -66,7 +66,13 @@ export class HealthController {
   @Public()
   @Get('version')
   version_() {
-    return { version, node: process.version, env: process.env.NODE_ENV ?? 'development' };
+    const commit = process.env.RAILWAY_GIT_COMMIT_SHA;
+    return {
+      version,
+      node: process.version,
+      env: process.env.NODE_ENV ?? 'development',
+      commit: commit && /^[a-f0-9]{40}$/i.test(commit) ? commit : null,
+    };
   }
 
   /**

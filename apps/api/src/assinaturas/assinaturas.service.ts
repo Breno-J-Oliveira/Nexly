@@ -92,6 +92,8 @@ export class AssinaturasService {
 
     const result = await this.prisma.client.$transaction(
       async (tx) => {
+        // Mesma ordem da exclusão: empresa antes de assinatura, inclusive no primeiro checkout.
+        await tx.$queryRaw`SELECT id FROM empresas WHERE id=${empresaId} FOR UPDATE`;
         // UPDATE obtém o lock da linha. Serializa sessões e webhooks entre réplicas.
         let row = await tx.assinatura.update({
           where: { empresaId },
@@ -239,9 +241,75 @@ export class AssinaturasService {
     return this.status(empresaId);
   }
 
+  /** Recupera notificações perdidas sem consumir a cota das ações do administrador. */
+  async reconciliarAgendada(empresaId: string, ambiente: string): Promise<void> {
+    if (!this.gateway.enabled || ambiente !== this.gateway.mode) return;
+    const row = await this.prisma.client.assinatura.findUnique({ where: { empresaId } });
+    if (!row?.customerId || row.ambiente !== ambiente) return;
+    await this.reconcile(empresaId);
+  }
+
+  /** Deve compartilhar a transação da exclusão para serializar com checkout e webhook. */
+  async validarEncerramento(
+    empresaId: string,
+    tx: Prisma.TransactionClient,
+    exclusaoEm?: Date,
+  ): Promise<void> {
+    await tx.$queryRaw`SELECT id FROM empresas WHERE id=${empresaId} FOR UPDATE`;
+    const existing = await tx.assinatura.findUnique({ where: { empresaId } });
+    if (!existing) return;
+    const row = await tx.assinatura.update({
+      where: { empresaId },
+      data: { updatedAt: new Date() },
+    });
+    if (!row.customerId) return;
+    this.validarAmbiente(row);
+    const stripe = this.gateway.client;
+    const subscriptions = await stripe.subscriptions.list({
+      customer: row.customerId,
+      status: 'all',
+      limit: 100,
+    });
+    if (subscriptions.has_more) {
+      throw new ConflictException(
+        'Solicite ao suporte a conferência da cobrança antes de excluir a conta.',
+      );
+    }
+    for (const subscription of subscriptions.data) {
+      if (subscription.livemode !== this.gateway.livemode) {
+        throw new ConflictException('Ambiente de cobrança incompatível. Contate o suporte.');
+      }
+      if (!ESTADOS_EM_ANDAMENTO.has(subscription.status)) continue;
+      const fim =
+        subscription.cancel_at ??
+        (subscription.cancel_at_period_end
+          ? Math.max(...subscription.items.data.map((item) => item.current_period_end ?? Infinity))
+          : null);
+      if (!exclusaoEm || !fim || !Number.isFinite(fim) || fim * 1000 > exclusaoEm.getTime()) {
+        throw new ConflictException(
+          'Cancele a renovação em Assinatura antes de excluir a conta. A cobrança precisa encerrar antes da exclusão; se precisar, contate o suporte.',
+        );
+      }
+    }
+    if (row.checkoutChave && !row.checkoutId) {
+      throw new ConflictException(
+        'Há uma contratação pendente. Atualize a assinatura ou contate o suporte antes de excluir.',
+      );
+    }
+    if (row.checkoutId) {
+      const session = await stripe.checkout.sessions.retrieve(row.checkoutId);
+      if (session.livemode !== this.gateway.livemode || session.status !== 'expired') {
+        throw new ConflictException(
+          'Há um checkout em andamento. Aguarde a conclusão ou expiração e atualize a assinatura antes de excluir.',
+        );
+      }
+    }
+  }
+
   private async reconcile(empresaId: string, event?: { id: string; type: string }) {
     await this.prisma.client.$transaction(
       async (tx) => {
+        await tx.$queryRaw`SELECT id FROM empresas WHERE id=${empresaId} FOR UPDATE`;
         const row = await tx.assinatura.update({
           where: { empresaId },
           data: { updatedAt: new Date() },

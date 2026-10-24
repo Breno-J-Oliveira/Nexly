@@ -47,7 +47,17 @@ O serviço exige assinatura `active`, ausência de pausa de cobrança, período 
 
 No ambiente test, a assinatura de teste é registrada, mas não altera `Empresa.plano` de produção. A gravação do plano comercial da empresa ocorre somente no modo live. Assim, homologar um pagamento fictício não equivale a comprar acesso comercial.
 
-O estado local depende de webhooks entregues ou de atualização autenticada bem-sucedida. Este módulo não possui um agendamento próprio de reconciliação periódica de todas as assinaturas. Monitorar falhas de entrega é necessário: indisponibilidade prolongada pode deixar o estado local desatualizado. A documentação descreve a regra ao reconciliar, sem prometer expiração automática independente desses mecanismos.
+Além dos webhooks e da atualização autenticada, a API agenda uma reconciliação por hora para cada empresa com customer no ambiente configurado. A varredura ocorre na inicialização e a cada 15 minutos, em páginas de 100 vínculos; a chave da fila deduplica a mesma empresa, ambiente e hora entre réplicas e reinícios. O job consulta o estado atual do Stripe, sem criar cobranças e sem consumir a cota das ações do administrador.
+
+A fila durável repete falhas até cinco tentativas e avisa os administradores em Saúde e rotinas se não concluir. Jobs de outro ambiente ou de integração desativada não alteram o plano. Falhas de rede preservam o estado local até uma consulta válida; o processamento depende de API, banco e Stripe disponíveis e pode atrasar conforme a fila. A rotina complementa os webhooks, não os substitui nem garante sincronização instantânea durante indisponibilidade.
+
+## Exclusão de conta e cobrança
+
+O pedido de exclusão não cancela automaticamente uma assinatura no Stripe. O administrador deve cancelar a renovação no Portal antes de solicitar a remoção. O pedido aceita uma assinatura ainda vigente se o cancelamento já estiver agendado para ocorrer até a data de exclusão; a execução definitiva exige que não exista assinatura em andamento.
+
+A API confere o estado no Stripe tanto no pedido quanto na remoção definitiva. Bloqueia exclusão diante de falha de consulta, ambiente incompatível, paginação incompleta ou checkout ainda aberto/pendente. O vínculo local de cobrança permanece preservado. O encerramento é serializado com checkout e reconciliação pela trava da empresa e da assinatura; o pedido de exclusão é revalidado para respeitar cancelamentos e múltiplos workers.
+
+Se a assinatura for reativada após o pedido, a remoção é adiada. O operador deve acompanhar os logs de exclusão e o suporte deve resolver os casos pendentes. A janela de 30 dias é uma regra operacional do produto, não uma declaração de prazo legal universal. Registros mantidos pelo Stripe, obrigações de retenção e solicitações excepcionais precisam de atendimento específico.
 
 ## Renovação, troca e cancelamento
 

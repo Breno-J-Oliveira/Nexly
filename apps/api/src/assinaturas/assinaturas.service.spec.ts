@@ -45,6 +45,7 @@ describe('Assinaturas do Nexly no Sandbox', () => {
     verify: jest.fn(),
   };
   const db = {
+    $queryRaw: jest.fn().mockResolvedValue([{ id: 'e1' }]),
     assinatura: {
       findUnique: jest.fn(),
       upsert: jest.fn(),
@@ -128,12 +129,131 @@ describe('Assinaturas do Nexly no Sandbox', () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
+  it('recupera plano pago sem webhook e sem consumir a cota do administrador', async () => {
+    configurarProducao(1);
+    await service.reconciliarAgendada('e1', 'live');
+    expect(db.empresa.update).toHaveBeenCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.PRO },
+    });
+    expect(redis.consumeLimit).not.toHaveBeenCalled();
+    expect(db.eventoStripe.create).not.toHaveBeenCalled();
+  });
+
+  it('recupera cancelamento não entregue pelo webhook', async () => {
+    configurarProducao(1, { status: 'canceled' });
+    await service.reconciliarAgendada('e1', 'live');
+    expect(db.empresa.update).toHaveBeenCalledWith({
+      where: { id: 'e1' },
+      data: { plano: Plano.FREE },
+    });
+  });
+
+  it('não altera o plano quando a consulta periódica ao Stripe falha', async () => {
+    configurarProducao(1);
+    stripe.subscriptions.list.mockRejectedValueOnce(new Error('timeout'));
+    await expect(service.reconciliarAgendada('e1', 'live')).rejects.toThrow('timeout');
+    expect(db.empresa.update).not.toHaveBeenCalled();
+  });
+
+  it('ignora jobs antigos de outro ambiente, vínculos removidos e integração desativada', async () => {
+    await service.reconciliarAgendada('e1', 'live');
+    row.ambiente = 'live';
+    await service.reconciliarAgendada('e1', 'test');
+    row.ambiente = 'test';
+    gateway.enabled = false;
+    await service.reconciliarAgendada('e1', 'test');
+    gateway.enabled = true;
+    db.assinatura.findUnique.mockResolvedValueOnce(null);
+    await service.reconciliarAgendada('e1', 'test');
+    expect(stripe.subscriptions.list).not.toHaveBeenCalled();
+    expect(db.empresa.update).not.toHaveBeenCalled();
+  });
+
+  it('a reconciliação periódica de teste não concede plano de produção', async () => {
+    stripe.subscriptions.list.mockResolvedValue({ data: [subscription()], has_more: false });
+    await service.reconciliarAgendada('e1', 'test');
+    expect(row.plano).toBe(Plano.BASIC);
+    expect(db.empresa.update).not.toHaveBeenCalled();
+  });
+
   it('não expõe identificadores internos no status', async () => {
     const result = await service.status('e1');
     expect(result.planos.map((p) => p.centavos)).toEqual([4900, 9900, 19900]);
     expect(result).not.toHaveProperty('customerId');
     expect(result).not.toHaveProperty('checkoutChave');
     expect(db.assinatura.findUnique).toHaveBeenCalledWith({ where: { empresaId: 'e1' } });
+  });
+
+  const validarEncerramento = (exclusaoEm?: Date) =>
+    service.validarEncerramento('e1', db as unknown as Prisma.TransactionClient, exclusaoEm);
+
+  it('não exige Stripe para excluir empresa sem vínculo de cobrança', async () => {
+    db.assinatura.findUnique.mockResolvedValueOnce(null);
+    await validarEncerramento();
+    expect(db.$queryRaw).toHaveBeenCalled();
+    expect(stripe.subscriptions.list).not.toHaveBeenCalled();
+  });
+
+  it.each(['active', 'past_due', 'unpaid', 'incomplete', 'paused', 'trialing'])(
+    'impede exclusão definitiva com assinatura %s, mesmo com plano local FREE',
+    async (status) => {
+      stripe.subscriptions.list.mockResolvedValue({
+        data: [subscription({ status })],
+        has_more: false,
+      });
+      await expect(validarEncerramento()).rejects.toBeInstanceOf(ConflictException);
+    },
+  );
+
+  it('aceita pedido com cancelamento agendado antes da exclusão, mas impede apagar até encerrar', async () => {
+    stripe.subscriptions.list.mockResolvedValue({
+      data: [subscription({ cancel_at_period_end: true })],
+      has_more: false,
+    });
+    await expect(validarEncerramento(new Date(1_800_000_001_000))).resolves.toBeUndefined();
+    await expect(validarEncerramento(new Date(1_799_999_999_000))).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    await expect(validarEncerramento()).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('falha fechada se a consulta de cobrança falhar ou estiver incompleta', async () => {
+    stripe.subscriptions.list.mockRejectedValueOnce(new Error('indisponível'));
+    await expect(validarEncerramento()).rejects.toThrow('indisponível');
+    stripe.subscriptions.list.mockResolvedValueOnce({ data: [], has_more: true });
+    await expect(validarEncerramento()).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('não exclui com vínculo ou resposta Stripe de outro ambiente', async () => {
+    row.ambiente = 'live';
+    await expect(validarEncerramento()).rejects.toBeInstanceOf(ConflictException);
+    row.ambiente = 'test';
+    stripe.subscriptions.list.mockResolvedValueOnce({
+      data: [subscription({ livemode: true, status: 'canceled' })],
+      has_more: false,
+    });
+    await expect(validarEncerramento()).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('preserva checkout aberto ou cuja criação ainda precisa ser recuperada', async () => {
+    row.checkoutChave = 'tentativa-pendente';
+    await expect(validarEncerramento()).rejects.toBeInstanceOf(ConflictException);
+    row.checkoutId = 'cs_1';
+    stripe.checkout.sessions.retrieve.mockResolvedValue({ livemode: false, status: 'open' });
+    await expect(validarEncerramento()).rejects.toBeInstanceOf(ConflictException);
+    stripe.checkout.sessions.retrieve.mockResolvedValue({ livemode: false, status: 'expired' });
+    await expect(validarEncerramento()).resolves.toBeUndefined();
+  });
+
+  it('permite apagar após encerramento confirmado sem criar cobranças', async () => {
+    stripe.subscriptions.list.mockResolvedValue({
+      data: [subscription({ status: 'canceled' })],
+      has_more: false,
+    });
+    await validarEncerramento();
+    expect(stripe.customers.create).not.toHaveBeenCalled();
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
   });
 
   it('recusa plano arbitrário antes de acessar Stripe', async () => {

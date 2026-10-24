@@ -2,12 +2,15 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../database/prisma.service';
 import * as argon2 from 'argon2';
 import { AuditService } from '../audit/audit.service';
+import { Prisma } from '@prisma/client';
+import { AssinaturasService } from '../assinaturas/assinaturas.service';
 
 @Injectable()
 export class LgpdService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly assinaturas: AssinaturasService,
   ) {}
 
   /** Exporta todos os dados da empresa do tenant como objeto estruturado. */
@@ -118,7 +121,7 @@ export class LgpdService {
     return { success: true };
   }
 
-  /** Agenda a exclusão da conta (30 dias), conforme LGPD. */
+  /** Agenda a exclusão da conta após a janela operacional de 30 dias. */
   async solicitarExclusao(
     empresaId: string,
     usuarioId: string,
@@ -132,9 +135,17 @@ export class LgpdService {
     }
 
     const executarEm = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    await this.prisma.client.exclusaoConta.create({
-      data: { empresaId, executarEm },
-    });
+    await this.prisma.client.$transaction(
+      async (tx) => {
+        await this.assinaturas.validarEncerramento(
+          empresaId,
+          tx as unknown as Prisma.TransactionClient,
+          executarEm,
+        );
+        await tx.exclusaoConta.create({ data: { empresaId, executarEm } });
+      },
+      { maxWait: 5000, timeout: 30_000 },
+    );
 
     return { agendadaParaExclusaoEm: executarEm };
   }

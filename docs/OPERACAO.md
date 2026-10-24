@@ -64,4 +64,24 @@ Contato público autorizado: **breno.emailsenai@gmail.com**. Antes de abrir o se
 
 ## Detalhamento de cobrança
 
-O [guia de pagamentos](PAGAMENTOS.md) detalha configuração test/live, permissões, eventos, reconciliação, renovação, troca, cancelamento, recebimento e diagnóstico. A atualização de variáveis exige reinício ou nova publicação da API. A monitoração de webhooks é necessária porque não há reconciliação periódica própria de todas as assinaturas.
+O [guia de pagamentos](PAGAMENTOS.md) detalha configuração test/live, permissões, eventos, reconciliação, renovação, troca, cancelamento, recebimento e diagnóstico. A atualização de variáveis exige reinício ou nova publicação da API. Monitore webhooks e a fila `ASSINATURA_RECONCILIAR`: a conferência horária ajuda a recuperar eventos perdidos, mas depende das integrações disponíveis.
+
+## Liberação comercial — revisão de 24/10/2026
+
+A tela enviada pelo responsável confirmou `Your trial has expired` e `Service offline` no Railway. Esse bloqueio é da conta, não prova incidente geral nem erro no código atual. A decisão foi manter a API no Railway com plano pago; a ativação ainda precisa ser confirmada. Excluir deploys não renova o período de teste.
+
+Antes de vender, concluir esta sequência com evidências do ambiente publicado:
+
+| Etapa | Evidência necessária | Responsável pela ação externa |
+| --- | --- | --- |
+| Publicação da API | Último commit da main Active; `/api/health/deep` com HTTP 200 e banco/Redis saudáveis; `/api/health/version` com Node corrigido e commit esperado | Titular ativa o plano; manutenção confere deploy e logs |
+| Credenciais | Substituição das credenciais expostas ao Railway, atualização de todos os consumidores e revogação das anteriores; rotação de chaves de cifra exige preservar dados existentes | Titular nas contas dos provedores |
+| Conta de usuário | Cadastro, login por senha/Google, logout, renovação, dois fatores e acesso por perfis testados no domínio publicado | Manutenção e conta de piloto |
+| Recuperação de acesso | Provedor de e-mail e remetente verificados; entrega real e redefinição de senha testadas | Titular configura remetente; envio permanece desativado até isso |
+| Assinaturas | Checkout, webhook, renovação recusada/recuperada, troca e cancelamento homologados no Sandbox; preços e portal live conferidos separadamente | Manutenção e titular no Stripe |
+| Recebimento | Conta Stripe habilitada, verificações e destino bancário corretos | Titular no Stripe; testes automatizados não comprovam repasse |
+| Backup | Backup externo recente cifrado e restauração comprovada em banco descartável | Titular fornece armazenamento; manutenção executa verificação |
+| Condições comerciais | Identificação pública do responsável, termos, privacidade, cancelamento, suporte e obrigações fiscais definidos e revisados | Titular e profissionais responsáveis |
+| Piloto | Uma empresa percorre agenda → atendimento → estoque, PDV → financeiro, equipe/permissões e exportação; divergências registradas e resolvidas | Titular seleciona negócio piloto |
+
+O endpoint de versão inclui `commit` quando o Railway fornece `RAILWAY_GIT_COMMIT_SHA` válido; caso contrário retorna `null`. Isso evita confundir deploy antigo com o código recém-publicado. Uma revisão automatizada aprovada não declara a operação comercial liberada enquanto estas dependências estiverem pendentes. A documentação acadêmica em Word permanece sob controle do autor e não foi alterada nesta revisão.

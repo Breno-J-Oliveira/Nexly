@@ -1,5 +1,14 @@
 # Histórico das entregas documentadas
 
+## Preparação comercial de 24 de outubro de 2026
+
+- Correções transitivas Multer 2.5.0 e fast-uri 3.1.9; auditoria de produção sem avisos conhecidos na nova consulta.
+- Reconciliação horária de assinaturas por fila durável, com recuperação de eventos perdidos, deduplicação por ambiente/empresa e tentativas com alerta operacional.
+- Proteção do vínculo de cobrança antes de solicitar/executar exclusão de empresa; consulta do estado no Stripe e serialização com contratação e reconciliação. Pedidos cancelados são revalidados antes da remoção.
+- Orientação de encerramento na tela de configurações, preservando o design existente.
+- Identificação do commit em `/api/health/version` para conferir a versão realmente publicada no Railway.
+- Critérios de lançamento reunidos em [Operação](OPERACAO.md), distinguindo testes do código, homologação externa e pendências do titular. Documentos Word preservados.
+
 ## Outubro de 2026
 
 O produto evoluiu da agenda conectada ao estoque para um conjunto modular com financeiro, comissões, fidelidade, fornecedores, compras e recursos operacionais. Foram adicionados fluxos de personalização, trabalho em equipe, tarefas persistidas, sessões, segundo fator, login Google e assinaturas do Nexly. Configuração externa e disponibilidade em produção precisam ser verificadas separadamente.
