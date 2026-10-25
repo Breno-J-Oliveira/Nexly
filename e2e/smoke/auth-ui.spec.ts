@@ -37,13 +37,21 @@ test('cadastro chega à revisão sem pedir cartão e exige aceite', async ({ pag
   await page.getByRole('button', { name: 'Continuar', exact: true }).click();
   await expect(page.getByLabel('Modelo do negócio')).toHaveValue('psicologia');
   await expect(page.getByRole('button', { name: /^PDV/ })).toHaveAttribute('aria-pressed', 'false');
+  await page.getByText('Veja como cada recurso funciona', { exact: true }).click();
+  await page.getByLabel('Conhecer recurso', { exact: true }).selectOption('pdv');
+  await expect(
+    page.getByText('Busque os produtos e monte o carrinho.', { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: /^PDV/ })).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByRole('button', { name: /^Agenda/ })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
   await page.getByRole('button', { name: 'Continuar', exact: true }).click();
-  await expect(page.getByText('Acesso gratuito', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Continuar', exact: true }).click();
+  await expect(page.getByText('Etapa 4 de 4 · Perfil')).toBeVisible();
+  await expect(
+    page.getByText(/Acesso gratuito com 1 profissional ativo, sem cartão/),
+  ).toBeVisible();
   await expect(page.getByText('Confira seu cadastro')).toBeVisible();
   await page.getByLabel('Nome do responsável', { exact: true }).fill('Pessoa de teste');
   await page.getByLabel('CNPJ', { exact: true }).fill('11.222.333/0001-81');

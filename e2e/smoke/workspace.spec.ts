@@ -40,7 +40,6 @@ test('preset survives registration and modules can be changed later', async ({ p
       'false',
     );
     await page.getByRole('button', { name: 'Continuar', exact: true }).click();
-    await page.getByRole('button', { name: 'Continuar', exact: true }).click();
     await page.getByLabel('Nome do responsável').fill('TESTE pessoa temporária');
     await page.getByLabel('CNPJ', { exact: true }).fill(cnpj());
     await page.getByLabel('Telefone do negócio').fill('11999999999');

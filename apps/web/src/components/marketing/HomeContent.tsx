@@ -73,11 +73,11 @@ const questions = [
 ];
 
 const segments = [
-  { name: 'Salões', icon: 'scissors', text: 'Horários, serviços e equipe' },
-  { name: 'Clínicas', icon: 'heart-pulse', text: 'Consultas e relacionamento' },
-  { name: 'Petshops', icon: 'paw', text: 'Atendimentos e produtos' },
-  { name: 'Estúdios', icon: 'spa', text: 'Uma rotina sob medida' },
-  { name: 'Barbearias', icon: 'user-tie', text: 'Agenda, vendas e comissões' },
+  { name: 'Salões', segment: 'salao', icon: 'scissors', text: 'Horários, serviços e equipe' },
+  { name: 'Clínicas', segment: 'estetica', icon: 'heart-pulse', text: 'Consultas e relacionamento' },
+  { name: 'Petshops', segment: 'petshop', icon: 'paw', text: 'Atendimentos e produtos' },
+  { name: 'Estúdios', segment: 'outro', icon: 'spa', text: 'Uma rotina sob medida' },
+  { name: 'Barbearias', segment: 'barbearia', icon: 'user-tie', text: 'Agenda, vendas e comissões' },
 ];
 
 export function HomeContent() {
@@ -131,9 +131,9 @@ export function HomeContent() {
               </p>
             </div>
             <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-5">
-              {segments.map(({ name, icon, text }) => (
+              {segments.map(({ name, segment, icon, text }) => (
                 <Link
-                  href="/cadastro"
+                  href={`/cadastro?segmento=${segment}`}
                   key={name}
                   className="group rounded-xl border border-white/[0.08] bg-[#111116] p-5 transition-colors hover:border-[#6366F1]/50"
                 >

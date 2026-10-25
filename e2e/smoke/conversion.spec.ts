@@ -2,6 +2,32 @@ import { expect, test } from '../fixtures';
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
+test('segmento da landing prepara o cadastro e permite escolher outro modelo', async ({ page }) => {
+  await page.goto('/');
+  await page
+    .getByRole('region', { name: 'Segmentos atendidos' })
+    .getByRole('link', { name: /Petshops/ })
+    .click();
+  await expect(page).toHaveURL(/\/cadastro\?segmento=petshop$/);
+  await page.getByLabel('E-mail', { exact: true }).fill('segmento@example.test');
+  await page.getByLabel('Senha', { exact: true }).fill('TesteSeguro123!');
+  await page.getByRole('button', { name: 'Continuar', exact: true }).click();
+  await expect(page.getByLabel('Segmento', { exact: true })).toHaveValue('petshop');
+  await page.getByLabel('Nome da empresa', { exact: true }).fill('Negócio de teste');
+  await page.getByRole('button', { name: 'Continuar', exact: true }).click();
+  await expect(page.getByLabel('Modelo do negócio')).toHaveValue('petshop');
+  await page.getByRole('button', { name: 'Voltar', exact: true }).click();
+  await page.getByLabel('Segmento', { exact: true }).selectOption('psicologia');
+  await page.getByRole('button', { name: 'Continuar', exact: true }).click();
+  await expect(page.getByLabel('Modelo do negócio')).toHaveValue('psicologia');
+  await page.goto('/precos');
+  const enterprise = page
+    .getByRole('article')
+    .filter({ has: page.getByRole('heading', { name: 'Empresarial', exact: true }) });
+  await expect(enterprise).toContainText('Até 100 profissionais ativos');
+  await expect(enterprise).toContainText('R$ 199');
+});
+
 test('funcionalidades navegam por clique, teclado e link direto sem executar operações', async ({
   page,
 }) => {
@@ -71,7 +97,7 @@ for (const width of [320, 390, 1440]) {
     const a = (await steps.boundingBox())!,
       b = (await mode.boundingBox())!;
     expect(a.y - b.y - b.height).toBeGreaterThanOrEqual(24);
-    await expect(steps.getByRole('listitem')).toHaveCount(5);
+    await expect(steps.getByRole('listitem')).toHaveCount(4);
     for (const path of ['/', '/funcionalidades#estoque', '/blog', '/precos']) {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

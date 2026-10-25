@@ -20,9 +20,8 @@ import { maskCnpj, maskTelefone, soDigitos } from '@/lib/format';
 import { authLink } from '@/lib/auth-navigation';
 import { useAuthDestination } from '@/lib/use-auth-destination';
 
-const PASSO_COUNT = 5;
-
-const planos = [{ id: 'FREE', nome: 'Acesso gratuito', preco: 0, periodo: '', descricao: 'Comece a organizar seu negócio sem informar cartão.', recursos: ['1 profissional ativo', 'Agenda e clientes', 'Estoque e PDV', 'Relatórios e gestão'], destaque: false }];
+const PASSO_COUNT = 4;
+const SEGMENT_PRESETS: Record<string, string> = { salao: 'salao', barbearia: 'salao', estetica: 'estetica', spa: 'estetica', veterinaria: 'veterinaria', psicologia: 'psicologia', petshop: 'petshop', outro: 'personalizado' };
 
 const schemaPasso1 = z
   .object({
@@ -34,7 +33,6 @@ const schemaPasso2 = z.object({
   empresaNome: z.string().min(2, 'Nome da empresa obrigatório'),
   segmento: z.string().min(2, 'Segmento obrigatório'),
 });
-const schemaPasso3 = z.object({ plano: z.string().min(1, 'Selecione um plano') });
 const schemaPerfil = z.object({
   responsavelNome: z.string().min(2, 'Informe seu nome'),
   cnpj: z.string().refine(v => validarCnpj(soDigitos(v)), 'CNPJ inválido'),
@@ -44,12 +42,11 @@ const schemaPerfil = z.object({
 
 type Passo1 = z.infer<typeof schemaPasso1>;
 type Passo2 = z.infer<typeof schemaPasso2>;
-type Passo3 = z.infer<typeof schemaPasso3>;
 
-interface FormData extends Passo1, Passo2, Passo3, z.infer<typeof schemaPerfil> {}
+interface FormData extends Passo1, Passo2, z.infer<typeof schemaPerfil> {}
 
 function StepIndicator({ passoAtual }: { passoAtual: number }) {
-  const labels = ['Conta', 'Negócio', 'Recursos', 'Plano', 'Perfil'];
+  const labels = ['Conta', 'Negócio', 'Recursos', 'Perfil'];
   return (
     <nav aria-label="Etapas do cadastro" className="my-8 border-y border-white/[0.06] py-6 sm:my-9">
       <p className="mb-5 text-center text-xs text-[#A1A1AA]">Etapa {passoAtual} de {PASSO_COUNT} · {labels[passoAtual - 1]}</p>
@@ -89,8 +86,15 @@ export default function CadastroPage() {
 
   const form1 = useForm<Passo1>({ resolver: zodResolver(schemaPasso1), mode: 'onBlur' });
   const form2 = useForm<Passo2>({ resolver: zodResolver(schemaPasso2), mode: 'onBlur' });
-  const form3 = useForm<Passo3>({ resolver: zodResolver(schemaPasso3), mode: 'onBlur', defaultValues: { plano: 'FREE' } });
   const perfil = useForm<z.infer<typeof schemaPerfil>>({ resolver: zodResolver(schemaPerfil), mode: 'onBlur' });
+
+  useEffect(() => {
+    const escolhido = new URLSearchParams(window.location.search).get('segmento');
+    if (escolhido && Object.hasOwn(SEGMENT_PRESETS, escolhido)) {
+      form2.setValue('segmento', escolhido);
+      setForm(previous => ({ ...previous, segmento: escolhido }));
+    }
+  }, [form2]);
 
   useEffect(() => {
     if (!googleRegistration) return;
@@ -102,8 +106,7 @@ export default function CadastroPage() {
   const segmento = form2.watch('segmento');
   useEffect(() => {
     if (!segmento) return;
-    const mapping: Record<string, string> = { salao: 'salao', barbearia: 'salao', estetica: 'estetica', spa: 'estetica', veterinaria: 'veterinaria', psicologia: 'psicologia', petshop: 'petshop', outro: 'personalizado' };
-    const modelo = PRESETS.find(p => p.id === mapping[segmento]);
+    const modelo = PRESETS.find(p => p.id === SEGMENT_PRESETS[segmento]);
     if (modelo) { setPreset(modelo.id); setModulos(normalizeModules(modelo.modulos)); }
   }, [segmento]);
 
@@ -114,7 +117,6 @@ export default function CadastroPage() {
     if (passo === 1) { valid = await form1.trigger(); if (valid) dados = form1.getValues(); }
     else if (passo === 2) { valid = await form2.trigger(); if (valid) dados = form2.getValues(); }
     else if (passo === 3) { valid = modulos.length > 0; if (!valid) setError('Escolha pelo menos um recurso.'); }
-    else if (passo === 4) { valid = await form3.trigger(); if (valid) dados = form3.getValues(); }
     if (!valid) return;
     setForm((prev) => ({ ...prev, ...dados }));
     setPasso((p) => Math.min(p + 1, PASSO_COUNT));
@@ -194,31 +196,6 @@ export default function CadastroPage() {
         return <ModulePicker preset={preset} modulos={modulos} onChange={(p, ids) => { setPreset(p); setModulos(ids); }} />;
       case 4:
         return (
-          <div className="space-y-3">
-            {planos.map((plano) => {
-              const selecionado = form3.watch('plano') === plano.id || form.plano === plano.id;
-              return (
-                <button key={plano.id} type="button" onClick={() => form3.setValue('plano', plano.id, { shouldValidate: true })} className="relative w-full rounded-2xl border p-4 text-left transition-all" style={{ backgroundColor: selecionado ? 'rgba(99,102,241,0.10)' : '#111116', borderColor: selecionado ? '#6366F1' : 'rgba(255,255,255,0.08)' }}>
-                  {plano.destaque && <span className="absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}>Popular</span>}
-                  <div className="flex items-end gap-2"><span className="text-2xl font-bold" style={{ color: '#FAFAFA' }}>R$ {plano.preco}</span><span className="text-sm" style={{ color: '#A1A1AA' }}>{plano.periodo}</span></div>
-                  <div className="mt-1 text-[15px] font-semibold" style={{ color: '#FAFAFA' }}>{plano.nome}</div>
-                  <p className="text-[13px]" style={{ color: '#A1A1AA' }}>{plano.descricao}</p>
-                  <ul className="mt-3 space-y-1">
-                    {plano.recursos.map((r, i) => (
-                      <li key={i} className="flex items-center gap-2 text-[12px]" style={{ color: '#A1A1AA' }}>
-                        <Icon name="check" className="text-[#22C55E]" size="sm" />
-                        {r}
-                      </li>
-                    ))}
-                  </ul>
-                </button>
-              );
-            })}
-            {form3.formState.errors.plano?.message && <span className="text-xs text-red-400">{form3.formState.errors.plano.message}</span>}
-          </div>
-        );
-      case 5:
-        return (
           <div className="space-y-5">
             <AuthInput label="Nome do responsável" placeholder="Seu nome" error={perfil.formState.errors.responsavelNome?.message} {...perfil.register('responsavelNome')} />
             <AuthInput label="CNPJ" placeholder="00.000.000/0000-00" error={perfil.formState.errors.cnpj?.message} value={perfil.watch('cnpj') || ''} onChange={e => perfil.setValue('cnpj', maskCnpj(e.target.value))} />
@@ -226,6 +203,7 @@ export default function CadastroPage() {
             <AuthInput label="Cidade" placeholder="São Paulo, SP" error={perfil.formState.errors.cidade?.message} {...perfil.register('cidade')} />
             <div className="rounded-xl border border-white/10 bg-[#18181F] p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-[#A1A1AA]">Confira seu cadastro</p>
+              <p className="mt-2 text-sm leading-6 text-[#A1A1AA]">Acesso gratuito com 1 profissional ativo, sem cartão. Você poderá contratar um plano depois de criar a conta.</p>
               <dl className="mt-4 space-y-3 text-sm">
                 {[['Empresa', form.empresaNome], ['E-mail', form.email], ['Recursos', `${modulos.length} selecionados`], ['Acesso', 'Gratuito']].map(([label, value]) => (
                   <div key={label} className="flex flex-wrap justify-between gap-2"><dt className="text-[#A1A1AA]">{label}</dt><dd className="break-all text-right text-[#FAFAFA]">{value}</dd></div>
@@ -246,8 +224,8 @@ export default function CadastroPage() {
   return (
     <div data-onboarding-modules={passo === 3 ? 'true' : undefined} className="rounded-2xl border px-6 py-8 sm:p-10" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
       <div className="flex justify-center"><Brand /></div>
-      <h1 className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>{['Comece pelo seu acesso', 'Configure seu negócio', 'O Nexly se adapta ao seu negócio.', 'Seu Nexly está quase pronto.', 'Complete seu perfil'][passo - 1]}</h1>
-      <p className="mt-2 text-center text-[14px]" style={{ color: '#A1A1AA' }}>{passo === 3 ? 'Escolha os recursos que você precisa e crie uma experiência sob medida.' : passo === 5 ? 'Confira seus dados antes de criar a conta' : 'Gerencie seu negócio de forma inteligente'}</p>
+      <h1 className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>{['Comece pelo seu acesso', 'Configure seu negócio', 'O Nexly se adapta ao seu negócio.', 'Complete seu perfil'][passo - 1]}</h1>
+      <p className="mt-2 text-center text-[14px]" style={{ color: '#A1A1AA' }}>{passo === 3 ? 'Escolha os recursos que você precisa e crie uma experiência sob medida.' : passo === PASSO_COUNT ? 'Confira seus dados antes de criar a conta' : 'Gerencie seu negócio de forma inteligente'}</p>
       <div className="mt-8 flex rounded-xl border p-1" style={{ borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#0C0C10' }}>
         <Link href={authLink('/login', destination)} className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ color: '#A1A1AA' }}>Entrar</Link>
         <Link href={authLink('/cadastro', destination)} className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}>Criar Conta</Link>
