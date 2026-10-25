@@ -7,7 +7,7 @@ for (const [plano, limite] of [
   [Plano.FREE, 1],
   [Plano.BASIC, 2],
   [Plano.PRO, 10],
-  [Plano.ENTERPRISE, null],
+  [Plano.ENTERPRISE, 100],
 ] as const) {
   test(`limite ${plano} é aplicado pela API com concorrência e isolamento`, async ({
     request,
@@ -44,7 +44,7 @@ for (const [plano, limite] of [
     });
     let outraEmpresaId: string | undefined;
     try {
-      const ativosAntes = limite === null ? 12 : limite - 1;
+      const ativosAntes = limite - 1;
       await db.profissional.createMany({
         data: [
           ...Array.from({ length: ativosAntes }, (_, i) => ({
@@ -82,19 +82,19 @@ for (const [plano, limite] of [
           }),
         ),
       );
-      expect(results.filter((r) => r.status() === 201)).toHaveLength(limite === null ? 6 : 1);
+      expect(results.filter((r) => r.status() === 201)).toHaveLength(1);
       for (const result of results.filter((r) => r.status() !== 201)) {
         expect(result.status()).toBe(403);
         expect((await result.json()).code).toBe('PROFESSIONAL_LIMIT_REACHED');
       }
-      const expectedCount = ativosAntes + (limite === null ? 6 : 1);
+      const expectedCount = ativosAntes + 1;
       const quotaResponse = await request.get(`${apiURL}/api/profissionais/limites`, { headers });
       expect(quotaResponse.status()).toBe(200);
       expect(await quotaResponse.json()).toEqual({
         plano,
         ativos: expectedCount,
         limite,
-        podeAdicionar: limite === null,
+        podeAdicionar: false,
       });
       expect(await db.profissional.count({ where: { empresaId: outra.id, ativo: true } })).toBe(1);
       if (plano === Plano.FREE) {

@@ -13,7 +13,7 @@ Checkout é a página de contratação hospedada pelo Stripe. Customer é o cada
 | Gratuito     | FREE       | R$ 0                 | 1                                     |
 | Essencial    | BASIC      | R$ 49                | 2                                     |
 | Profissional | PRO        | R$ 99                | 10                                    |
-| Empresarial  | ENTERPRISE | R$ 199               | Sem limite comercial de profissionais |
+| Empresarial  | ENTERPRISE | R$ 199               | 100 profissionais ativos |
 
 O [catálogo do backend](../apps/api/src/assinaturas/catalogo.ts) define os preços aprovados e mantém identificadores separados para teste e produção. Os [limites compartilhados](../packages/shared/src/plans.ts) definem as cotas de profissionais ativos. Ausência de limite comercial de profissionais não significa ausência de limites de infraestrutura, uso ou segurança.
 

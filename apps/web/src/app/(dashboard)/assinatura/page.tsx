@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
+import { PROFESSIONAL_LIMITS, type Plano } from '@nexly/shared';
 
 interface SubscriptionState {
   disponivel: boolean;
@@ -15,7 +16,7 @@ interface SubscriptionState {
   cancelarEm: string | null;
   podeGerenciar: boolean;
   emAndamento: boolean;
-  planos: { id: string; nome: string; centavos: number }[];
+  planos: { id: Plano; nome: string; centavos: number }[];
 }
 
 const labels: Record<string, string> = {
@@ -247,6 +248,7 @@ export default function AssinaturaPage() {
                   <span className="text-sm font-normal text-[#A1A1AA]"> / mês</span>
                 </p>
                 <p className="mb-6 mt-4 flex-1 text-sm leading-7 text-[#A1A1AA]">
+                  Até {PROFESSIONAL_LIMITS[plan.id]} profissionais ativos.{' '}
                   Assinatura mensal recorrente. Você confirma os detalhes no checkout seguro do
                   Stripe.
                 </p>

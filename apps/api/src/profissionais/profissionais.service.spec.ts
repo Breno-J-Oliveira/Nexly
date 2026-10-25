@@ -91,6 +91,8 @@ describe('ProfissionaisService', () => {
       [Plano.FREE, 3],
       [Plano.BASIC, 2],
       [Plano.PRO, 10],
+      [Plano.ENTERPRISE, 100],
+      [Plano.ENTERPRISE, 101],
     ])('recusa cadastro acima do limite de %s com %i ativos', async (plano, ativos) => {
       queryRaw.mockResolvedValue([{ plano }]);
       profissional.count.mockResolvedValue(ativos);
@@ -106,7 +108,7 @@ describe('ProfissionaisService', () => {
       [Plano.FREE, 0],
       [Plano.BASIC, 1],
       [Plano.PRO, 9],
-      [Plano.ENTERPRISE, 100],
+      [Plano.ENTERPRISE, 99],
     ])('permite cadastro dentro da capacidade de %s com %i ativos', async (plano, ativos) => {
       queryRaw.mockResolvedValue([{ plano }]);
       profissional.count.mockResolvedValue(ativos);
@@ -127,6 +129,17 @@ describe('ProfissionaisService', () => {
   });
 
   describe('limites', () => {
+    it('expõe o teto empresarial sem remover profissionais cadastrados anteriormente', async () => {
+      empresa.findUniqueOrThrow.mockResolvedValue({ plano: Plano.ENTERPRISE });
+      profissional.count.mockResolvedValue(101);
+      await expect(inTenant(() => service.limites())).resolves.toEqual({
+        plano: Plano.ENTERPRISE,
+        ativos: 101,
+        limite: 100,
+        podeAdicionar: false,
+      });
+      expect(profissional.updateMany).not.toHaveBeenCalled();
+    });
     it('mostra excesso após redução de plano sem desativar cadastros existentes', async () => {
       profissional.count.mockResolvedValue(3);
       await expect(inTenant(() => service.limites())).resolves.toEqual({

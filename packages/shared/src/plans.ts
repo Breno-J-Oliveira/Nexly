@@ -12,7 +12,7 @@ export const PROFESSIONAL_LIMITS: Record<Plano, number | null> = {
   FREE: 1,
   BASIC: 2,
   PRO: 10,
-  ENTERPRISE: null,
+  ENTERPRISE: 100,
 };
 
 export interface ProfessionalQuota {

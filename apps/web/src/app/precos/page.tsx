@@ -4,6 +4,7 @@ import { LandingFooter } from '@/components/LandingFooter';
 import { LandingHeader } from '@/components/LandingHeader';
 import { PublicIntro } from '@/components/marketing/PublicUI';
 import { subscriptionDestination } from '@/lib/auth-navigation';
+import { PROFESSIONAL_LIMITS } from '@nexly/shared';
 
 const planos = [
   {
@@ -11,7 +12,7 @@ const planos = [
     nome: 'Essencial',
     preco: 49,
     descricao: 'Para organizar uma equipe pequena.',
-    limite: 'Até 2 profissionais ativos',
+    limite: `Até ${PROFESSIONAL_LIMITS.BASIC} profissionais ativos`,
     destaque: false,
   },
   {
@@ -19,7 +20,7 @@ const planos = [
     nome: 'Profissional',
     preco: 99,
     descricao: 'Para acompanhar o crescimento da equipe.',
-    limite: 'Até 10 profissionais ativos',
+    limite: `Até ${PROFESSIONAL_LIMITS.PRO} profissionais ativos`,
     destaque: true,
   },
   {
@@ -27,7 +28,7 @@ const planos = [
     nome: 'Empresarial',
     preco: 199,
     descricao: 'Para trabalhar com uma equipe maior.',
-    limite: 'Profissionais ativos ilimitados',
+    limite: `Até ${PROFESSIONAL_LIMITS.ENTERPRISE} profissionais ativos`,
     destaque: false,
   },
 ];

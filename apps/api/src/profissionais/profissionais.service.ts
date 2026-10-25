@@ -67,7 +67,7 @@ export class ProfissionaisService {
         if (!quota.podeAdicionar) {
           throw new ForbiddenException({
             code: 'PROFESSIONAL_LIMIT_REACHED',
-            message: `O plano ${PLAN_NAMES[empresa.plano]} permite até ${quota.limite} ${quota.limite === 1 ? 'profissional ativo' : 'profissionais ativos'}. Desative um cadastro ou altere o plano para adicionar outro.`,
+            message: `O plano ${PLAN_NAMES[empresa.plano]} permite até ${quota.limite} ${quota.limite === 1 ? 'profissional ativo' : 'profissionais ativos'}. ${empresa.plano === Plano.ENTERPRISE ? 'Desative um cadastro para liberar uma vaga.' : 'Desative um cadastro ou altere o plano para adicionar outro.'}`,
           });
         }
         return tx.profissional.create({

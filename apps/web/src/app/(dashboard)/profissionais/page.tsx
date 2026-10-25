@@ -169,8 +169,9 @@ export default function ProfissionaisPage() {
           {!quota.podeAdicionar && (
             <>
               <p className="mt-2 text-sm leading-7 text-amber-200">
-                Você atingiu o limite do plano. Para adicionar outro profissional, desative um
-                cadastro ou altere o plano. Os cadastros existentes continuam disponíveis.
+                Você atingiu o limite do plano. {quota.plano === 'ENTERPRISE'
+                  ? 'Desative um profissional que não faz mais parte da equipe para liberar uma vaga.'
+                  : 'Para adicionar outro profissional, desative um cadastro ou altere o plano.'} Os cadastros existentes continuam disponíveis.
               </p>
               {user?.role === 'ADMIN' ? (
                 <Link
