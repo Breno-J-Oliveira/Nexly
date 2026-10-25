@@ -132,7 +132,7 @@ export default function RelatoriosPage() {
                 <KPI label="Margem %" value={dre.margemPercentual===null?'Indisponível':dre.margemPercentual.toFixed(1)+'%'} color={(dre.margemPercentual ?? 0) >= 0 ? '#22C55E' : '#EF4444'} />
                 <KPI label="Descontos" value={fmt(dre.descontos)} color="#EF4444" />
               </div>
-              <p className="mt-4 text-xs text-[#A1A1AA]">CMV e margens dependem do custo histórico dos produtos, que ainda não é registrado.</p>
+              <p className="mt-4 text-xs leading-6 text-[#A1A1AA]">As receitas acima consideram vendas concluídas, mesmo que ainda não tenham sido recebidas. CMV é o custo dos produtos vendidos, registrado no momento da venda. Vendas antigas sem esse custo deixam as margens indisponíveis; alterar o custo atual do produto não reescreve o histórico.</p>
               <p className="mt-4 text-xs" style={{ color: '#A1A1AA' }}>
                 {dre.qtdVendas} {dre.qtdVendas === 1 ? 'venda' : 'vendas'} no período
               </p>
@@ -144,8 +144,8 @@ export default function RelatoriosPage() {
           {fluxo && (
             <div className="grid gap-6 lg:grid-cols-2">
               <section className="min-w-0 rounded-xl border border-white/10 bg-[#111116] p-5">
-                <h3 className="text-sm font-semibold">Faturamento do Período</h3>
-                <p className="mt-1 text-xs text-[#A1A1AA]">Receita diária das vendas registradas</p>
+                <h3 className="text-sm font-semibold">Movimentação líquida de caixa</h3>
+                <p className="mt-1 text-xs text-[#A1A1AA]">Recebimentos menos pagamentos, com os estornos do dia. Valores negativos indicam mais saídas que entradas.</p>
                 <div className="mt-6 h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={fluxo.fluxo}>
@@ -153,7 +153,7 @@ export default function RelatoriosPage() {
                       <XAxis dataKey="data" tickFormatter={value => String(value).slice(5)} tick={{ fill: '#A1A1AA', fontSize: 11 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: '#A1A1AA', fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
                       <Tooltip contentStyle={{ background: '#18181F', border: '1px solid rgba(255,255,255,.1)', borderRadius: 8 }} formatter={value => fmt(Number(value))} />
-                      <Bar dataKey="total" name="Faturamento" fill="#6366F1" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="total" name="Movimentação líquida" fill="#6366F1" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -172,9 +172,9 @@ export default function RelatoriosPage() {
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                     <th className="px-4 py-3 font-medium" style={{ color: '#A1A1AA' }}>Data</th>
-                    <th className="px-4 py-3 font-medium" style={{ color: '#A1A1AA' }}>Vendas</th>
-                    <th className="px-4 py-3 font-medium" style={{ color: '#A1A1AA' }}>Total</th>
-                    <th className="px-4 py-3 font-medium" style={{ color: '#A1A1AA' }}>Saldo Acum.</th>
+                    <th className="px-4 py-3 font-medium" style={{ color: '#A1A1AA' }}>Movimentos</th>
+                    <th className="px-4 py-3 font-medium" style={{ color: '#A1A1AA' }}>Líquido do dia</th>
+                    <th className="px-4 py-3 font-medium" style={{ color: '#A1A1AA' }}>Acumulado no período</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -185,7 +185,7 @@ export default function RelatoriosPage() {
                     <tr key={f.data} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                       <td className="px-4 py-3" style={{ color: '#FAFAFA' }}>{new Date(f.data + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                       <td className="px-4 py-3" style={{ color: '#818CF8' }}>{f.entradas}</td>
-                      <td className="px-4 py-3" style={{ color: '#22C55E' }}>{fmt(f.total)}</td>
+                      <td className="px-4 py-3" style={{ color: f.total >= 0 ? '#22C55E' : '#EF4444' }}>{fmt(f.total)}</td>
                       <td className="px-4 py-3 font-semibold" style={{ color: f.saldoAcumulado >= 0 ? '#22C55E' : '#EF4444' }}>{fmt(f.saldoAcumulado)}</td>
                     </tr>
                   ))}

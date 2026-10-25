@@ -12,7 +12,7 @@ A matriz organiza o **grupo**, a **operação** e o **teste esperado**, com iden
 
 | ID   | Grupo e operação          | Procedimento e resultado esperado                                                         |
 | ---- | ------------------------- | ----------------------------------------------------------------------------------------- |
-| CT01 | Cadastro e presets        | Percorrer cinco etapas; salvar módulos válidos e termos sem sobreposição de controles.    |
+| CT01 | Cadastro e presets        | Percorrer quatro etapas; salvar módulos válidos e termos sem sobreposição de controles.    |
 | CT02 | Validação                 | Enviar campos inválidos; erro associado ao campo e nenhuma gravação parcial indevida.     |
 | CT03 | Login                     | Credenciais válidas abrem painel; inválidas não expõem dados ou senha.                    |
 | CT04 | Sessão                    | Renovar token e repetir concorrência; preservar sessão válida e rejeitar reuso indevido.  |
@@ -71,6 +71,8 @@ A execução seguinte, de `fc8cdaa`, aprovou 108 cenários diretamente e um apó
 Em uma execução posterior na `main` (`ee675a8`), o [CI encontrou excesso de largura em relatórios](https://github.com/Breno-J-Oliveira/Nexly/actions/runs/40206432920). O cenário foi ampliado para aguardar o carregamento real e conferir as quatro abas, com nome extenso e alerta de estoque. A correção ajusta a distribuição dos indicadores e a quebra de nomes no celular. Após reabrir o frontend local, passaram os dois cenários de PDV e a travessia das 29 páginas, incluindo as quatro abas dos relatórios: três testes aprovados em 1,8 minuto, com um worker e sem repetição automática. As capturas de financeiro e estoque em 320 px também foram inspecionadas. Build, lint e checagem de tipos passaram. O [CI de 366a44e](https://github.com/Breno-J-Oliveira/Nexly/actions/runs/40209711639) aprovou os 109 cenários em 9,2 minutos, sem falhas nem repetição automática; todos os demais jobs também passaram. A tentativa anterior, com o servidor fechado, havia falhado antes de abrir a interface e não foi contabilizada como aprovação.
 
 ## Registro de evidências
+
+Em 25/10, a primeira etapa das melhorias comerciais limitou o Empresarial a 100 profissionais ativos por empresa, mantendo R$ 199/mês. Passaram 23 testes unitários de profissionais e três cenários locais com PostgreSQL descartável: nos planos Essencial, Profissional e Empresarial, seis pedidos simultâneos disputaram a última vaga e apenas um foi aprovado. Também passaram build da API e do frontend, lint dos arquivos alterados, tipos do frontend e dos testes, e validação documental. A navegação do cadastro em quatro etapas, as prévias dos módulos e os textos dos relatórios ainda aguardam a execução da suíte de navegador desta versão. Esses resultados não medem capacidade máxima nem comprovam implantação em produção.
 
 Registre commit, data, ambiente, comando, resultado e eventual falha. Falha deve ser corrigida ou permanecer identificada como pendência. Capturas, traces, exports e relatórios vão para `test-results` ou os diretórios ignorados do Playwright, sem publicação de conteúdo de clientes.
 

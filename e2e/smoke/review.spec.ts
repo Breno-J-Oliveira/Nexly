@@ -49,6 +49,14 @@ test('reports export uses authentication and staff dashboard respects permission
     await page.getByLabel('Data inicial', { exact: true }).fill('2026-10-14');
     await page.getByLabel('Data final', { exact: true }).fill('2026-10-14');
     await expect(page.getByText('Indisponível', { exact: true }).first()).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Movimentação líquida de caixa', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Movimentos', exact: true })).toBeVisible();
+    await expect(
+      page.getByText(/alterar o custo atual do produto não reescreve o histórico/),
+    ).toBeVisible();
+    await expect(page.getByText(/que ainda não é registrado/)).toHaveCount(0);
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Exportar CSV (até 500 vendas)', exact: true }).click();
     const download = await downloadPromise;

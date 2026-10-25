@@ -6,9 +6,11 @@ O produto atende segmentos como salões, barbearias, clínicas, petshops e estú
 
 ## Cadastro e primeiro acesso
 
-O cadastro distribui as informações em cinco etapas, incluindo dados da conta e do negócio, escolha de recursos e aceite das condições. As dependências dos módulos são consideradas: a agenda, por exemplo, utiliza clientes, profissionais e serviços. A preferência de plano acompanha a navegação; uma escolha na interface não confirma pagamento nem concede plano pago.
+O cadastro distribui as informações em quatro etapas, incluindo dados da conta e do negócio, escolha de recursos e aceite das condições. As dependências dos módulos são consideradas: a agenda, por exemplo, utiliza clientes, profissionais e serviços. A preferência de plano acompanha a navegação; uma escolha na interface não confirma pagamento nem concede plano pago.
 
 Depois do acesso, o painel oferece indicadores, agenda do dia e pendências. Atalhos e primeiros passos ficam em uma seção expansível, para preservar espaço. Meu Nexly permite rever a configuração inicial e conhecer os recursos escolhidos.
+
+O segmento escolhido nos cartões da landing prepara o cadastro e pode ser alterado antes da criação da conta. A seleção de módulos oferece uma prévia com exemplos, passos e capturas quando disponíveis, sem modificar os recursos escolhidos. A conta começa gratuita; não há uma etapa separada para selecionar a única opção gratuita.
 
 ## Funcionalidades
 
@@ -66,9 +68,11 @@ Os alertas financeiros dependem de permissão e módulo habilitado. Uma consulta
 | Gratuito     | R$ 0                  | 1                                     |
 | Essencial    | R$ 49                 | 2                                     |
 | Profissional | R$ 99                 | 10                                    |
-| Empresarial  | R$ 199                | Sem limite comercial de profissionais |
+| Empresarial  | R$ 199                | 100 profissionais ativos |
 
 Os limites estão em [plans.ts](../packages/shared/src/plans.ts); o catálogo de cobrança está no backend. O Stripe cobra a assinatura do Nexly. O registro de uma venda no PDV não transfere automaticamente dinheiro entre o cliente e o negócio.
+
+O teto Empresarial é de 100 profissionais ativos por empresa, compartilhado entre suas unidades. A API verifica a cota dentro da transação, inclusive em cadastros simultâneos. Cadastros legados acima do teto são preservados e impedem novas inclusões até liberar vagas. Essa cota se refere aos profissionais cadastrados, não à quantidade de logins simultâneos nem a uma garantia de capacidade da infraestrutura.
 
 ## Páginas públicas
 
@@ -85,3 +89,57 @@ Labels associados aos campos, mensagens de erro, foco, navegação por teclado, 
 ## Jornada da assinatura
 
 O administrador contrata pelo Stripe Checkout e gerencia o vínculo no Customer Portal configurado. A assinatura do Nexly é distinta das vendas registradas no PDV. A modalidade implementada é mensal, sem configuração de teste gratuito, anuidade ou impostos automáticos. Regras de confirmação, limites e cancelamento estão em [Pagamentos](PAGAMENTOS.md).
+
+## Evolução comercial aprovada — 25/10/2026
+
+As propostas abaixo foram autorizadas como direção de evolução. Planejado não significa disponível; integrações externas dependem de configuração e homologação. Cada entrega deve preservar permissões, isolamento de empresas, histórico e identidade visual, com evidência registrada em [Testes](TESTES.md).
+
+| Nº | Evolução | Situação |
+| --- | --- | --- |
+| 1 | Apresentação inicial orientada a uma tarefa real | Planejado |
+| 2 | Demonstração interativa isolada sem cadastro | Planejado |
+| 3 | Jornadas por segmento | Parcial: seleção da landing prepara o cadastro; páginas específicas pendentes |
+| 4 | Comparador de planos por necessidade | Planejado |
+| 5 | Casos reais de clientes | Depende de pilotos e autorização dos relatos |
+| 6 | Vídeos curtos com legendas | Planejado |
+| 7 | Blog conectado a tarefas e modelos úteis | Planejado |
+| 8 | Acabamento visual e acessibilidade contínuos | Em evolução; não representa certificação |
+| 9 | Cadastro mais curto | Implementado em quatro etapas; dados obrigatórios preservados |
+| 10 | Prévia dos módulos escolhidos | Implementado: exemplos e capturas, sem alterar a seleção |
+| 11 | Configuração guiada até o primeiro atendimento | Planejado sobre o guia existente |
+| 12 | Retomar configurações interrompidas | Planejado, sem armazenar senhas ou tokens |
+| 13 | Estados vazios com próximo passo específico | Planejado sobre os componentes existentes |
+| 14 | Ajuda contextual durante a tarefa | Planejado |
+| 15 | Painel adequado ao papel do usuário | Planejado sobre as permissões existentes |
+| 16 | Mapeamento de colunas na importação | Planejado |
+| 17 | Busca global de registros e ações | Planejado sobre a busca de páginas existente |
+| 18 | Filtros salvos e favoritos | Planejado |
+| 19 | Cadastro rápido sem abandonar a tarefa | Planejado |
+| 20 | Aviso de alterações não salvas | Planejado |
+| 21 | Notificações com ações de resolução | Planejado |
+| 22 | Preferências e resumo de notificações | Planejado; envio depende do provedor |
+| 23 | Ações em lote com prévia | Planejado |
+| 24 | Uso rápido no celular e instalação web | Planejado; não prometer gravações offline |
+| 25 | Lista de espera e encaixes | Planejado |
+| 26 | Confirmação e reagendamento pelo cliente | Planejado |
+| 27 | Intervalos e preparação entre atendimentos | Planejado |
+| 28 | Reserva de salas e equipamentos | Planejado |
+| 29 | Sugestão de retorno | Planejado |
+| 30 | Pacotes de sessões e serviços | Planejado |
+| 31 | Portal do cliente do estabelecimento | Planejado |
+| 32 | Campos próprios por segmento | Planejado; não equivale a prontuário clínico |
+| 33 | Salvar e suspender carrinhos | Planejado; preservar idempotência e revalidar estoque |
+| 34 | Pagamento dividido no PDV | Planejado; registro financeiro, sem repasse bancário automático |
+| 35 | Devolução parcial de itens | Planejado sobre o estorno existente |
+| 36 | Abertura e fechamento de caixa | Planejado |
+| 37 | Clareza e consistência financeira | Parcial: rótulos do fluxo de caixa e explicação de custo histórico corrigidos |
+| 38 | Datas consistentes com o fuso da empresa | Planejado para todos os relatórios e exportações |
+| 39 | Consumo fracionado e unidades de medida | Planejado; exige evolução do modelo de dados |
+| 40 | Múltiplos lotes por produto | Planejado; exige evolução do modelo de dados |
+| 41 | Sugestão de reposição por consumo | Planejado |
+| 42 | Recuperação de acesso operacional | Depende de provedor e remetente; envio continua desativado |
+| 43 | Backup externo restaurável | Depende de armazenamento e secrets; validação externa pendente |
+| 44 | Suporte com histórico de atendimento | Planejado |
+| 45 | Métricas de ativação e feedback contextual | Planejado com coleta mínima e finalidade definida |
+
+A primeira entrega prioriza o teto comercial, redução do cadastro, prévia dos recursos e clareza financeira. A sequência prioriza preservação do trabalho (12, 20 e 33), primeira configuração (11 e 13), operação da agenda (25–29) e evolução financeira/estoque (34–41), mantendo a validação das dependências externas 42 e 43 como requisito para liberação comercial.

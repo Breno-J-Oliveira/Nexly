@@ -1,5 +1,13 @@
 # Histórico das entregas documentadas
 
+## Primeira etapa da evolução comercial — 25 de outubro de 2026
+
+- Empresarial mantém R$ 199/mês e passa a permitir até 100 profissionais ativos por empresa. A cota é aplicada na API sob trava transacional e apresentada em preços, assinatura e equipe.
+- Cadastro reduzido de cinco para quatro etapas, preservando módulos, validação dos dados, aceite e contratação posterior. Os cartões de segmentos da landing preparam a seleção, que permanece editável.
+- Prévia de recursos na configuração: explicações e capturas demonstrativas abertas sob demanda, sem alterar a seleção de módulos.
+- Relatórios distinguem vendas concluídas de movimentação líquida de caixa e explicam corretamente os custos históricos e as margens indisponíveis.
+- As 45 evoluções aprovadas estão acompanhadas em [Produto](PRODUTO.md), com entregas, partes pendentes e dependências externas separadas. Resultados de validação em [Testes](TESTES.md); Word preservado.
+
 ## Concorrência no caixa — 25 de outubro de 2026
 
 - A validação de cliente, cupom e estoque passou para a mesma transação da venda, depois da trava e da conferência da chave de operação. Uma repetição recupera a venda original mesmo quando ela consumiu o último produto ou uso do cupom.
