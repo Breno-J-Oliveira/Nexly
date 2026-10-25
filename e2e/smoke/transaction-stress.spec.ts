@@ -39,10 +39,15 @@ test('concorrência preserva estoque, agenda, recebimentos e isolamento entre em
     });
     expect(login.ok()).toBe(true);
     const headers = { Authorization: `Bearer ${(await login.json()).accessToken}` };
-    const vender = (produtoId: string, chaveOperacao: string) =>
+    const vender = (produtoId: string, chaveOperacao: string, cupomCodigo?: string) =>
       request.post(`${origin}/api/vendas`, {
         headers,
-        data: { itens: [{ produtoId, quantidade: 1 }], chaveOperacao, formaPagamento: 'Pix' },
+        data: {
+          itens: [{ produtoId, quantidade: 1 }],
+          chaveOperacao,
+          formaPagamento: 'Pix',
+          cupomCodigo,
+        },
       });
     const produto = await db.produto.create({
       data: {
@@ -58,6 +63,8 @@ test('concorrência preserva estoque, agenda, recebimentos e isolamento entre em
       Array.from({ length: 20 }, () => vender(produto.id, chave)),
     );
     expect(repetidas.map((r) => r.status())).toEqual(Array(20).fill(201));
+    const idsRepetidos = await Promise.all(repetidas.map(async (r) => (await r.json()).id));
+    expect(new Set(idsRepetidos).size).toBe(1);
     expect(await db.venda.count({ where: { empresaId: empresa.id } })).toBe(1);
     expect(
       await db.movimentacaoEstoque.count({ where: { produtoId: produto.id, tipo: 'SAIDA' } }),
@@ -83,6 +90,32 @@ test('concorrência preserva estoque, agenda, recebimentos e isolamento entre em
     expect((await db.produto.findUniqueOrThrow({ where: { id: disputado.id } })).estoqueAtual).toBe(
       0,
     );
+
+    // Repetir uma venda não deve validar novamente o cupom já consumido por ela.
+    const comCupom = await db.produto.create({
+      data: {
+        empresaId: empresa.id,
+        nome: 'Venda com cupom',
+        sku: 'COUPON',
+        preco: 10,
+        estoqueAtual: 20,
+      },
+    });
+    const cupom = await db.cupom.create({
+      data: { empresaId: empresa.id, codigo: 'UNICO', tipo: 'FIXO', valor: 2, usoMaximo: 1 },
+    });
+    const chaveCupom = randomUUID();
+    const comCupomRepetidas = await Promise.all(
+      Array.from({ length: 16 }, () => vender(comCupom.id, chaveCupom, cupom.codigo)),
+    );
+    expect(comCupomRepetidas.map((r) => r.status())).toEqual(Array(16).fill(201));
+    expect(await db.venda.count({ where: { empresaId: empresa.id, cupomId: cupom.id } })).toBe(1);
+    expect((await db.cupom.findUniqueOrThrow({ where: { id: cupom.id } })).usoAtual).toBe(1);
+    expect((await db.produto.findUniqueOrThrow({ where: { id: comCupom.id } })).estoqueAtual).toBe(
+      19,
+    );
+    expect((await vender(comCupom.id, chaveCupom)).status()).toBe(409);
+    expect((await vender(comCupom.id, randomUUID(), cupom.codigo)).status()).toBe(422);
 
     const conta = await db.lancamentoFinanceiro.create({
       data: {

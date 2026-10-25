@@ -4,6 +4,7 @@ import { EstoqueService } from '../estoque/estoque.service';
 import { VendasService } from './vendas.service';
 import { tenantStorage } from '../database/tenant-context';
 import { Prisma } from '@prisma/client';
+import { createHash } from 'node:crypto';
 
 describe('VendasService', () => {
   let service: VendasService;
@@ -14,6 +15,7 @@ describe('VendasService', () => {
       venda: { findFirst: jest.Mock; findMany: jest.Mock; aggregate: jest.Mock };
       itemVenda: { aggregate: jest.Mock };
       cliente: { findFirst: jest.Mock };
+      cupom: { findFirst: jest.Mock };
     };
   };
   let estoque: { registrarSaidaTx: jest.Mock };
@@ -26,9 +28,13 @@ describe('VendasService', () => {
         venda: { findFirst: jest.fn(), findMany: jest.fn(), aggregate: jest.fn() },
         itemVenda: { aggregate: jest.fn() },
         cliente: { findFirst: jest.fn().mockResolvedValue({ id: 'c1' }) },
+        cupom: { findFirst: jest.fn() },
       },
     };
     estoque = { registrarSaidaTx: jest.fn().mockResolvedValue(undefined) };
+    prisma.client.$transaction.mockImplementation((cb) =>
+      cb({ ...prisma.client, $queryRaw: jest.fn().mockResolvedValue([]) }),
+    );
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -50,6 +56,49 @@ describe('VendasService', () => {
       await expect(criar(undefined, [])).rejects.toThrow(/ao menos um item/);
     });
 
+    it.each(['estoque consumido', 'cupom esgotado', 'cliente desativado'])(
+      'recupera venda concluída entre consulta inicial e trava, mesmo com %s',
+      async (cenario) => {
+        const clienteId = cenario === 'cliente desativado' ? 'c1' : undefined;
+        const cupomCodigo = cenario === 'cupom esgotado' ? 'UNICO' : undefined;
+        const itens = [{ produtoId: 'p1', quantidade: 1 }];
+        const anterior = {
+          id: 'v1',
+          requisicaoHash: createHash('sha256')
+            .update(
+              JSON.stringify({
+                clienteId: clienteId ?? null,
+                itens,
+                filialId: null,
+                recebido: false,
+                formaPagamento: null,
+                desconto: 0,
+                cupomCodigo: cupomCodigo ?? null,
+              }),
+            )
+            .digest('hex'),
+          itens: [],
+        };
+        prisma.client.venda.findFirst.mockResolvedValueOnce(null).mockResolvedValue(anterior);
+        prisma.client.produto.findMany.mockResolvedValue([
+          { id: 'p1', nome: 'Última unidade', preco: 10, estoqueAtual: 0 },
+        ]);
+        prisma.client.cliente.findFirst.mockResolvedValue(null);
+        prisma.client.cupom.findFirst.mockResolvedValue({ ativo: true, usoAtual: 1, usoMaximo: 1 });
+        prisma.client.$transaction.mockImplementation((cb) =>
+          cb({
+            $queryRaw: jest.fn().mockResolvedValue([]),
+            venda: { findFirst: jest.fn().mockResolvedValue(anterior) },
+          }),
+        );
+
+        await expect(
+          criar(clienteId, itens, { chaveOperacao: 'mesma-venda', cupomCodigo }),
+        ).resolves.toMatchObject({ id: 'v1' });
+        expect(estoque.registrarSaidaTx).not.toHaveBeenCalled();
+      },
+    );
+
     it('rejeita total que excede a capacidade monetária antes de baixar estoque', async () => {
       prisma.client.produto.findMany.mockResolvedValue([
         { id: 'p1', nome: 'Produto', preco: '99999999.99', estoqueAtual: 2 },
@@ -57,7 +106,22 @@ describe('VendasService', () => {
       await expect(criar(undefined, [{ produtoId: 'p1', quantidade: 2 }])).rejects.toThrow(
         /valor da venda excede/,
       );
-      expect(prisma.client.$transaction).not.toHaveBeenCalled();
+      expect(estoque.registrarSaidaTx).not.toHaveBeenCalled();
+    });
+
+    it('recusa reaproveitar a chave com outro conteúdo mesmo após esperar a trava', async () => {
+      prisma.client.venda.findFirst.mockResolvedValue(null);
+      prisma.client.$transaction.mockImplementation((cb) =>
+        cb({
+          $queryRaw: jest.fn().mockResolvedValue([]),
+          venda: {
+            findFirst: jest.fn().mockResolvedValue({ id: 'v1', requisicaoHash: 'outro-conteudo' }),
+          },
+        }),
+      );
+      await expect(
+        criar(undefined, [{ produtoId: 'p1', quantidade: 1 }], { chaveOperacao: 'mesma-venda' }),
+      ).rejects.toThrow(/utilizada com outros itens/);
       expect(estoque.registrarSaidaTx).not.toHaveBeenCalled();
     });
 
@@ -95,6 +159,7 @@ describe('VendasService', () => {
       prisma.client.$transaction.mockImplementation((cb) => {
         const fakeTx = {
           $queryRaw: jest.fn().mockResolvedValue([]),
+          produto: prisma.client.produto,
           lancamentoFinanceiro: { create: jest.fn().mockResolvedValue({ id: 'conta1' }) },
 
           venda: {
@@ -104,7 +169,10 @@ describe('VendasService', () => {
             }),
           },
           itemVenda: { create: jest.fn().mockResolvedValue({}) },
-          cliente: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+          cliente: {
+            ...prisma.client.cliente,
+            updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+          },
         };
         return cb(fakeTx);
       });
@@ -140,7 +208,7 @@ describe('VendasService', () => {
           { produtoId: 'p1', quantidade: 2 },
         ]),
       ).rejects.toThrow(/Saldo insuficiente/);
-      expect(prisma.client.$transaction).not.toHaveBeenCalled();
+      expect(estoque.registrarSaidaTx).not.toHaveBeenCalled();
     });
 
     it('não associa cliente de outra empresa', async () => {

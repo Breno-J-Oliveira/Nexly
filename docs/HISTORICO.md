@@ -1,5 +1,11 @@
 # Histórico das entregas documentadas
 
+## Concorrência no caixa — 25 de outubro de 2026
+
+- A validação de cliente, cupom e estoque passou para a mesma transação da venda, depois da trava e da conferência da chave de operação. Uma repetição recupera a venda original mesmo quando ela consumiu o último produto ou uso do cupom.
+- Reutilizar uma chave com conteúdo diferente continua sendo recusado. O total exibido no PDV é somado em centavos para não rejeitar descontos válidos por diferenças de precisão.
+- Quatro regressões de unidade e ampliação do teste com banco real: 646 testes da API aprovados e três rodadas consecutivas de concorrência sem repetição automática. A conferência completa de navegador fica registrada em [Testes](TESTES.md).
+
 ## Usabilidade e testes de estresse — 24 de outubro de 2026
 
 - PDV: validação de descontos, bloqueio do carrinho durante envio, indicação correta do Pix selecionado, atalho de busca e recuperação de falhas do catálogo.

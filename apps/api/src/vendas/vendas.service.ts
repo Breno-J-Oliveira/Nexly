@@ -33,11 +33,11 @@ export class VendasService {
    * Cria uma venda completa a partir dos itens do PDV.
    *
    * Fluxo:
-   *  1. Valida todos os produtos (existem? há saldo?).
-   *  2. Calcula o total com os preços **atuais** do banco.
-   *  3. Em uma única transação:
-   *     a. Cria a Venda.
-   *     b. Cria cada ItemVenda com o preço unitário congelado.
+   *  1. Normaliza itens e identifica a requisição.
+   *  2. Em uma única transação, trava a empresa e recupera eventual repetição.
+   *  3. Para uma venda nova, ainda na transação:
+   *     a. Valida cliente, cupom e produtos; calcula o total com preços atuais.
+   *     b. Cria a venda e cada item com o preço unitário congelado.
    *     c. Chama `EstoqueService.registrarSaidaTx` para baixar o estoque
    *        e registrar a MovimentacaoEstoque.
    *
@@ -101,84 +101,8 @@ export class VendasService {
         return this.obter(anterior.id);
       }
     }
-    if (clienteId) {
-      const cliente = await this.prisma.client.cliente.findFirst({
-        where: { id: clienteId, empresaId, ativo: true },
-        select: { id: true },
-      });
-      if (!cliente) throw new NotFoundException('Cliente não encontrado');
-    }
-
-    // 1. Valida o cupom (se informado) antes de calcular o total.
-    let cupom: {
-      id: string;
-      tipo: 'PERCENTUAL' | 'FIXO';
-      valor: number;
-      usoAtual: number;
-      usoMaximo: number | null;
-    } | null = null;
-    if (opcoes?.cupomCodigo) {
-      const c = await this.prisma.client.cupom.findFirst({
-        where: { codigo: opcoes.cupomCodigo },
-      });
-      if (!c || !c.ativo) {
-        throw new UnprocessableEntityException('Cupom inválido ou inativo');
-      }
-      if (c.validade && c.validade < new Date()) {
-        throw new UnprocessableEntityException('Cupom expirado');
-      }
-      if (c.usoMaximo !== null && c.usoAtual >= c.usoMaximo) {
-        throw new UnprocessableEntityException('Cupom esgotado');
-      }
-      cupom = {
-        id: c.id,
-        tipo: c.tipo,
-        valor: Number(c.valor),
-        usoAtual: c.usoAtual,
-        usoMaximo: c.usoMaximo,
-      };
-    }
-
-    const idsUnicos = [...new Set(itens.map((i) => i.produtoId))];
-    const produtos = await this.prisma.client.produto.findMany({
-      where: { id: { in: idsUnicos }, ativo: true },
-    });
-    const produtoMap = new Map(produtos.map((p) => [p.id, p]));
-
-    // 2. Valida que todos os produtos existem e têm saldo suficiente.
-    for (const item of itens) {
-      const produto = produtoMap.get(item.produtoId);
-      if (!produto) {
-        throw new NotFoundException('Produto não encontrado');
-      }
-      if (!opcoes?.filialId && produto.estoqueAtual < item.quantidade) {
-        throw new ConflictException(`Saldo insuficiente para "${produto.nome}"`);
-      }
-    }
-
-    // 3. Calcula o total com base nos preços atuais + descontos (manual + cupom).
-    const totalBruto = itens.reduce((acc, item) => {
-      const produto = produtoMap.get(item.produtoId);
-      return acc.plus(new Prisma.Decimal(produto?.preco ?? 0).times(item.quantidade));
-    }, new Prisma.Decimal(0));
-    const descontoManual = new Prisma.Decimal(opcoes?.desconto ?? 0);
-    if (!descontoManual.isFinite() || descontoManual.isNegative())
-      throw new BadRequestException('Desconto inválido');
-    const descontoCupom = cupom
-      ? cupom.tipo === 'PERCENTUAL'
-        ? totalBruto.times(cupom.valor).div(100)
-        : cupom.valor
-      : 0;
-    const descontoTotal = Prisma.Decimal.min(
-      descontoManual.plus(descontoCupom),
-      totalBruto,
-    ).toDecimalPlaces(2);
-    const total = totalBruto.minus(descontoTotal).toDecimalPlaces(2);
-    if (total.greaterThan('99999999.99') || descontoTotal.greaterThan('99999999.99')) {
-      throw new BadRequestException('O valor da venda excede o limite permitido');
-    }
-
-    // 4-8. Transação: cria venda + itens + baixa de estoque + incrementa cupom.
+    // A repetição precisa ser resolvida antes de consultar estado mutável:
+    // outra chamada pode ter concluído a venda após a consulta inicial.
     const venda = await this.prisma.client.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM empresas WHERE id=${empresaId} FOR UPDATE`;
       if (opcoes?.chaveOperacao) {
@@ -194,6 +118,84 @@ export class VendasService {
         }
       }
 
+      if (clienteId) {
+        const cliente = await tx.cliente.findFirst({
+          where: { id: clienteId, empresaId, ativo: true },
+          select: { id: true },
+        });
+        if (!cliente) throw new NotFoundException('Cliente não encontrado');
+      }
+
+      // 1. Valida o cupom (se informado) antes de calcular o total.
+      let cupom: {
+        id: string;
+        tipo: 'PERCENTUAL' | 'FIXO';
+        valor: number;
+        usoAtual: number;
+        usoMaximo: number | null;
+      } | null = null;
+      if (opcoes?.cupomCodigo) {
+        const c = await tx.cupom.findFirst({
+          where: { empresaId, codigo: opcoes.cupomCodigo },
+        });
+        if (!c || !c.ativo) {
+          throw new UnprocessableEntityException('Cupom inválido ou inativo');
+        }
+        if (c.validade && c.validade < new Date()) {
+          throw new UnprocessableEntityException('Cupom expirado');
+        }
+        if (c.usoMaximo !== null && c.usoAtual >= c.usoMaximo) {
+          throw new UnprocessableEntityException('Cupom esgotado');
+        }
+        cupom = {
+          id: c.id,
+          tipo: c.tipo,
+          valor: Number(c.valor),
+          usoAtual: c.usoAtual,
+          usoMaximo: c.usoMaximo,
+        };
+      }
+
+      const idsUnicos = [...new Set(itens.map((i) => i.produtoId))];
+      const produtos = await tx.produto.findMany({
+        where: { empresaId, id: { in: idsUnicos }, ativo: true },
+      });
+      const produtoMap = new Map(produtos.map((p) => [p.id, p]));
+
+      // 2. Valida que todos os produtos existem e têm saldo suficiente.
+      for (const item of itens) {
+        const produto = produtoMap.get(item.produtoId);
+        if (!produto) {
+          throw new NotFoundException('Produto não encontrado');
+        }
+        if (!opcoes?.filialId && produto.estoqueAtual < item.quantidade) {
+          throw new ConflictException(`Saldo insuficiente para "${produto.nome}"`);
+        }
+      }
+
+      // 3. Calcula o total com base nos preços atuais + descontos (manual + cupom).
+      const totalBruto = itens.reduce((acc, item) => {
+        const produto = produtoMap.get(item.produtoId);
+        return acc.plus(new Prisma.Decimal(produto?.preco ?? 0).times(item.quantidade));
+      }, new Prisma.Decimal(0));
+      const descontoManual = new Prisma.Decimal(opcoes?.desconto ?? 0);
+      if (!descontoManual.isFinite() || descontoManual.isNegative())
+        throw new BadRequestException('Desconto inválido');
+      const descontoCupom = cupom
+        ? cupom.tipo === 'PERCENTUAL'
+          ? totalBruto.times(cupom.valor).div(100)
+          : cupom.valor
+        : 0;
+      const descontoTotal = Prisma.Decimal.min(
+        descontoManual.plus(descontoCupom),
+        totalBruto,
+      ).toDecimalPlaces(2);
+      const total = totalBruto.minus(descontoTotal).toDecimalPlaces(2);
+      if (total.greaterThan('99999999.99') || descontoTotal.greaterThan('99999999.99')) {
+        throw new BadRequestException('O valor da venda excede o limite permitido');
+      }
+
+      // Cria venda, itens, recebimento e baixa de estoque na mesma transação.
       const v = await tx.venda.create({
         data: {
           empresaId,
