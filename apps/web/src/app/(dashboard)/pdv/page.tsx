@@ -175,6 +175,7 @@ export default function PdvPage() {
     setItens((prev) => prev.filter((i) => i.produto.id !== id));
   };
 
+  const produtosExibidos = busca.trim().length >= 2 ? resultados : catalogo;
   const total =
     itens.reduce((acc, i) => acc + Math.round(Number(i.produto.preco) * 100) * i.quantidade, 0) /
     100;
@@ -290,7 +291,7 @@ export default function PdvPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-[#FAFAFA]">Ponto de Venda</h2>
               <span className="text-xs text-[#71717A]" title="Total de produtos carregados">
-                {(busca.trim().length >= 2 ? resultados : catalogo).length} produtos
+                {produtosExibidos.length} {produtosExibidos.length === 1 ? 'produto' : 'produtos'}
               </span>
             </div>
           </PageToolbar>
@@ -375,7 +376,7 @@ export default function PdvPage() {
               </p>
             )}
             <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-3">
-              {(busca.trim().length >= 2 ? resultados : catalogo).map((p) => (
+              {produtosExibidos.map((p) => (
                 <button
                   key={p.id}
                   type="button"
