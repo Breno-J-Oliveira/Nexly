@@ -62,7 +62,14 @@ test('todos os módulos permanecem utilizáveis em 320px com nomes longos e sem 
     const nome = 'NomeExtensoSemEspacos'.repeat(6);
     await db.cliente.create({ data: { empresaId: empresa.id, nome } });
     await db.produto.create({
-      data: { empresaId: empresa.id, nome, sku: 'LONG', preco: 15, estoqueAtual: 5 },
+      data: {
+        empresaId: empresa.id,
+        nome,
+        sku: 'LONG',
+        preco: 15,
+        estoqueAtual: 5,
+        estoqueMinimo: 6,
+      },
     });
     await db.profissional.create({ data: { empresaId: empresa.id, nome } });
     await db.servico.create({ data: { empresaId: empresa.id, nome, preco: 30, duracaoMin: 30 } });
@@ -81,7 +88,34 @@ test('todos os módulos permanecem utilizáveis em 320px com nomes longos e sem 
         await expect(
           page.locator('main, #page-toolbar').getByRole('heading').first(),
         ).toBeVisible();
-        await page.waitForTimeout(1000);
+        if (route === '/relatorios') {
+          await expect(page.locator('main [aria-busy]').first()).toHaveAttribute(
+            'aria-busy',
+            'false',
+          );
+          for (const aba of ['Financeiro', 'Agenda', 'Profissionais', 'Estoque']) {
+            await page.getByRole('button', { name: aba, exact: true }).click();
+            await expect(page.getByRole('button', { name: aba, exact: true })).toHaveAttribute(
+              'aria-pressed',
+              'true',
+            );
+            if (aba === 'Financeiro')
+              await expect(page.getByText('Indisponível').first()).toBeVisible();
+            if (aba === 'Estoque') await expect(page.getByText('5 / mín. 6')).toBeVisible();
+            expect
+              .soft(
+                await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+                `${route}/${aba}: conteúdo carregado ultrapassa a largura`,
+              )
+              .toBe(true);
+            await page.screenshot({
+              path: `test-results/manual/relatorios-${aba}-320.png`,
+              fullPage: true,
+            });
+          }
+        } else {
+          await page.waitForTimeout(1000);
+        }
         expect
           .soft(
             await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),

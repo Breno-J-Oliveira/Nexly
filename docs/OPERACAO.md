@@ -58,6 +58,8 @@ Configure no GitHub os secrets exigidos pelo workflow: URL de backup, senha de c
 
 Valide recuperação em banco descartável, registre data e resultado sem dados pessoais e confirme que os registros restaurados são consistentes. Não execute restauração sobre o banco publicado como teste.
 
+Em 25/10/2026, a [verificação agendada](https://github.com/Breno-J-Oliveira/Nexly/actions/runs/40192752840) falhou por ausência de `BACKUP_S3_BUCKET`; o job semanal de restauração também falhou. Configure o armazenamento e os demais secrets exigidos e execute backup, verificação e restauração em banco de teste antes de considerar o backup operacional. O sucesso dos testes de scripts no CI não substitui essa validação externa.
+
 ## Suporte e prontidão comercial
 
 Contato público autorizado: **breno.emailsenai@gmail.com**. Antes de abrir o serviço, confirme atendimento desse canal, identificação do responsável, condições comerciais, termos, privacidade, testes de recebimento e cancelamento, backup restaurável e acompanhamento de um piloto. Pendências externas devem ser acompanhadas operacionalmente; não marcar como concluídas apenas porque há uma tela implementada.

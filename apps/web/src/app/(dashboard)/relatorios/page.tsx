@@ -80,14 +80,14 @@ export default function RelatoriosPage() {
   const maxHeatmap = agenda ? Math.max(0, ...agenda.heatmap.flat()) : 0;
 
   const KPI = ({ label, value, color }: { label: string; value: string; color?: string }) => (
-    <div className="rounded-xl p-5" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="min-w-0 rounded-xl p-5 [overflow-wrap:anywhere]" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
       <p className="text-xs" style={{ color: '#A1A1AA' }}>{label}</p>
       <p className="mt-1 text-xl font-bold" style={{ color: color || '#FAFAFA' }}>{value}</p>
     </div>
   );
 
   return (
-    <div>
+    <div className="min-w-0 [overflow-wrap:anywhere]" aria-busy={carregando}>
       <PageToolbar><div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>Relatórios</h2>
@@ -109,7 +109,7 @@ export default function RelatoriosPage() {
       <p className="mt-3 text-xs text-[#A1A1AA]">Datas do período em UTC.</p>
       {erro&&<div role="alert" className="mt-4 rounded-lg border border-red-400/30 p-4 text-sm text-red-200">{erro} <Button variant="ghost" onClick={()=>setRetry(v=>v+1)}>Tentar novamente</Button></div>}
       {carregando && (
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="h-[86px] animate-pulse rounded-xl" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }} />
           ))}
@@ -121,13 +121,13 @@ export default function RelatoriosPage() {
         <div className="mt-6 space-y-6">
           {dre ? (
             <div>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <KPI label="Receita Bruta" value={fmt(dre.receitaBruta)} />
                 <KPI label="Receita Líquida" value={fmt(dre.receitaLiquida)} color="#22C55E" />
                 <KPI label="CMV" value={fmt(dre.cmv)} color="#EAB308" />
                 <KPI label="Ticket Médio" value={fmt(dre.ticketMedio)} />
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <KPI label="Margem Bruta" value={fmt(dre.margemBruta)} color={dre.margemBruta===null?'#A1A1AA':dre.margemBruta>=0?'#22C55E':'#EF4444'} />
                 <KPI label="Margem %" value={dre.margemPercentual===null?'Indisponível':dre.margemPercentual.toFixed(1)+'%'} color={(dre.margemPercentual ?? 0) >= 0 ? '#22C55E' : '#EF4444'} />
                 <KPI label="Descontos" value={fmt(dre.descontos)} color="#EF4444" />
@@ -161,7 +161,7 @@ export default function RelatoriosPage() {
               <section className="min-w-0 rounded-xl border border-white/10 bg-[#111116] p-5">
                 <h3 className="text-sm font-semibold">Ranking de Profissionais</h3>
                 <p className="mt-1 text-xs text-[#A1A1AA]">Receita individual no período selecionado</p>
-                <div className="mt-6 space-y-5">{[...profs].sort((a, b) => b.receita - a.receita).slice(0, 5).map((p, i) => <div key={p.id}><div className="mb-2 flex justify-between gap-3 text-xs"><span className="text-[#A1A1AA]">{i + 1}. {p.nome}</span><span>{fmt(p.receita)}</span></div><div className="h-2 overflow-hidden rounded-full bg-white/5"><div className="h-full rounded-full bg-[#6366F1]" style={{ width: `${Math.max(0, Math.min(100, p.receita / Math.max(1, ...profs.map(item => item.receita)) * 100))}%` }} /></div></div>)}</div>
+                <div className="mt-6 space-y-5">{[...profs].sort((a, b) => b.receita - a.receita).slice(0, 5).map((p, i) => <div key={p.id}><div className="mb-2 flex flex-wrap justify-between gap-3 text-xs"><span className="min-w-0 text-[#A1A1AA]">{i + 1}. {p.nome}</span><span>{fmt(p.receita)}</span></div><div className="h-2 overflow-hidden rounded-full bg-white/5"><div className="h-full rounded-full bg-[#6366F1]" style={{ width: `${Math.max(0, Math.min(100, p.receita / Math.max(1, ...profs.map(item => item.receita)) * 100))}%` }} /></div></div>)}</div>
               </section>
             </div>
           )}
@@ -199,7 +199,7 @@ export default function RelatoriosPage() {
       {/* ── Agenda ── */}
       {!carregando && aba === 'agenda' && agenda && (
         <div className="mt-6 space-y-6">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KPI label="Total de agendamentos" value={String(agenda.total)} />
             <KPI label="Taxa de conclusão" value={agenda.taxaConclusao.toFixed(1) + '%'} color="#22C55E" />
             <KPI label="Taxa de cancelamento" value={agenda.taxaCancelamento.toFixed(1) + '%'} color="#EF4444" />
@@ -301,7 +301,7 @@ export default function RelatoriosPage() {
       {/* ── Estoque ── */}
       {!carregando && aba === 'estoque' && estoque && (
         <div className="mt-6 space-y-6">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <KPI label="Movimentações" value={String(estoque.movimentacoes)} />
             <KPI label="Produtos em alerta" value={String(estoque.alertas.length)} color={estoque.alertas.length > 0 ? '#EF4444' : '#22C55E'} />
             <KPI label="Top consumidos" value={String(estoque.produtosMaisConsumidos.length)} />
@@ -331,8 +331,8 @@ export default function RelatoriosPage() {
             {estoque.alertas.length === 0 && <p className="text-sm" style={{ color: '#A1A1AA' }}>Nenhum produto abaixo do mínimo.</p>}
             <div className="space-y-2">
               {estoque.alertas.map((a) => (
-                <div key={a.id} className="flex items-center justify-between rounded-lg border px-4 py-2" style={{ backgroundColor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.2)' }}>
-                  <span className="text-[13px]" style={{ color: '#FAFAFA' }}>{a.nome}</span>
+                <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-2" style={{ backgroundColor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.2)' }}>
+                  <span className="min-w-0 text-[13px]" style={{ color: '#FAFAFA' }}>{a.nome}</span>
                   <span className="text-[13px]" style={{ color: '#EF4444' }}>{a.estoqueAtual} / mín. {a.estoqueMinimo}</span>
                 </div>
               ))}
