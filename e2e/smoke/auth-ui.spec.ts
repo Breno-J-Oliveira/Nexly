@@ -38,7 +38,7 @@ test('cadastro chega à revisão sem pedir cartão e exige aceite', async ({ pag
   await expect(page.getByLabel('Modelo do negócio')).toHaveValue('psicologia');
   await expect(page.getByRole('button', { name: /^PDV/ })).toHaveAttribute('aria-pressed', 'false');
   await page.getByText('Veja como cada recurso funciona', { exact: true }).click();
-  await page.getByLabel('Conhecer recurso', { exact: true }).selectOption('pdv');
+  await page.getByRole('combobox', { name: 'Conhecer recurso', exact: true }).selectOption('pdv');
   await expect(
     page.getByText('Busque os produtos e monte o carrinho.', { exact: true }),
   ).toBeVisible();
