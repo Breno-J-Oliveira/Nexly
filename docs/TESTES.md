@@ -49,6 +49,9 @@ A matriz organiza o **grupo**, a **operação** e o **teste esperado**, com iden
 | CT35 | Concorrência real | Disputar última unidade e mesmo horário; repetir venda e recebimento; conferir registros e saldos no PostgreSQL. |
 | CT36 | Nomes extensos | Percorrer os 29 caminhos internos em 320 px e abrir detalhes; nomes sem espaços não ampliam a página. |
 | CT37 | Consulta sem resposta | Manter conexão aberta sem resposta; sair do carregamento em até 20 segundos e recuperar a lista. |
+| CT38 | Limite Empresarial | Disputar a centésima vaga entre seis pedidos; permitir um cadastro, recusar os demais e preservar outras empresas. |
+| CT39 | Cadastro por segmento | Entrar pela opção Petshop da landing, conferir a seleção inicial e mudar para Psicologia antes de criar a conta. |
+| CT40 | Prévia sem ativação | Consultar os passos e a imagem do PDV sem ativá-lo no modelo de Psicologia; concluir a revisão em quatro etapas. |
 
 ## Como executar
 
@@ -72,7 +75,7 @@ Em uma execução posterior na `main` (`ee675a8`), o [CI encontrou excesso de la
 
 ## Registro de evidências
 
-Em 25/10, a primeira etapa das melhorias comerciais limitou o Empresarial a 100 profissionais ativos por empresa, mantendo R$ 199/mês. Passaram 23 testes unitários de profissionais e três cenários locais com PostgreSQL descartável: nos planos Essencial, Profissional e Empresarial, seis pedidos simultâneos disputaram a última vaga e apenas um foi aprovado. Também passaram build da API e do frontend, lint dos arquivos alterados, tipos do frontend e dos testes, e validação documental. A navegação do cadastro em quatro etapas, as prévias dos módulos e os textos dos relatórios ainda aguardam a execução da suíte de navegador desta versão. Esses resultados não medem capacidade máxima nem comprovam implantação em produção.
+Em 25/10, a primeira etapa das melhorias comerciais limitou o Empresarial a 100 profissionais ativos por empresa, mantendo R$ 199/mês. Passaram 23 testes unitários de profissionais e três cenários locais com PostgreSQL descartável: nos planos Essencial, Profissional e Empresarial, seis pedidos simultâneos disputaram a última vaga e apenas um foi aprovado. Também passaram build da API e do frontend, lint dos arquivos alterados, tipos do frontend e dos testes, e validação documental. O [CI de eea5aed](https://github.com/Breno-J-Oliveira/Nexly/actions/runs/40232150564) aprovou 649 testes da API e 109 dos 110 cenários de navegador; o único erro foi o seletor do campo de prévia. A correção em `ce199ba` usa o papel acessível do campo, e o cenário passou localmente sem repetição automática. A prévia foi inspecionada em 390 e 1440 px, sem excesso de largura. O [CI completo de ce199ba](https://github.com/Breno-J-Oliveira/Nexly/actions/runs/40257599467) aprovou todos os jobs e os 110 cenários de navegador em 9,2 minutos, sem falhas nem repetição automática. Esses resultados não medem capacidade máxima nem comprovam implantação em produção.
 
 Registre commit, data, ambiente, comando, resultado e eventual falha. Falha deve ser corrigida ou permanecer identificada como pendência. Capturas, traces, exports e relatórios vão para `test-results` ou os diretórios ignorados do Playwright, sem publicação de conteúdo de clientes.
 
