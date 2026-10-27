@@ -4,6 +4,11 @@ test('configuração diferencia simulação, falha e envio aceito sem mensagens 
   page,
   baseURL,
 }) => {
+  // Cada cenário reabre a página e descarta intencionalmente o toggle não salvo.
+  page.on('dialog', async (dialog) => {
+    expect(dialog.type()).toBe('beforeunload');
+    await dialog.accept();
+  });
   let mode: 'unconfigured' | 'simulation' | 'ready' = 'unconfigured';
   let sent = false;
   let submittedPhone = '';
@@ -68,7 +73,9 @@ test('configuração diferencia simulação, falha e envio aceito sem mensagens 
   ).toBeVisible();
   await page.getByLabel('Telefone para receber o teste', { exact: true }).fill('(11) 99999-1234');
   await page.getByRole('button', { name: 'Enviar mensagem de teste', exact: true }).click();
-  await expect(page.getByRole('main').getByRole('alert')).toContainText('O provedor não aceitou o envio');
+  await expect(page.getByRole('main').getByRole('alert')).toContainText(
+    'O provedor não aceitou o envio',
+  );
   sent = true;
   await page.getByRole('button', { name: 'Enviar mensagem de teste', exact: true }).click();
   await expect(

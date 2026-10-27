@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
+import { useUnsavedChangesWarning } from '@/lib/use-unsaved-changes-warning';
 import { toastSuccess, toastError } from '@/components/ui/Toaster';
 import { formatarDataHora, maskCnpj, maskTelefone } from '@/lib/format';
 
@@ -70,6 +71,28 @@ const PLANO_LABEL: Record<string, string> = {
   PRO: 'Profissional',
   ENTERPRISE: 'Empresarial',
 };
+
+type PerfilEditavel = {
+  nome: string; cnpj: string; telefone: string; emailContato: string;
+  endereco: string; descricao: string; instagram: string; whatsapp: string;
+};
+
+function dadosPerfil({ nome, cnpj, telefone, emailContato, endereco, descricao, instagram, whatsapp }: PerfilEditavel) {
+  return { nome, cnpj, telefone, emailContato, endereco, descricao, instagram, whatsapp };
+}
+
+type SecaoEditavel = 'perfil' | 'horario' | 'notificacoes';
+
+function snapshot(value: unknown): string {
+  // JSONB pode devolver as mesmas propriedades em outra ordem.
+  return JSON.stringify(value, (_key, item: unknown) => {
+    if (item && typeof item === 'object' && !Array.isArray(item)) {
+      const record = item as Record<string, unknown>;
+      return Object.fromEntries(Object.keys(record).sort().map(key => [key, record[key]]));
+    }
+    return item;
+  });
+}
 
 function Toggle({ on, onChange, label }: { on: boolean; onChange: () => void; label: string }) {
   return (
@@ -143,6 +166,7 @@ export default function ConfiguracoesPage() {
     NOTIFICACOES_PADRAO,
   );
   const [salvando, setSalvando] = useState(false);
+  const [salvos, setSalvos] = useState<Record<SecaoEditavel, string> | null>(null);
   const [fusoHorario, setFusoHorario] = useState('America/Sao_Paulo');
   const [erroHorarios, setErroHorarios] = useState('');
   const [linkAgendamento, setLinkAgendamento] = useState<string | null>(null);
@@ -201,8 +225,9 @@ export default function ConfiguracoesPage() {
         if (controller.signal.aborted) return;
         const d = r.data ?? {};
         const fusoSalvo: unknown = d.fusoHorario;
-        setFusoHorario(typeof fusoSalvo === 'string' ? fusoSalvo : 'America/Sao_Paulo');
-        setEmpresa({
+        const proximoFuso = typeof fusoSalvo === 'string' ? fusoSalvo : 'America/Sao_Paulo';
+        setFusoHorario(proximoFuso);
+        const proximaEmpresa = {
           nome: d.nome ?? '',
           cnpj: d.cnpj ?? '',
           telefone: d.telefone ?? '',
@@ -214,11 +239,19 @@ export default function ConfiguracoesPage() {
           plano: d.plano ?? 'FREE',
           lembretesAtivos: d.lembretesAtivos ?? false,
           templateLembrete: d.templateLembrete ?? '',
-        });
+        };
+        setEmpresa(proximaEmpresa);
         const destinatarioTeste: unknown = d.whatsapp || d.telefone;
         setTelefoneTeste(typeof destinatarioTeste === 'string' ? destinatarioTeste : '');
-        if (d.horarios) setHorarios(d.horarios as Record<string, { abre: string; fecha: string; aberto: boolean }>);
-        if (d.notificacoes) setNotificacoes(d.notificacoes as Record<string, { ativo?: boolean; template?: string }>);
+        const proximosHorarios = (d.horarios ?? HORARIO_PADRAO) as Record<string, { abre: string; fecha: string; aberto: boolean }>;
+        const proximasNotificacoes = (d.notificacoes ?? NOTIFICACOES_PADRAO) as Record<string, { ativo?: boolean; template?: string }>;
+        setHorarios(proximosHorarios);
+        setNotificacoes(proximasNotificacoes);
+        setSalvos({
+          perfil: snapshot(dadosPerfil(proximaEmpresa)),
+          horario: snapshot({ horarios: proximosHorarios, fusoHorario: proximoFuso }),
+          notificacoes: snapshot({ notificacoes: proximasNotificacoes, lembretesAtivos: proximaEmpresa.lembretesAtivos, templateLembrete: proximaEmpresa.templateLembrete }),
+        });
       })
       .catch(() => {
         if (!controller.signal.aborted) setErroConfiguracoes(true);
@@ -237,23 +270,30 @@ export default function ConfiguracoesPage() {
     return () => controller.abort();
   }, [tentativaConfiguracoes]);
 
+  const dadosNotificacoes = { notificacoes, lembretesAtivos: empresa.lembretesAtivos, templateLembrete: empresa.templateLembrete };
+  const atuais: Record<SecaoEditavel, string> = {
+    perfil: snapshot(dadosPerfil(empresa)),
+    horario: snapshot({ horarios, fusoHorario }),
+    notificacoes: snapshot(dadosNotificacoes),
+  };
+  const pendentes = (['perfil', 'horario', 'notificacoes'] as const).filter(chave => salvos && atuais[chave] !== salvos[chave]);
+  useUnsavedChangesWarning(pendentes.length > 0);
+  const marcarSalvo = (chave: SecaoEditavel, enviado: string) =>
+    setSalvos(previous => previous ? { ...previous, [chave]: enviado } : previous);
+
   const setEmp = (k: keyof typeof empresa, v: string) =>
     setEmpresa((prev) => ({ ...prev, [k]: v }));
 
   const salvarPerfil = async () => {
+    if (salvando) return;
+    const enviado = atuais.perfil;
     setSalvando(true);
     try {
-      await api.put('/configuracoes', {
-        nome: empresa.nome,
-        cnpj: empresa.cnpj,
-        telefone: empresa.telefone,
-        emailContato: empresa.emailContato,
-        endereco: empresa.endereco,
-        descricao: empresa.descricao,
-        instagram: empresa.instagram,
-        whatsapp: empresa.whatsapp,
-      });
+      await api.put('/configuracoes', dadosPerfil(empresa));
+      marcarSalvo('perfil', enviado);
       toastSuccess('Configurações salvas!');
+    } catch {
+      toastError('Não foi possível salvar o perfil. Suas alterações foram mantidas; tente novamente.');
     } finally {
       setSalvando(false);
     }
@@ -289,10 +329,13 @@ export default function ConfiguracoesPage() {
   };
 
   const salvarHorarios = async () => {
+    if (salvando) return;
+    const enviado = atuais.horario;
     setSalvando(true);
     setErroHorarios('');
     try {
       await api.put('/configuracoes', { horarios, fusoHorario });
+      marcarSalvo('horario', enviado);
       toastSuccess('Horários salvos!');
     } catch {
       setErroHorarios('Não foi possível salvar os horários. Verifique os dados e tente novamente.');
@@ -302,14 +345,16 @@ export default function ConfiguracoesPage() {
   };
 
   const salvarNotificacoes = async () => {
+    if (salvando) return;
+    const enviado = atuais.notificacoes;
     setSalvando(true);
     try {
-      await api.put('/configuracoes', { notificacoes });
-      await api.patch('/configuracoes/notificacoes', {
-        lembretesAtivos: empresa.lembretesAtivos,
-        templateLembrete: empresa.templateLembrete,
-      });
+      // O endpoint existente atualiza todas as preferências em uma única gravação.
+      await api.put('/configuracoes', dadosNotificacoes);
+      marcarSalvo('notificacoes', enviado);
       toastSuccess('Notificações salvas!');
+    } catch {
+      toastError('Não foi possível salvar as notificações. Suas alterações foram mantidas; tente novamente.');
     } finally {
       setSalvando(false);
     }
@@ -535,6 +580,12 @@ export default function ConfiguracoesPage() {
 return (
     <>
     <PageToolbar><div><h2 className="font-semibold">Configurações</h2><p className="mt-1">Personalize seu sistema e preferências</p></div></PageToolbar>
+    {pendentes.length > 0 && (
+      <div role="status" className="mb-5 rounded-xl border border-amber-400/25 bg-amber-400/5 p-4 text-sm leading-6 text-amber-100">
+        <p>Alterações não salvas em: {pendentes.map(chave => SECOES.find(item => item.id === chave)?.label).join(', ')}.</p>
+        <p className="mt-1 text-[#A1A1AA]">Você pode alternar entre as seções sem perder o que digitou. Salve cada seção antes de sair.</p>
+      </div>
+    )}
     <nav aria-label="Seções de configurações" className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 md:hidden">
       {SECOES.map((item) => item.id === 'usuarios' ? (
         <Link key={item.id} href="/usuarios" className="flex min-h-11 items-center rounded-xl border border-white/10 bg-[#111116] px-3 py-2 text-sm text-[#A1A1AA]">{item.label}</Link>
@@ -613,7 +664,7 @@ return (
             }}>Tentar novamente</Button>
           </div>
         ) : (
-          <>
+          <fieldset disabled={salvando} className="min-w-0">
 {secao === 'perfil' && (
           <div>
             <h2 className="text-xl font-semibold" style={{ color: '#FAFAFA' }}>
@@ -1609,7 +1660,7 @@ return (
             </div>
           </div>
         )}
-          </>
+          </fieldset>
         )}
       </div>
 
