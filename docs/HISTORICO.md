@@ -1,5 +1,14 @@
 # Histórico das entregas documentadas
 
+## Preservação das configurações — 27 de outubro de 2026
+
+- Perfil, horários e notificações passam a indicar suas próprias alterações não salvas. Alternar seções preserva a edição, e salvar uma seção não limpa a pendência de outra.
+- Os campos ficam bloqueados durante o salvamento. Falhas de perfil e notificações recebem mensagem específica, preservando os valores para uma nova tentativa.
+- As preferências de notificações usam a atualização única já oferecida pela API, evitando duas gravações separadas que poderiam terminar parcialmente.
+- Links internos pedem confirmação de descarte; recarregar/fechar usa o aviso nativo. O botão Voltar e navegações programáticas ainda não são interceptados. Nenhum rascunho é persistido no navegador.
+- A criação do primeiro link público de agendamento agora preenche o token somente se ele ainda estiver vazio. Acessos concorrentes reutilizam o link persistido, sem substituir endereços já compartilhados.
+- Evidências de validação em [Testes](TESTES.md); documentação Word preservada.
+
 ## Primeira etapa da evolução comercial — 25 de outubro de 2026
 
 - Empresarial mantém R$ 199/mês e passa a permitir até 100 profissionais ativos por empresa. A cota é aplicada na API sob trava transacional e apresentada em preços, assinatura e equipe.

@@ -14,6 +14,12 @@ O segmento escolhido nos cartões da landing prepara o cadastro e pode ser alter
 
 ## Funcionalidades
 
+Nas configurações, Perfil do Negócio, Horários e Notificações indicam separadamente as alterações não salvas. Trocar de seção mantém a edição em memória; salvar uma seção não remove as pendências das outras. Os campos ficam bloqueados durante o envio e uma falha permite tentar novamente sem redigitar. As preferências de notificações são gravadas juntas em uma única requisição.
+
+Ao sair por um link interno, a pessoa confirma o descarte. Recarregar ou fechar a aba usa o aviso nativo do navegador, quando suportado. Essa proteção não intercepta o botão Voltar do navegador nem toda navegação programática; não há recuperação de rascunhos após fechar a sessão, e esses dados não são gravados em armazenamento local.
+
+O primeiro acesso ao link público de agendamento cria um endereço por empresa. Se várias pessoas o solicitarem ao mesmo tempo, a API reutiliza o endereço que foi salvo primeiro, preservando os links já compartilhados.
+
 | Área               | O que a pessoa pode fazer                                                                            |
 | ------------------ | ---------------------------------------------------------------------------------------------------- |
 | Agenda             | Marcar, confirmar, concluir e cancelar atendimentos; consultar profissionais e conflitos de horário. |
@@ -115,7 +121,7 @@ As propostas abaixo foram autorizadas como direção de evolução. Planejado n�
 | 17 | Busca global de registros e ações | Planejado sobre a busca de páginas existente |
 | 18 | Filtros salvos e favoritos | Planejado |
 | 19 | Cadastro rápido sem abandonar a tarefa | Planejado |
-| 20 | Aviso de alterações não salvas | Planejado |
+| 20 | Aviso de alterações não salvas | Parcial: configurações indicam seções pendentes e protegem links/recarregamento; expansão e histórico do navegador pendentes |
 | 21 | Notificações com ações de resolução | Planejado |
 | 22 | Preferências e resumo de notificações | Planejado; envio depende do provedor |
 | 23 | Ações em lote com prévia | Planejado |
