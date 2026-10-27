@@ -103,13 +103,17 @@ test('configurações distinguem seções pendentes e permitem cancelar a saída
   await expect(pending).toContainText('Alterações não salvas em: Horário de Funcionamento.');
   await expect(pending).not.toContainText('Perfil do Negócio');
   const unload = page.waitForEvent('dialog');
-  const reload = page.reload().catch(() => null);
+  // A navegação será cancelada: não esperar o evento de carregamento de outra página.
+  const reload = page.evaluate(() => window.location.reload());
   const unloadDialog = await unload;
   expect(unloadDialog.type()).toBe('beforeunload');
   await unloadDialog.dismiss();
   await reload;
   await expect(pending).toContainText('Horário de Funcionamento');
-  await page.screenshot({ path: 'test-results/manual/settings-unsaved-mobile.png' });
+  await test.info().attach('configuracoes-pendentes-mobile', {
+    body: await page.screenshot({ path: 'test-results/manual/settings-unsaved-mobile.png' }),
+    contentType: 'image/png',
+  });
   const cancel = page.waitForEvent('dialog').then(async (dialog) => {
     expect(dialog.type()).toBe('confirm');
     await dialog.dismiss();
