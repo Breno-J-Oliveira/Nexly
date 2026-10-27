@@ -47,11 +47,18 @@ export class ConfiguracoesController {
     for (let tentativa = 0; tentativa < 3; tentativa++) {
       const token = randomBytes(16).toString('hex');
       try {
-        await this.prisma.client.empresa.update({
-          where: { id: ctx.tenantId },
+        // Apenas a primeira requisição preenche o token; concorrentes reutilizam o vencedor.
+        const created = await this.prisma.client.empresa.updateMany({
+          where: { id: ctx.tenantId, bookingToken: null },
           data: { bookingToken: token },
         });
-        return { token };
+        if (created.count === 1) return { token };
+        const current = await this.prisma.client.empresa.findFirst({
+          where: { id: ctx.tenantId },
+          select: { bookingToken: true },
+        });
+        if (!current) return { token: null };
+        if (current.bookingToken) return { token: current.bookingToken };
       } catch (e) {
         if ((e as { code?: string }).code !== 'P2002') throw e;
       }
