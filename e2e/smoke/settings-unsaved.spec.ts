@@ -110,6 +110,7 @@ test('configurações distinguem seções pendentes e permitem cancelar a saída
   await unloadDialog.dismiss();
   await reload;
   await expect(pending).toContainText('Horário de Funcionamento');
+  await pending.scrollIntoViewIfNeeded();
   await test.info().attach('configuracoes-pendentes-mobile', {
     body: await page.screenshot({ path: 'test-results/manual/settings-unsaved-mobile.png' }),
     contentType: 'image/png',
