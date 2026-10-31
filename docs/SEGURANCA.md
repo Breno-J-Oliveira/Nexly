@@ -50,6 +50,14 @@ O workflow de segurança executa gitleaks, audit de dependências e Semgrep. ZAP
 
 Na verificação de 22/10/2026, a auditoria de produção retornou zero vulnerabilidades. O CI de ferramentas apontou `braces`, transitivo do conjunto Tailwind/ESLint, com [aviso sem versão corrigida naquela consulta](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm). O resultado é datado e pode mudar. Não foi aplicado `audit fix --force` nem reduzida a exigência do workflow para esconder o alerta.
 
+## Reserva de exportações LGPD
+
+As exportações da empresa e de um cliente compartilham uma reserva Redis por empresa, além das permissões e cotas existentes. A reserva utiliza aquisição atômica, token aleatório e liberação por comparação do proprietário. Enquanto estiver ocupada, uma nova exportação retorna 429 com `EXPORT_IN_PROGRESS`; indisponibilidade na aquisição retorna 503 sem iniciar a consulta. A liberação ocorre também após falha da operação, e um proprietário antigo não pode apagar a reserva de outro.
+
+O prazo da reserva é de 900 segundos, sem renovação. Após esse prazo uma operação ainda em andamento pode se sobrepor a outra. O JSON completo continua sendo montado em memória; esta entrega não limita o tamanho de uma exportação nem substitui uma evolução para processamento em lotes com entrega por streaming ou job. Não há truncamento silencioso dos dados exportados.
+
+O workflow de segurança inclui o serviço independente `services/nexusauth` no escopo Semgrep. A imagem Semgrep utiliza versão e digest fixados, e o arquivo Gitleaks tem seu SHA-256 verificado antes da extração. Fixar versões exige revisões periódicas; não comprova que os jobs foram executados ou que não existem vulnerabilidades. O [OWASP ASVS](https://asvs.owasp.org/) orienta os critérios de verificação, sem representar certificação do Nexly.
+
 ## Segurança de cobrança
 
 Webhooks exigem assinatura sobre o corpo original. A API rejeita ambiente incompatível e conta conectada, confere o catálogo e resolve a empresa pelo customer persistido. O retorno do navegador não comprova pagamento. Operações de administração exigem ADMIN e usam cota distribuída. Credenciais ficam no backend. Consulte [Pagamentos](PAGAMENTOS.md) para as condições de acesso, idempotência e limites operacionais.

@@ -32,8 +32,10 @@ jobs:
       - name: Instala o gitleaks
         run: |
           VERSION=8.21.2
-          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
-            | tar -xz gitleaks
+          ARCHIVE="gitleaks_${VERSION}_linux_x64.tar.gz"
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/${ARCHIVE}" -o "$ARCHIVE"
+          echo "5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba  ${ARCHIVE}" | sha256sum --check --strict
+          tar -xzf "$ARCHIVE" gitleaks
           sudo mv gitleaks /usr/local/bin/
           gitleaks version
       - name: Varre o histórico do repositório
@@ -60,7 +62,7 @@ jobs:
     name: Análise estática (semgrep)
     runs-on: ubuntu-latest
     container:
-      image: semgrep/semgrep
+      image: semgrep/semgrep:1.183.0@sha256:2e45517a85e13a9cca14a2a00df6bb48affd66b8ebfae1b0991cd57578362fb0
     steps:
       - uses: actions/checkout@v6
       - name: Semgrep (regras OWASP Top 10 + TypeScript/Node)
@@ -74,7 +76,7 @@ jobs:
             --exclude dist \
             --exclude .next \
             --exclude .turbo \
-            apps packages
+            apps packages services/nexusauth
 
   zap:
     name: OWASP ZAP (baseline)

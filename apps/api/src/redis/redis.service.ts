@@ -116,6 +116,23 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  /** Release only our reservation: an expired owner's finally must not delete its successor. */
+  async releaseLease(key: string, token: string): Promise<boolean | null> {
+    if (!this.client) return null;
+    try {
+      return (
+        (await this.client.eval(
+          "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end; return 0",
+          1,
+          key,
+          token,
+        )) === 1
+      );
+    } catch {
+      return null;
+    }
+  }
+
   /** Leitura e remoção atômicas, compatíveis com Redis anterior a GETDEL. */
   async take(key: string): Promise<{ value: string | null } | null> {
     if (!this.client) return null;
