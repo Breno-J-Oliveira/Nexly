@@ -29,7 +29,7 @@ export function encrypt(plaintext: string): string {
 
   const key = getKey();
   const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
   const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
   const authTag = cipher.getAuthTag();
   return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`;
@@ -68,7 +68,7 @@ export function decrypt(ciphertext: string): string {
   if (!/^[0-9a-fA-F]+$/.test(authTagHex) || authTagHex.length !== AUTH_TAG_LENGTH * 2) {
     throw new Error('Invalid auth tag format');
   }
-  if (!/^[0-9a-fA-F]+$/.test(encryptedHex) || encryptedHex.length === 0) {
+  if (!/^[0-9a-fA-F]+$/.test(encryptedHex) || encryptedHex.length % 2 !== 0) {
     throw new Error('Invalid encrypted data format');
   }
   
@@ -76,7 +76,7 @@ export function decrypt(ciphertext: string): string {
   const authTag = Buffer.from(authTagHex, 'hex');
   const encrypted = Buffer.from(encryptedHex, 'hex');
   
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
   decipher.setAuthTag(authTag);
   
   try {
