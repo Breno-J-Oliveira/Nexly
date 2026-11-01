@@ -62,6 +62,14 @@ Em 25/10/2026, a [verificação agendada](https://github.com/Breno-J-Oliveira/Ne
 
 ## Suporte e prontidão comercial
 
+### Conferência externa de 31/10/2026
+
+Às 22h42 BRT, o frontend em `https://nexly-web.vercel.app` respondeu HTTP 200. O domínio Railway permitido no `connect-src` do CSP desse frontend, `https://api-production-ca5d.up.railway.app`, respondeu HTTP 404 em `/api/health`, com JSON `Application not found` e identificação do Railway. Isso difere de um erro de rota `Cannot GET` do NestJS. O CSP informa um destino permitido, mas não comprova sozinho a URL usada pelo bundle; login, pagamentos e comunicação funcional de produção não foram homologados nessa consulta.
+
+O [backup agendado mais recente consultado](https://github.com/Breno-J-Oliveira/Nexly/actions/runs/41198172984) falhou na validação da configuração, e o dump não foi executado. A [última tentativa de restore não pulada entre os runs consultados](https://github.com/Breno-J-Oliveira/Nexly/actions/runs/40192752840/job/121167069850), de 25/10, também falhou. As execuções seguintes que pularam a etapa não representam novas provas de restauração.
+
+Antes da liberação comercial, confirme o serviço e o domínio efetivos da API, obtenha uma resposta saudável e homologue login/cobrança; depois configure o armazenamento privado e comprove backup e recuperação em banco descartável. Essas pendências não são resolvidas por uma compilação ou por testes de scripts em CI. A consulta externa foi somente leitura, sem alteração de produção ou acesso a segredos.
+
 Contato público autorizado: **breno.emailsenai@gmail.com**. Antes de abrir o serviço, confirme atendimento desse canal, identificação do responsável, condições comerciais, termos, privacidade, testes de recebimento e cancelamento, backup restaurável e acompanhamento de um piloto. Pendências externas devem ser acompanhadas operacionalmente; não marcar como concluídas apenas porque há uma tela implementada.
 
 ## Detalhamento de cobrança
