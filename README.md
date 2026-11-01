@@ -1196,6 +1196,12 @@ Leia [o guia de testes](docs/TESTES.md) e a configuração de cada cenário ante
 
 Esses grupos têm escopos distintos e não formam um único total de testes. São evidências de execuções locais datadas; não representam homologação de todas as integrações externas ou de cada versão publicada. O badge de CI no início consulta o workflow do GitHub, separadamente desses registros.
 
+### Revisão de experiência e segurança de 31/10/2026
+
+O [CI de `290cb33`](https://github.com/Breno-J-Oliveira/Nexly/actions/runs/41263105845) aprovou **704 testes da API e 127 cenários Playwright**, sem falhas, cenários pulados ou novas tentativas. Tipos, lint, containers e scripts de backup/restauração também passaram. O [workflow de segurança](https://github.com/Breno-J-Oliveira/Nexly/actions/runs/41263105858) aprovou auditoria, gitleaks e Semgrep; ZAP não foi executado nessa campanha. Onze testes criptográficos isolados do NexusAuth passaram localmente, sem representar homologação integral desse serviço independente.
+
+A entrega inclui navegação por tarefas, ajuda opcional em Clientes, foco e avisos acessíveis no cadastro, proteção de exportações simultâneas e contrato de isolamento dos modelos. A análise por página está em [Produto](docs/PRODUTO.md), e a evidência detalhada em [Testes](docs/TESTES.md). O serviço da API no Railway foi confirmado como pausado e o backup externo ainda exige configuração: consulte [Operação](docs/OPERACAO.md) antes de considerar o sistema liberado para venda. A documentação Word mais recente foi preservada.
+
 Consulte [a revisão da apresentação](docs/documentacao/REVISAO_APRESENTACAO_2026-10-29.md), o [plano de testes e GOT](docs/documentacao/Nexly_Plano_de_Testes_e_GOT_ABNT.docx) e os [workflows](https://github.com/Breno-J-Oliveira/Nexly/actions) para detalhes. O registro da revisão preserva o estado observado naquele momento; atualizações posteriores de imagens são descritas neste README e nos arquivos atuais.
 
 [Voltar ao topo](#topo)
