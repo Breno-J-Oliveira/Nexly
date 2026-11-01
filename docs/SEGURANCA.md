@@ -50,6 +50,25 @@ O workflow de segurança executa gitleaks, audit de dependências e Semgrep. ZAP
 
 Na verificação de 22/10/2026, a auditoria de produção retornou zero vulnerabilidades. O CI de ferramentas apontou `braces`, transitivo do conjunto Tailwind/ESLint, com [aviso sem versão corrigida naquela consulta](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm). O resultado é datado e pode mudar. Não foi aplicado `audit fix --force` nem reduzida a exigência do workflow para esconder o alerta.
 
+## Prioridades da revisão de 31 de outubro de 2026
+
+| Área | Evidência e próxima verificação |
+| --- | --- |
+| Exportação | As consultas LGPD carregam tabelas completas. A reserva por empresa reduz sobreposição enquanto válida; limitar memória e custo total exige evolução específica. |
+| Isolamento | A extensão de empresa permite caminhos sem contexto para autenticação e trabalhos internos. Isso não demonstra vazamento; é necessário manter inventário de modelos globais, diretos e filhos e testar caminhos privados, públicos, trabalhos e transações. |
+| Eventos de segurança | Logs HTTP já possuem requestId e redação de caminhos. Avaliar eventos com identificadores internos mínimos de ator e empresa verificados, sem conteúdo de requisições, dados pessoais ou credenciais. |
+| Recuperação | O guia operacional registra falha de backup e restauração em 25/10 por armazenamento ausente. O estado externo atual não foi consultado nesta revisão; comprovar recuperação em banco descartável permanece requisito. |
+| Hospedagem e provedores | Conferir runtime, cookies, CORS, revogação, Google e reconciliação Stripe no ambiente publicado. Código e CI não comprovam as configurações efetivas da hospedagem. |
+| Retenção de dados | Revisar finalidade e prazos de auditoria, texto livre e backups com o responsável pelo serviço; não alterar regras ou declarar conformidade legal por suposição. |
+
+As verificações são orientadas pelo [OWASP ASVS](https://asvs.owasp.org/) e pelas recomendações de [isolamento multitenant](https://cheatsheetseries.owasp.org/cheatsheets/Multi_Tenant_Security_Cheat_Sheet.html) e [autorização](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html). Esta revisão combina inspeção de código e testes locais delimitados; não equivale a um pentest completo de produção.
+
+O contrato automatizado de inventário compara os 41 modelos do schema com o client Prisma gerado. Os 31 modelos diretos precisam receber efetivamente o filtro de empresa; os oito filhos têm suas relações verificadas; `Empresa` recebe o próprio ID e `EventoStripe` é a exceção global explícita para deduplicação antes da resolução da empresa. Isso protege contra omissões futuras no inventário, sem alterar os caminhos de autenticação ou trabalhos internos. Não substitui testes de RLS e autorização em banco real.
+
+Na nova auditoria de 31/10, `follow-redirects` foi atualizado de 1.16.1 para 1.16.2 ([aviso](https://github.com/advisories/GHSA-mrwp-f3q8-3g9p)) e `postcss-selector-parser` de 6.1.4 para 6.1.5 ([aviso](https://github.com/advisories/GHSA-rj75-hqrm-r3gf)). A auditoria das dependências de produção do monorepo principal retornou zero avisos conhecidos. Incluindo ferramentas de desenvolvimento, o web manteve 19 avisos moderados; a API, 34 moderados e um baixo. Nenhum alto ou crítico foi encontrado nessas consultas. O serviço independente NexusAuth não faz parte desse total do npm audit da raiz; não foi usado `audit fix --force` para encobrir pendências.
+
+No NexusAuth, a utilidade criptográfica já validava tags de 16 bytes no formato de entrada. A configuração agora também declara esse comprimento explicitamente na API AES-GCM e rejeita hexadecimal ímpar. Onze testes isolados verificam round-trip, tags truncadas e adulteração; não constituem validação integral do microsserviço. O workflow do serviço usa referências completas de commit para as Actions alteradas e Node 22.23.4, alinhado ao runtime corrigido de sua imagem.
+
 ## Reserva de exportações LGPD
 
 As exportações da empresa e de um cliente compartilham uma reserva Redis por empresa, além das permissões e cotas existentes. A reserva utiliza aquisição atômica, token aleatório e liberação por comparação do proprietário. Enquanto estiver ocupada, uma nova exportação retorna 429 com `EXPORT_IN_PROGRESS`; indisponibilidade na aquisição retorna 503 sem iniciar a consulta. A liberação ocorre também após falha da operação, e um proprietário antigo não pode apagar a reserva de outro.

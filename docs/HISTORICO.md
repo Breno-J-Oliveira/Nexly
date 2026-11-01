@@ -1,5 +1,15 @@
 # Histórico das entregas documentadas
 
+## Orientação de uso e proteção operacional — 31 de outubro de 2026
+
+- Navegação agrupada por tarefa, com catálogo único para menu, títulos e busca; destinos anteriores preservados e assinatura incluída na busca.
+- Menu móvel com controle de foco, Escape, ocultação efetiva quando fechado e recuperação de foco ao mudar a largura da janela.
+- Cadastro com foco nas validações e etapas, erros gerais anunciados e preenchimento automático adequado aos campos de acesso.
+- Ajuda opcional em Clientes, estados vazios equivalentes no celular e desktop e ação para limpar busca sem resultado.
+- Documentos e Filiais independentes da consulta de opções não utilizadas; descrição de Filiais alinhada ao estoque por unidade.
+- Reserva temporária por empresa para exportações LGPD, liberação atômica no Redis e verificação do serviço NexusAuth no escopo Semgrep. Limites em [Segurança](SEGURANCA.md).
+- Revisão por página e critérios de avaliação da retenção em [Produto](PRODUTO.md). Evidências de execução ficam em [Testes](TESTES.md); documentação acadêmica Word preservada.
+
 ## Preservação das configurações — 27 de outubro de 2026
 
 - Perfil, horários e notificações passam a indicar suas próprias alterações não salvas. Alternar seções preserva a edição, e salvar uma seção não limpa a pendência de outra.

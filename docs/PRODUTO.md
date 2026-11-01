@@ -114,8 +114,8 @@ As propostas abaixo foram autorizadas como direção de evolução. Planejado n�
 | 10 | Prévia dos módulos escolhidos | Implementado: exemplos e capturas, sem alterar a seleção |
 | 11 | Configuração guiada até o primeiro atendimento | Planejado sobre o guia existente |
 | 12 | Retomar configurações interrompidas | Planejado, sem armazenar senhas ou tokens |
-| 13 | Estados vazios com próximo passo específico | Planejado sobre os componentes existentes |
-| 14 | Ajuda contextual durante a tarefa | Planejado |
+| 13 | Estados vazios com próximo passo específico | Parcial: Clientes diferencia cadastro vazio e busca sem resultado, com orientação equivalente no celular e desktop |
+| 14 | Ajuda contextual durante a tarefa | Parcial: tutorial opcional de busca e cadastro em Clientes; expansão para outros módulos planejada |
 | 15 | Painel adequado ao papel do usuário | Planejado sobre as permissões existentes |
 | 16 | Mapeamento de colunas na importação | Planejado |
 | 17 | Busca global de registros e ações | Planejado sobre a busca de páginas existente |
@@ -149,3 +149,73 @@ As propostas abaixo foram autorizadas como direção de evolução. Planejado n�
 | 45 | Métricas de ativação e feedback contextual | Planejado com coleta mínima e finalidade definida |
 
 A primeira entrega prioriza o teto comercial, redução do cadastro, prévia dos recursos e clareza financeira. A sequência prioriza preservação do trabalho (12, 20 e 33), primeira configuração (11 e 13), operação da agenda (25–29) e evolução financeira/estoque (34–41), mantendo a validação das dependências externas 42 e 43 como requisito para liberação comercial.
+
+## Revisão da experiência e retenção — 31 de outubro de 2026
+
+O objetivo é facilitar tarefas reais para pessoas com pouca familiaridade com tecnologia. A revisão considera legibilidade, teclado, orientação, prevenção de erros e recuperação do trabalho. Idade não determina capacidade; as decisões precisam ser conferidas com pessoas do público pretendido.
+
+A entrega inicial organiza a navegação por tarefas, preservando os 28 destinos anteriores e acrescentando a assinatura ao catálogo da busca. Os grupos secundários podem ser expandidos; o grupo da página atual permanece aberto. No celular, o menu fechado fica fora da navegação por teclado; o menu aberto controla foco, Escape e retorno ao acionador, inclusive ao alternar para desktop. A busca continua oferecendo destinos autorizados dos grupos recolhidos.
+
+O cadastro direciona o foco ao primeiro campo inválido e ao título da nova etapa. Os erros gerais de login e cadastro são anunciados. Em Clientes, “Conhecer esta tela” abre uma ajuda curta, com instruções e um botão que localiza o controle sem clicar nem alterar valores. A ajuda pode ser encerrada e repetida, pausa durante formulários/detalhes e não persiste preferências ou dados. As entradas no painel e em Meu Nexly levam até essa ajuda, conforme acesso. Não há ainda visita guiada para todas as funções.
+
+Documentos e Filiais deixam de depender do carregamento de opções que seus formulários não utilizam. A descrição de Filiais diferencia estoque por unidade e cadastros ainda compartilhados; os dados e as regras de venda, agenda e estoque foram preservados.
+
+A inspeção de código encontrou estruturas que devem ser aproveitadas: cadastro em quatro etapas, prévias dos módulos, guia de primeiros passos, busca de páginas e permissões por papel. O menu reúne 28 destinos em três grupos; o preset Salão usa todos os módulos do catálogo. Reduzir a quantidade de decisões visíveis pode ajudar, mas desativar recursos de empresas existentes ou excluir módulos exige avaliar seu uso e dependências.
+
+### Mapa de revisão por página
+
+Esta tabela registra oportunidades e critérios de revisão, não declara que todos os comportamentos foram implementados ou testados. A travessia automatizada de páginas verifica erros e largura; não substitui tarefas completas com usuários. O diagnóstico detalhado de segurança fica em [Segurança](SEGURANCA.md).
+
+| Página ou rotas | Oportunidade e critério de avaliação |
+| --- | --- |
+| `/` | Mostrar o benefício com exemplos do segmento, explicar o primeiro resultado e levar ao cadastro sem promessas não comprovadas. |
+| `/funcionalidades` | Organizar por necessidade, explicar o resultado de cada função e distinguir recursos de integrações que dependem de configuração. |
+| `/precos` | Manter comparação clara, limites de profissionais ativos e distinção entre assinatura Nexly e recebimentos do estabelecimento. |
+| `/blog`, `/blog/[slug]` | Relacionar leitura a uma tarefa útil do negócio, preservar navegação e sugerir conteúdo relevante sem interromper a leitura. |
+| `/suporte` | Facilitar contato e informar o que incluir no pedido sem solicitar senhas, tokens ou dados de clientes. |
+| `/termos`, `/privacidade` | Facilitar localização de condições, retenção, contatos e responsabilidade; linguagem acessível sem alterar obrigações por suposição. |
+| `/login` | Anunciar erros gerais, manter foco previsível e explicar indisponibilidade das opções de acesso quando aplicável. |
+| `/cadastro` | Focar o primeiro erro, anunciar a etapa, preservar valores ao voltar e explicar dependências dos módulos. |
+| `/recuperar-senha`, `/redefinir-senha` | Orientar expiração, nova tentativa e retorno ao login; envio real continua condicionado ao provedor. |
+| `/aceitar-convite` | Explicar empresa, papel e situação do convite, com recuperação de expiração e sessão incompatível. |
+| `/booking/[token]` | Conduzir serviço, profissional e horário; permitir recuperar indisponibilidade e conflito sem confirmar um horário não gravado. |
+| `/dashboard` | Priorizar compromissos e pendências; tornar o próximo passo fácil de descobrir sem aumentar a densidade do painel. |
+| `/meu-nexly` | Diferenciar personalização da empresa, conhecimento dos recursos e ajuda individual; apresentar impacto da seleção de módulos. |
+| `/clientes` | Igualar orientação móvel e desktop; separar cadastro vazio de busca sem resultado, oferecendo limpar busca e criação conforme permissão. |
+| `/agenda` | Facilitar primeiro agendamento, explicar dependências e conflitos e distinguir agendamento criado de atendimento concluído. |
+| `/profissionais` | Explicar quem atende e o limite do plano, diferenciando profissionais de contas com acesso ao sistema. |
+| `/servicos` | Explicar preço, duração e consumo de insumos com exemplos; preservar validação e prevenção de perdas. |
+| `/pdv` | Clarear escolha de cliente, produto e pagamento; preservar recuperação de resposta perdida e distinguir venda recebida de conta a receber. |
+| `/vendas` | Facilitar consulta e continuidade no financeiro, explicando estados, recebimentos e estorno antes da confirmação. |
+| `/produtos`, `/estoque` | Distinguir cadastro do produto e movimentação física; ligar alertas a uma ação de reposição compreensível. |
+| `/estoque/pedidos` | Conduzir fornecedor, itens e recebimento, evitando confundir pedido criado com mercadoria recebida. |
+| `/estoque/filiais`, `/filiais` | Explicar estoque por unidade e os dados ainda compartilhados; corrigir descrições divergentes do comportamento. |
+| `/financeiro` | Distinguir vencido, a vencer, parcialmente pago e recebido; mostrar como voltar ao lançamento de origem. |
+| `/relatorios` | Explicar período, fuso e definição dos indicadores; separar ausência de dados, filtro vazio e falha. |
+| `/comissao` | Distinguir valor calculado e pagamento/repasse efetivo; manter consulta por período e profissional compreensível. |
+| `/fidelidade` | Explicar origem dos pontos e próxima ação quando não há participação no programa. |
+| `/marketing` | Deixar claro consentimento e preparação para envio manual; não apresentar campanha preparada como enviada. |
+| `/recorrencias` | Explicar série, horários futuros e cancelamento sem perda do histórico. |
+| `/tarefas`, `/automacao` | Diferenciar tarefa e regra que gera tarefas, incluindo prazo, responsável e prevenção de duplicidade. |
+| `/documentos` | Facilitar primeiro documento e reuso de modelos; não depender de opções de formulários não utilizadas. |
+| `/usuarios` | Explicar papel, convite e revogação, distinguindo acesso ao sistema e profissional que realiza atendimentos. |
+| `/importar` | Orientar formato, prévia, validação e recuperação de erro sem sugerir que dados foram importados antes da confirmação. |
+| `/historico` | Explicar filtros e ações registradas, protegendo dados sensíveis e oferecendo retorno ao contexto da operação. |
+| `/operacao` | Mostrar situação real, falha, processamento e próxima ação, evitando expor complexidade técnica desnecessária. |
+| `/configuracoes` | Preservar edições pendentes, explicar o que está configurado, simulado ou depende de provedor. |
+| `/minha-conta` | Facilitar revisão de sessões, segundo fator e recuperação de acesso com mensagens claras. |
+| `/assinatura` | Explicar plano atual, limites, contratação, cancelamento e portal; confirmação vem do backend e do provedor. |
+
+### Ajuda contextual proposta
+
+O tutorial deve ser iniciado pela pessoa e poder ser encerrado, repetido e acessado por teclado. Um cartão com seta pode identificar o controle da etapa; o texto também deve nomeá-lo, sem depender da seta ou somente de cor. A primeira entrega deve se concentrar em tarefas curtas e seguras. Tutorial não cadastra, conclui atendimento, vende ou altera pagamento automaticamente.
+
+No celular e com ampliação, a orientação não pode cobrir o campo ou botão em uso. A ajuda deve considerar permissões, módulos desativados, alvos ausentes, formulários preenchidos e modais abertos. Preferências pessoais do tutorial não devem alterar a preferência administrativa existente de mostrar o guia da empresa.
+
+Essas decisões seguem a orientação de [ajuda contextual do NN/g](https://www.nngroup.com/articles/onboarding-tutorials/) e de [estados vazios com caminhos de ação](https://www.nngroup.com/articles/empty-state-interface-design/). Para alvos de interação, 44 px é uma meta de conforto adotável; o [critério WCAG 2.2 AA 2.5.8](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html) estabelece 24 por 24 CSS px ou condições de exceção e espaçamento. Medições e testes renderizados são necessários antes de afirmar conformidade.
+
+### Como avaliar o resultado
+
+Não há uma série de uso real analisada nesta revisão que permita afirmar aumento de retenção. Primeiro é necessário medir tempo até o primeiro agendamento e até a primeira venda, sucesso sem ajuda, erros e pedidos de suporte por tarefa. Criar agendamento não equivale a concluir atendimento; iniciar checkout não equivale a assinar. Depois, acompanhar retorno semanal às tarefas adequadas a cada segmento, com coleta mínima e sem nomes, contatos, conteúdo de documentos ou dados clínicos.
+
+A [referência de ativação da Amplitude](https://amplitude.com/books/user-engagement/activating-new-users) ajuda a formular hipóteses; não determina metas universais para o Nexly. Testes com pessoas do público devem comparar facilidade e conclusão de tarefas antes e depois das mudanças. Instalar uma ferramenta de analytics ou gravação de sessão não faz parte desta entrega.
