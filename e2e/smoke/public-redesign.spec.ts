@@ -82,7 +82,7 @@ test('landing mostra o produto, dez dúvidas e um caminho para falar com a equip
 }) => {
   await page.goto('/');
   await expect(page.getByRole('tablist', { name: 'Explorar prévia do Nexly' })).toHaveCount(0);
-  const photos = page.locator('main img[src*="-demo.webp"]');
+  const photos = page.locator('main figure img');
   await expect(photos).toHaveCount(4);
   for (const photo of await photos.all()) {
     await photo.scrollIntoViewIfNeeded();

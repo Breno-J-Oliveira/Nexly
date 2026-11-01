@@ -30,6 +30,8 @@ test-results/
 playwright-report/
 blob-report/
 .playwright/
+/output/image-refresh/
+/output/
 
 # Sistema / IDE
 .DS_Store
@@ -60,7 +62,16 @@ apps/api/prisma/*.db
 !/docs/documentacao/
 /docs/documentacao/*
 !/docs/documentacao/Nexly_Documentacao_Completa_ABNT.docx
+!/docs/documentacao/Nexly_Documentação.docx
 !/docs/documentacao/Nexly_Plano_de_Testes_e_GOT_ABNT.docx
+!/docs/documentacao/CHECKLIST_FINALIZACAO.md
+!/docs/documentacao/REVISAO_APRESENTACAO_2026-10-29.md
+!/docs/documentacao/historico/
+/docs/documentacao/historico/*
+!/docs/documentacao/historico/*.docx
+!/docs/Screenshots/
+/docs/Screenshots/*
+!/docs/Screenshots/*.png
 .clinerules
 docs-deploy.md
 comunictionIA.md

@@ -1,6 +1,4 @@
-const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
-if (nodeMajor < 24 || (nodeMajor === 24 && nodeMinor < 15))
-  throw new Error('Use Node.js 24.15 ou superior (veja .nvmrc).');
+require('./check-node-version.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const dotenv = require('dotenv');
