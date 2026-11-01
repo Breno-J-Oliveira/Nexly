@@ -90,7 +90,26 @@ export function Shell({ children }: { children: ReactNode }) {
       }
       button.focus();
     };
+    const focusDesktopWhenVisible = () => {
+      const sidebar = sidebarRef.current;
+      if (!sidebar || !media.matches || !sidebarAberta) return;
+      const active = document.activeElement;
+      const focusLost = active === document.body || active === document.documentElement;
+      const sidebarControlHidden = active instanceof HTMLElement && sidebar.contains(active) &&
+        (!active.getClientRects().length || getComputedStyle(active).visibility !== 'visible');
+      // Media-query events and focus loss can run in either order across browsers.
+      // Inspect rendered focus in a frame; preserve any currently usable control.
+      if (!focusLost && !sidebarControlHidden) return;
+      const target = sidebar.querySelector<HTMLButtonElement>('nav button');
+      if (!target || target.disabled) return;
+      if (!target.getClientRects().length || getComputedStyle(target).visibility !== 'visible') {
+        focusFrame = requestAnimationFrame(focusDesktopWhenVisible);
+        return;
+      }
+      target.focus();
+    };
     const sync = () => {
+      cancelAnimationFrame(focusFrame);
       const sidebar = sidebarRef.current;
       if (!sidebar) return;
       const modal = !media.matches && sidebarAberta;
@@ -108,13 +127,8 @@ export function Shell({ children }: { children: ReactNode }) {
       if (content) content.inert = modal;
       if (mobileNav) mobileNav.inert = modal;
       document.body.style.overflow = modal ? 'hidden' : previousOverflow;
-      if (wasModal && !modal && sidebar.contains(document.activeElement)) {
-        const active = document.activeElement as HTMLElement;
-        if (!active.getClientRects().length || getComputedStyle(active).visibility === 'hidden') {
-          const visibleControl = Array.from(sidebar.querySelectorAll<HTMLElement>('button, summary, a[href]'))
-            .find(node => node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden' && !node.matches(':disabled'));
-          visibleControl?.focus();
-        }
+      if (wasModal && !modal) {
+        focusFrame = requestAnimationFrame(focusDesktopWhenVisible);
       }
       wasModal = modal;
     };

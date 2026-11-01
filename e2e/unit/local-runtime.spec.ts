@@ -7,6 +7,23 @@ import { createRequire } from 'node:module';
 function checkRuntime(file: string, version: string): void {
   const filename = path.resolve('scripts', file);
   const nativeRequire = createRequire(filename);
+  // Only the script source comes from disk. Its environment checks use isolated fixtures,
+  // so CI and developer-specific .env files cannot change the runtime assertions.
+  const envFixtures = new Map([
+    [path.resolve('apps/api/.env'), 'DATABASE_URL=postgresql://test:test@localhost:5432/nexly_test\nDIRECT_URL=postgresql://test:test@127.0.0.1:5432/nexly_test\nREDIS_URL=redis://localhost:6379\n'],
+    [path.resolve('apps/web/.env'), 'NEXT_PUBLIC_API_URL=http://localhost:3001\n'],
+  ]);
+  const fixtureFs = {
+    existsSync(file: string) {
+      return envFixtures.has(file);
+    },
+    readFileSync(file: string) {
+      const contents = envFixtures.get(file);
+      if (contents === undefined) throw new Error(`Unexpected fixture path: ${file}`);
+      return Buffer.from(contents, 'utf8');
+    },
+  };
+
   vm.runInNewContext(fs.readFileSync(filename, 'utf8'), {
     __dirname: path.dirname(filename),
     URL,
@@ -18,6 +35,7 @@ function checkRuntime(file: string, version: string): void {
       },
     },
     require(name: string) {
+      if (name === 'node:fs') return fixtureFs;
       if (name === './check-node-version.cjs') {
         checkRuntime('check-node-version.cjs', version);
         return {};
