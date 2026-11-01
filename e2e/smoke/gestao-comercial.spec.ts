@@ -66,6 +66,7 @@ test('novas áreas funcionam com dados reais e preservam saldos no navegador', a
     await expect(
       page.getByRole('status').filter({ hasText: 'Preferências atualizadas' }),
     ).toBeVisible();
+    await page.getByRole('navigation', { name: 'Menu principal' }).locator('summary').filter({ hasText: 'Clientes e retorno' }).click();
     await expect(
       page
         .getByRole('navigation', { name: 'Menu principal' })
@@ -175,7 +176,7 @@ test('novas áreas funcionam com dados reais e preservam saldos no navegador', a
       '/meu-nexly',
     ]) {
       await page.goto(path);
-      await expect(page.getByRole('navigation', { name: 'Menu principal' })).toBeAttached();
+      await expect(page.getByRole('navigation', { name: 'Menu principal', includeHidden: true })).toBeAttached();
       await expect(page.locator('main')).toBeVisible();
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),

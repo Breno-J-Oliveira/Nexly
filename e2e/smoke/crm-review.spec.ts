@@ -48,6 +48,22 @@ test('customers support pagination, notes, keyboard focus and recovery from a ne
     await page.getByRole('button', { name: 'Entrar no painel', exact: true }).click();
     await page.waitForURL('**/dashboard');
     await page.goto('/clientes');
+    const help = page.getByRole('region', { name: 'Ajuda de clientes' });
+    await expect(help.getByRole('heading')).toHaveCount(0);
+    await help.getByRole('button', { name: 'Conhecer esta tela', exact: true }).click();
+    await expect(help.getByRole('heading', { name: 'Encontre um cliente' })).toBeFocused();
+    await help.getByRole('button', { name: 'Mostrar controle' }).click();
+    await expect(page.getByRole('textbox', { name: 'Buscar cliente' })).toBeFocused();
+    await expect(page.getByRole('textbox', { name: 'Buscar cliente' })).toHaveValue('');
+    await page.keyboard.press('Escape');
+    await expect(
+      help.getByRole('button', { name: 'Conhecer esta tela', exact: true }),
+    ).toBeFocused();
+    await page.getByRole('textbox', { name: 'Buscar cliente' }).fill('SemCorrespondenciaTutorial');
+    await expect(page.getByRole('button', { name: 'Limpar busca', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Limpar busca', exact: true }).click();
+    await expect(page.getByRole('textbox', { name: 'Buscar cliente' })).toHaveValue('');
+
     await expect(page.getByText('Página 1 de 5', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Próxima', exact: true }).click();
     await expect(page.getByText('Página 2 de 5', { exact: true })).toBeVisible();

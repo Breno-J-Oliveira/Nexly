@@ -220,6 +220,7 @@ export function routeModule(path: string): ModuleId | undefined {
 }
 
 export function canAccessWorkspaceRoute(path: string, role: string): boolean {
+  if (path === '/assinatura') return role === 'ADMIN';
   if (path === '/meu-nexly' || path === '/minha-conta') return true;
   if (role === 'ADMIN') return true;
   if(['/historico','/operacao'].includes(path))return false;

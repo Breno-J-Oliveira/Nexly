@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { Brand } from '@/components/marketing/Brand';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { UsuarioPublico, validarCnpj, normalizeModules, PRESETS, ModuleId } from '@nexly/shared';
@@ -49,7 +49,7 @@ function StepIndicator({ passoAtual }: { passoAtual: number }) {
   const labels = ['Conta', 'Negócio', 'Recursos', 'Perfil'];
   return (
     <nav aria-label="Etapas do cadastro" className="my-8 border-y border-white/[0.06] py-6 sm:my-9">
-      <p className="mb-5 text-center text-xs text-[#A1A1AA]">Etapa {passoAtual} de {PASSO_COUNT} · {labels[passoAtual - 1]}</p>
+      <p role="status" className="mb-5 text-center text-xs text-[#A1A1AA]">Etapa {passoAtual} de {PASSO_COUNT} · {labels[passoAtual - 1]}</p>
       <ol className="flex items-center justify-between gap-2">
         {Array.from({ length: PASSO_COUNT }).map((_, idx) => {
           const num = idx + 1;
@@ -76,6 +76,12 @@ export default function CadastroPage() {
   const router = useRouter();
   const { completeLogin, googleRegistration, setGoogleRegistration, setGoogleTwoFactorToken } = useAuth();
   const [passo, setPasso] = useState(1);
+  const stepHeading = useRef<HTMLHeadingElement>(null);
+  const previousStep = useRef(1);
+  useEffect(() => {
+    if (previousStep.current !== passo) stepHeading.current?.focus();
+    previousStep.current = passo;
+  }, [passo]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -114,8 +120,8 @@ export default function CadastroPage() {
     setError(null);
     let valid = false;
     let dados: Partial<FormData> = {};
-    if (passo === 1) { valid = await form1.trigger(); if (valid) dados = form1.getValues(); }
-    else if (passo === 2) { valid = await form2.trigger(); if (valid) dados = form2.getValues(); }
+    if (passo === 1) { valid = await form1.trigger(undefined, { shouldFocus: true }); if (valid) dados = form1.getValues(); }
+    else if (passo === 2) { valid = await form2.trigger(undefined, { shouldFocus: true }); if (valid) dados = form2.getValues(); }
     else if (passo === 3) { valid = modulos.length > 0; if (!valid) setError('Escolha pelo menos um recurso.'); }
     if (!valid) return;
     setForm((prev) => ({ ...prev, ...dados }));
@@ -127,7 +133,7 @@ export default function CadastroPage() {
   const finalizar = async (): Promise<void> => {
     if (isSubmitting) return;
     if (!aceitouTermos) { setError('Aceite os Termos de Uso e a Política de Privacidade para continuar.'); return; }
-    if (!await perfil.trigger()) return;
+    if (!await perfil.trigger(undefined, { shouldFocus: true })) return;
     const dadosPerfil = perfil.getValues();
     setError(null);
     setIsSubmitting(true);
@@ -163,8 +169,8 @@ export default function CadastroPage() {
         return (
           <div className="space-y-4">
             {googleRegistration && <div className="rounded-xl bg-indigo-500/10 p-3 text-sm text-indigo-200"><p role="status">E-mail confirmado pelo Google. Crie uma senha alternativa para acessar o Nexly também sem o Google.</p><button type="button" className="mt-2 underline" onClick={() => { setGoogleRegistration(null); form1.setValue('email', ''); setForm((previous) => ({ ...previous, email: '' })); }}>Usar outro acesso</button></div>}
-            <AuthInput label="E-mail" type="email" readOnly={Boolean(googleRegistration)} placeholder="voce@empresa.com" error={form1.formState.errors.email?.message} {...form1.register('email')} defaultValue={form.email} />
-            <AuthInput label="Senha" type={showPassword ? 'text' : 'password'} placeholder="Mínimo 8 caracteres" error={form1.formState.errors.senha?.message} defaultValue={form.senha} {...form1.register('senha')} right={
+            <AuthInput label="E-mail" type="email" autoComplete="email" readOnly={Boolean(googleRegistration)} placeholder="voce@empresa.com" error={form1.formState.errors.email?.message} {...form1.register('email')} defaultValue={form.email} />
+            <AuthInput label="Senha" autoComplete="new-password" type={showPassword ? 'text' : 'password'} placeholder="Mínimo 8 caracteres" error={form1.formState.errors.senha?.message} defaultValue={form.senha} {...form1.register('senha')} right={
               <button type="button" onClick={() => setShowPassword((v) => !v)} className="text-[#71717A] transition-colors hover:text-[#A1A1AA]" aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>
                 {showPassword ? (
                   <Icon name="eye-slash" variant="regular" className="text-[#71717A]" />
@@ -198,8 +204,8 @@ export default function CadastroPage() {
         return (
           <div className="space-y-5">
             <AuthInput label="Nome do responsável" placeholder="Seu nome" error={perfil.formState.errors.responsavelNome?.message} {...perfil.register('responsavelNome')} />
-            <AuthInput label="CNPJ" placeholder="00.000.000/0000-00" error={perfil.formState.errors.cnpj?.message} value={perfil.watch('cnpj') || ''} onChange={e => perfil.setValue('cnpj', maskCnpj(e.target.value))} />
-            <AuthInput label="Telefone do negócio" placeholder="(00) 00000-0000" error={perfil.formState.errors.telefone?.message} value={perfil.watch('telefone') || ''} onChange={e => perfil.setValue('telefone', maskTelefone(e.target.value))} />
+            <AuthInput {...perfil.register('cnpj')} label="CNPJ" placeholder="00.000.000/0000-00" error={perfil.formState.errors.cnpj?.message} value={perfil.watch('cnpj') || ''} onChange={e => perfil.setValue('cnpj', maskCnpj(e.target.value))} />
+            <AuthInput {...perfil.register('telefone')} label="Telefone do negócio" placeholder="(00) 00000-0000" error={perfil.formState.errors.telefone?.message} value={perfil.watch('telefone') || ''} onChange={e => perfil.setValue('telefone', maskTelefone(e.target.value))} />
             <AuthInput label="Cidade" placeholder="São Paulo, SP" error={perfil.formState.errors.cidade?.message} {...perfil.register('cidade')} />
             <div className="rounded-xl border border-white/10 bg-[#18181F] p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-[#A1A1AA]">Confira seu cadastro</p>
@@ -224,7 +230,7 @@ export default function CadastroPage() {
   return (
     <div data-onboarding-modules={passo === 3 ? 'true' : undefined} className="rounded-2xl border px-6 py-8 sm:p-10" style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}>
       <div className="flex justify-center"><Brand /></div>
-      <h1 className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>{['Comece pelo seu acesso', 'Configure seu negócio', 'O Nexly se adapta ao seu negócio.', 'Complete seu perfil'][passo - 1]}</h1>
+      <h1 ref={stepHeading} tabIndex={-1} className="mt-6 text-center text-[24px] font-semibold" style={{ color: '#FAFAFA' }}>{['Comece pelo seu acesso', 'Configure seu negócio', 'O Nexly se adapta ao seu negócio.', 'Complete seu perfil'][passo - 1]}</h1>
       <p className="mt-2 text-center text-[14px]" style={{ color: '#A1A1AA' }}>{passo === 3 ? 'Escolha os recursos que você precisa e crie uma experiência sob medida.' : passo === PASSO_COUNT ? 'Confira seus dados antes de criar a conta' : 'Gerencie seu negócio de forma inteligente'}</p>
       <div className="mt-8 flex rounded-xl border p-1" style={{ borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#0C0C10' }}>
         <Link href={authLink('/login', destination)} className="flex-1 rounded-lg py-2 text-center text-[13px] font-medium transition-colors" style={{ color: '#A1A1AA' }}>Entrar</Link>
@@ -233,7 +239,7 @@ export default function CadastroPage() {
       <StepIndicator passoAtual={passo} />
       <form method="post" onSubmit={(e) => { e.preventDefault(); if (passo === PASSO_COUNT) void finalizar(); else void avancar(); }} className="space-y-4">
         {renderPasso()}
-        {error && <p className="text-center text-sm text-red-400">{error}</p>}
+        {error && <p role="alert" className="text-center text-sm text-red-400">{error}</p>}
         <div className="flex gap-3 pt-2">
           {passo > 1 && (
             <Button type="button" variant="secondary" className="flex-1 rounded-xl py-3 text-[14px] font-semibold" onClick={voltar} disabled={isSubmitting}>Voltar</Button>

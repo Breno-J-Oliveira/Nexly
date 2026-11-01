@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { canAccessWorkspaceRoute as hasAccess } from '@nexly/shared';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ReactNode, useState, useRef, useEffect } from 'react';
+import { ReactNode, useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useWorkspace } from '@/lib/workspace';
 import { useNotifications } from '@/lib/notifications';
@@ -13,76 +13,20 @@ import { Icon } from '@/components/ui/Icon';
 import { CommandPalette } from '@/components/CommandPalette';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
 
-/* --- Breadcrumb labels --- */
-const PAGE_LABELS: Record<string, string> = {
-  '/financeiro':'Financeiro','/importar':'Importar cadastros','/historico':'Histórico de alterações','/operacao':'Saúde e rotinas','/estoque/filiais':'Estoque por unidade',
-  '/dashboard': 'Painel Geral',
-  '/marketing':'Marketing', '/tarefas':'Tarefas', '/recorrencias':'Recorrências', '/automacao':'Automação', '/filiais':'Filiais', '/documentos':'Documentos',
-  '/meu-nexly': 'Meu Nexly',
-  '/minha-conta': 'Minha conta',
-  '/agenda': 'Agenda',
-  '/clientes': 'Clientes',
-  '/profissionais': 'Profissionais',
-  '/servicos': 'Serviços',
-  '/produtos': 'Produtos',
-  '/estoque': 'Estoque',
-  '/estoque/pedidos': 'Pedidos de compra',
-  '/pdv': 'Ponto de Venda',
-  '/vendas': 'Vendas',
-  '/relatorios': 'Relatórios',
-  '/comissao': 'Comissões',
-  '/fidelidade': 'Fidelidade',
-  '/usuarios': 'Usuários',
-  '/configuracoes': 'Configurações',
-  '/assinatura': 'Plano e assinatura',
-};
-
-/* --- Navigation structure --- */
-type NavItem = { label: string; href: string; icon: string };
-type NavGroup = { label?: string; items: NavItem[] };
-const NAV_GROUPS: NavGroup[] = [
-  { label: 'MENU PRINCIPAL', items: [
-    { label: 'Painel Geral', href: '/dashboard', icon: 'gauge-high' },
-    { label: 'Agenda', href: '/agenda', icon: 'calendar-days' },
-    { label: 'Clientes', href: '/clientes', icon: 'users' },
-    { label: 'Profissionais', href: '/profissionais', icon: 'user-tie' },
-    { label: 'Serviços', href: '/servicos', icon: 'scissors' },
-  ]},
-  { label: 'VENDAS', items: [
-    { label: 'Produtos', href: '/produtos', icon: 'box-open' },
-    { label: 'Estoque', href: '/estoque', icon: 'boxes-stacked' },
-    { label: 'Pedidos', href: '/estoque/pedidos', icon: 'truck' },
-    { label: 'PDV', href: '/pdv', icon: 'cash-register' },
-    { label: 'Vendas', href: '/vendas', icon: 'receipt' },
-    {label:'Financeiro',href:'/financeiro',icon:'wallet'},
-    {label:'Estoque por unidade',href:'/estoque/filiais',icon:'building'},
-    { label: 'Relatórios', href: '/relatorios', icon: 'chart-column' },
-  ]},
-  { label: 'GESTÃO', items: [
-    ...[{label:'Marketing',href:'/marketing',icon:'bullhorn'},{label:'Tarefas',href:'/tarefas',icon:'list-check'},{label:'Recorrências',href:'/recorrencias',icon:'repeat'},{label:'Automação',href:'/automacao',icon:'bolt'},{label:'Filiais',href:'/filiais',icon:'building'},{label:'Documentos',href:'/documentos',icon:'file-lines'}],
-    { label: 'Comissões', href: '/comissao', icon: 'money-bill-wave' },
-    { label: 'Fidelidade', href: '/fidelidade', icon: 'star' },
-    { label: 'Usuários', href: '/usuarios', icon: 'user-group' },
-    { label: 'Minha conta', href: '/minha-conta', icon: 'user' },
-    { label: 'Meu Nexly', href: '/meu-nexly', icon: 'wand-magic-sparkles' },
-    {label:'Importar cadastros',href:'/importar',icon:'file-import'},
-    {label:'Histórico de alterações',href:'/historico',icon:'clock-rotate-left'},
-    {label:'Saúde e rotinas',href:'/operacao',icon:'heart-pulse'},
-    { label: 'Configurações', href: '/configuracoes', icon: 'gear' },
-  ]},
-];
+import { navigationGroups, visibleNavigation, type NavItem } from '@/lib/navigation';
 
 /**
  * RBAC no menu: esconde itens que o papel não pode acessar.
  * Mantido em sintonia com apps/api/src/common/auth/permissions.ts.
  */
 
-function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+function NavLink({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate: () => void }) {
   return (
     <Link
       href={item.href}
+      onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
-      className="group flex items-center gap-3 border rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150"
+      className="group flex min-h-11 items-center gap-3 border rounded-lg px-3 py-2 text-[13px] font-medium transition-colors duration-150 motion-reduce:transition-none"
       style={{
         backgroundColor: active ? 'rgba(99,102,241,0.10)' : 'transparent',
         borderColor: active ? 'rgba(99,102,241,0.28)' : 'transparent',
@@ -104,18 +48,102 @@ export function Shell({ children }: { children: ReactNode }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const [notifAberto, setNotifAberto] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const changeSearchOpen = useCallback((open: boolean) => {
+    if (open) setSidebarAberta(false);
+    setSearchOpen(open);
+  }, []);
+  const currentPath = useRef(pathname);
+  currentPath.current = pathname;
+  const sidebarRef = useRef<HTMLElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const mobileNavRef = useRef<HTMLElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const pageLabel = pathname==='/clientes'?(profile.preferencias?.nomeCliente??'Clientes'):pathname==='/servicos'?(profile.preferencias?.nomeServico??'Serviços'):PAGE_LABELS[pathname] ?? '';
+  const pageLabel = navigationGroups(profile.preferencias).flatMap(group => group.items).find(item => item.href === pathname)?.label ?? '';
   const nome = user?.nome ?? 'Usuário';
   const role = user?.role ?? '';
-  const grupos=NAV_GROUPS.map(group=>({...group,items:group.items.map(item=>({...item,label:item.href==='/clientes'?(profile.preferencias?.nomeCliente??item.label):item.href==='/servicos'?(profile.preferencias?.nomeServico??item.label):item.label}))}));
-  const destinos = grupos.flatMap(group => group.items).filter(item => hasAccess(item.href, role) && enabled(item.href));
+  const grupos = visibleNavigation(role, enabled, hasAccess, profile.preferencias);
+  const destinos = grupos.flatMap(group => group.items);
   const dataHoje = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
   const iniciais = nome.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 
   useEffect(() => { setSidebarAberta(false); setSearchOpen(false); }, [pathname]);
+
+  useEffect(() => {
+    const openedPath = currentPath.current;
+    const content = contentRef.current;
+    const mobileNav = mobileNavRef.current;
+    const media = window.matchMedia('(min-width: 768px)');
+    const restore = sidebarAberta && document.activeElement instanceof HTMLElement
+      ? document.activeElement : null;
+    let wasModal = false;
+    let focusFrame = 0;
+    const focusSidebarWhenVisible = () => {
+      const button = sidebarRef.current?.querySelector<HTMLButtonElement>('button');
+      if (!button || media.matches || !sidebarAberta) return;
+      // CSS visibility can still be hidden during the opening transition.
+      // Focusing then silently fails; retry at a rendered frame, never by timeout.
+      if (getComputedStyle(button).visibility !== 'visible' || !button.getClientRects().length) {
+        focusFrame = requestAnimationFrame(focusSidebarWhenVisible);
+        return;
+      }
+      button.focus();
+    };
+    const sync = () => {
+      const sidebar = sidebarRef.current;
+      if (!sidebar) return;
+      const modal = !media.matches && sidebarAberta;
+      sidebar.inert = !media.matches && !sidebarAberta;
+      sidebar.setAttribute('aria-label', 'Navegação principal');
+      if (modal) {
+        sidebar.setAttribute('role', 'dialog');
+        sidebar.setAttribute('aria-modal', 'true');
+        if (!wasModal) focusFrame = requestAnimationFrame(focusSidebarWhenVisible);
+      } else {
+        cancelAnimationFrame(focusFrame);
+        sidebar.removeAttribute('role');
+        sidebar.removeAttribute('aria-modal');
+      }
+      if (content) content.inert = modal;
+      if (mobileNav) mobileNav.inert = modal;
+      document.body.style.overflow = modal ? 'hidden' : previousOverflow;
+      if (wasModal && !modal && sidebar.contains(document.activeElement)) {
+        const active = document.activeElement as HTMLElement;
+        if (!active.getClientRects().length || getComputedStyle(active).visibility === 'hidden') {
+          const visibleControl = Array.from(sidebar.querySelectorAll<HTMLElement>('button, summary, a[href]'))
+            .find(node => node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden' && !node.matches(':disabled'));
+          visibleControl?.focus();
+        }
+      }
+      wasModal = modal;
+    };
+    const previousOverflow = document.body.style.overflow;
+    const trap = (event: KeyboardEvent) => {
+      if (media.matches || !sidebarAberta || event.key !== 'Tab') return;
+      const nodes = Array.from(sidebarRef.current?.querySelectorAll<HTMLElement>('a[href], button, summary') ?? []).filter(node => node.getClientRects().length && !node.matches(':disabled') && !node.closest('[inert], details:not([open]) > div'));
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    sync();
+    media.addEventListener('change', sync);
+    document.addEventListener('keydown', trap);
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      media.removeEventListener('change', sync);
+      document.removeEventListener('keydown', trap);
+      if (content) content.inert = false;
+      if (mobileNav) mobileNav.inert = false;
+      document.body.style.overflow = previousOverflow;
+      if (restore?.isConnected) {
+        if (currentPath.current !== openedPath) document.getElementById('main-content')?.focus();
+        else if (restore.getClientRects().length && getComputedStyle(restore).visibility !== 'hidden') restore.focus();
+        else document.getElementById('main-content')?.focus();
+      }
+    };
+  }, [sidebarAberta]);
+
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -142,8 +170,10 @@ export function Shell({ children }: { children: ReactNode }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 flex flex-col h-full w-[240px] transform border-r transition-transform duration-300 ease-out md:translate-x-0 ${
-          sidebarAberta ? 'translate-x-0' : '-translate-x-full'
+        ref={sidebarRef}
+        id="workspace-navigation"
+        className={`fixed left-0 top-0 z-50 flex flex-col h-full w-[240px] transform border-r transition-transform duration-300 ease-out motion-reduce:transition-none md:visible md:translate-x-0 ${
+          sidebarAberta ? 'visible translate-x-0' : 'invisible -translate-x-full'
         }`}
         style={{ backgroundColor: '#111116', borderColor: 'rgba(255,255,255,0.06)' }}
       >
@@ -152,31 +182,23 @@ export function Shell({ children }: { children: ReactNode }) {
             <Image src="/logo.svg" alt="Nexly" width={32} height={40} className="h-10 w-8 object-contain" />
           </div>
           <span className="text-lg font-bold" style={{ color: '#FAFAFA' }}>Nexly</span>
-          <button onClick={() => setSidebarAberta(false)} className="ml-auto md:hidden" style={{ color: '#A1A1AA' }} aria-label="Fechar menu">
+          <button onClick={() => setSidebarAberta(false)} className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center md:hidden" style={{ color: '#A1A1AA' }} aria-label="Fechar menu">
             <Icon name="xmark" size="sm" color="#A1A1AA" />
           </button>
         </div>
 
         <nav aria-label="Menu principal" className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-          <button type="button" aria-haspopup="dialog" onClick={() => { setSidebarAberta(false); setSearchOpen(true); }} className="flex min-h-11 items-center justify-between rounded-lg border border-white/10 px-3 text-sm text-[#D4D4D8]">Buscar páginas <kbd className="text-[10px] text-[#A1A1AA]">Ctrl K</kbd></button>
-          {grupos.map((group, idx) => {
-            const items = group.items.filter((item) => hasAccess(item.href, role) && enabled(item.href));
-            if (items.length === 0) return null;
-            return (
-              <div key={idx}>
-                {group.label && (
-                  <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: '#71717A' }}>
-                    {group.label}
-                  </p>
-                )}
-                <div className="flex flex-col gap-1">
-                  {items.map((item) => (
-                    <NavLink key={item.href} item={item} active={pathname === item.href} />
-                  ))}
-                </div>
+          <button type="button" aria-haspopup="dialog" onClick={() => { changeSearchOpen(true); }} className="flex min-h-11 items-center justify-between rounded-lg border border-white/10 px-3 text-sm text-[#D4D4D8]">Buscar páginas <kbd className="text-[10px] text-[#A1A1AA]">Ctrl K</kbd></button>
+          {grupos.map((group, idx) => (
+            <details key={`${group.label}-${pathname}`} open={idx === 0 || group.items.some(item => item.href === pathname)} onToggle={(event) => { if (group.items.some(item => item.href === pathname)) event.currentTarget.open = true; }} className="group/nav">
+              <summary className="min-h-11 cursor-pointer rounded-lg px-3 py-3 text-xs font-semibold text-[#A1A1AA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400">
+                {group.label}
+              </summary>
+              <div className="mt-1 flex flex-col gap-1">
+                {group.items.map(item => <NavLink key={item.href} item={item} active={pathname === item.href} onNavigate={() => setSidebarAberta(false)} />)}
               </div>
-            );
-          })}
+            </details>
+          ))}
         </nav>
         <div className="mx-4 mb-4 flex shrink-0 items-center gap-3 rounded-xl border border-white/10 bg-[#18181F] p-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#6366F1]/15 text-xs font-semibold text-[#A5B4FC]">{iniciais}</span>
@@ -185,11 +207,11 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main */}
-      <div className="flex min-h-screen flex-col min-w-0 md:pl-[240px]">
+      <div ref={contentRef} className="flex min-h-screen flex-col min-w-0 md:pl-[240px]">
         {/* Header */}
         <header className="sticky top-0 z-10 flex min-h-[72px] items-center gap-3 border-b px-4 py-2.5 backdrop-blur-md md:px-8" style={{ backgroundColor: 'rgba(6,6,8,0.90)', borderColor: 'rgba(255,255,255,0.06)' }}>
           {/* Hamburger (mobile) */}
-          <button onClick={() => setSidebarAberta(true)} className="md:hidden" style={{ color: '#A1A1AA' }} aria-label="Abrir menu">
+          <button onClick={() => setSidebarAberta(true)} className="inline-flex min-h-11 min-w-11 items-center justify-center md:hidden" style={{ color: '#A1A1AA' }} aria-label="Abrir menu" aria-controls="workspace-navigation" aria-expanded={sidebarAberta}>
             <Icon name="bars" size="sm" color="#A1A1AA" />
           </button>
 
@@ -201,7 +223,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
           <div id="page-toolbar" className="min-w-0 flex-1 empty:hidden" />
           <div className="shell-header-tools ml-auto flex items-center gap-2">
-            <button type="button" onClick={() => setSearchOpen(true)} aria-label="Buscar páginas" aria-haspopup="dialog" className="shell-global-search hidden min-h-11 items-center gap-4 rounded-lg border border-white/10 px-3 text-sm text-[#A1A1AA] lg:flex">Buscar página <kbd className="text-xs">Ctrl K</kbd></button>
+            <button type="button" onClick={() => changeSearchOpen(true)} aria-label="Buscar páginas" aria-haspopup="dialog" className="shell-global-search hidden min-h-11 items-center gap-4 rounded-lg border border-white/10 px-3 text-sm text-[#A1A1AA] lg:flex">Buscar página <kbd className="text-xs">Ctrl K</kbd></button>
             {/* Notificações */}
             <div className="relative" ref={notifRef}>
               <button
@@ -308,8 +330,8 @@ export function Shell({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
-      <nav aria-label="Navegação mobile" className="fixed inset-x-0 bottom-0 z-30 flex border-t border-white/10 bg-[#111116]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
-        <button type="button" onClick={() => setSearchOpen(true)} aria-label="Buscar páginas" aria-haspopup="dialog" className="flex min-h-16 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium text-[#A1A1AA]"><Icon name="magnifying-glass" size="lg" color="currentColor" />Buscar</button>
+      <nav ref={mobileNavRef} aria-label="Navegação mobile" className="fixed inset-x-0 bottom-0 z-30 flex border-t border-white/10 bg-[#111116]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
+        <button type="button" onClick={() => changeSearchOpen(true)} aria-label="Buscar páginas" aria-haspopup="dialog" className="flex min-h-16 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium text-[#A1A1AA]"><Icon name="magnifying-glass" size="lg" color="currentColor" />Buscar</button>
         {[
           { href: '/dashboard', label: 'Início', icon: 'gauge-high' },
           { href: '/agenda', label: 'Agenda', icon: 'calendar-days' },
@@ -320,11 +342,11 @@ export function Shell({ children }: { children: ReactNode }) {
             <Icon name={item.icon} size="lg" color="currentColor" />{item.label}
           </Link>
         ))}
-        <button type="button" onClick={() => setSidebarAberta(true)} aria-label="Abrir navegação" className={`flex min-h-16 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium ${!['/dashboard', '/agenda', '/clientes'].includes(pathname) ? 'text-[#818CF8]' : 'text-[#A1A1AA]'}`}>
+        <button type="button" onClick={() => setSidebarAberta(true)} aria-label="Abrir navegação" aria-controls="workspace-navigation" aria-expanded={sidebarAberta} className={`flex min-h-16 flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium ${!['/dashboard', '/agenda', '/clientes'].includes(pathname) ? 'text-[#818CF8]' : 'text-[#A1A1AA]'}`}>
           <Icon name="bars" size="lg" color="currentColor" />Menu
         </button>
       </nav>
-      <CommandPalette open={searchOpen} setOpen={setSearchOpen} items={destinos} />
+      <CommandPalette open={searchOpen} setOpen={changeSearchOpen} items={destinos} />
     </div>
   );
 }

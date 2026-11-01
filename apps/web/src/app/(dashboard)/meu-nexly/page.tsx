@@ -77,7 +77,18 @@ export default function MeuNexly() {
           </p>
         )}
       </section>
-      {['ADMIN','GESTOR'].includes(user?.role??'')&&<PreferenciasNegocio/>}
+      {['ADMIN', 'GESTOR'].includes(user?.role ?? '') && <PreferenciasNegocio />}
+      {profile.modulos.includes('clientes') &&
+        canAccessWorkspaceRoute('/clientes', user?.role || '') && (
+          <p className="my-3 text-sm">
+            <Link
+              href="/clientes#ajuda-clientes"
+              className="inline-flex min-h-11 items-center text-[#A5B4FC] underline"
+            >
+              Ajuda para começar com clientes
+            </Link>
+          </p>
+        )}
       <section>
         <h2 className="mb-4 text-lg font-semibold">Entenda seu painel</h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

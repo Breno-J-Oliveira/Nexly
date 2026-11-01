@@ -30,7 +30,7 @@ test('erro inesperado da rota preserva o documento e permite recuperar o painel'
   await page.unroute('**/api/dashboard');
   await page.getByRole('button', { name: 'Tentar de novo', exact: true }).click();
   await expect(
-    page.getByRole('navigation', { name: 'Menu principal', exact: true }),
+    page.getByRole('navigation', { name: 'Menu principal', exact: true, includeHidden: true }),
   ).toBeAttached();
   await expect(page.getByRole('heading', { name: 'Algo deu errado', exact: true })).toHaveCount(0);
 });

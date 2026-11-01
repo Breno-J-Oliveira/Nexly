@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }) => {
   await page.getByRole('button', { name: 'Entrar no painel', exact: true }).click();
   await page.waitForURL('**/dashboard');
   await expect(
-    page.getByRole('navigation', { name: 'Menu principal', exact: true }),
+    page.getByRole('navigation', { name: 'Menu principal', exact: true, includeHidden: true }),
   ).toBeAttached();
 });
 

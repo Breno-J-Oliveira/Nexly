@@ -47,7 +47,9 @@ test('preset survives registration and modules can be changed later', async ({ p
     await page.getByRole('checkbox').check();
     await page.getByRole('button', { name: 'Criar conta e acessar' }).click();
     await page.waitForURL('**/dashboard');
-    await expect(page.getByRole('link', { name: 'Meu Nexly', exact: true })).toBeVisible();
+    const navigation = page.getByRole('navigation', { name: 'Menu principal', exact: true });
+    await navigation.locator('summary').filter({ hasText: 'Conta e preferências' }).click();
+    await expect(navigation.getByRole('link', { name: 'Meu Nexly', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'PDV', exact: true })).toHaveCount(0);
     await expect(
       page.getByRole('heading', { name: 'Alertas Operacionais', exact: true }),

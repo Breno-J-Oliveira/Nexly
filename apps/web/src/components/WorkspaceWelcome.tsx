@@ -8,7 +8,7 @@ import { PrimeirosPassos } from './gestao/PrimeirosPassos';
 export function WorkspaceWelcome() {
   const { profile } = useWorkspace();
   const { user } = useAuth();
-  const modelo = PRESETS.find((p) => p.id === (profile.preferencias?.segmento??profile.preset));
+  const modelo = PRESETS.find((p) => p.id === (profile.preferencias?.segmento ?? profile.preset));
   return (
     <section className="mb-6 rounded-xl border border-white/10 bg-[#111116] p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -23,6 +23,17 @@ export function WorkspaceWelcome() {
           Personalizar e conhecer recursos
         </Link>
       </div>
+      {profile.modulos.includes('clientes') &&
+        canAccessWorkspaceRoute('/clientes', user?.role || '') && (
+          <p className="my-3 text-sm">
+            <Link
+              href="/clientes#ajuda-clientes"
+              className="inline-flex min-h-11 items-center text-[#A5B4FC] underline"
+            >
+              Ajuda para começar com clientes
+            </Link>
+          </p>
+        )}
       <div className="mt-4 flex flex-wrap gap-2">
         {MODULES.filter(
           (m) =>
@@ -35,11 +46,15 @@ export function WorkspaceWelcome() {
             className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#18181F] px-3 py-2 text-xs text-[#A1A1AA] hover:border-[#6366F1]/40 hover:text-white"
           >
             <Icon name={m.icon} size="sm" color="#818CF8" />
-            {m.id==='clientes'?(profile.preferencias?.nomeCliente??m.nome):m.id==='servicos'?(profile.preferencias?.nomeServico??m.nome):m.nome}
+            {m.id === 'clientes'
+              ? (profile.preferencias?.nomeCliente ?? m.nome)
+              : m.id === 'servicos'
+                ? (profile.preferencias?.nomeServico ?? m.nome)
+                : m.nome}
           </Link>
         ))}
       </div>
-      {['ADMIN','GESTOR'].includes(user?.role??'')&&<PrimeirosPassos/>}
+      {['ADMIN', 'GESTOR'].includes(user?.role ?? '') && <PrimeirosPassos />}
     </section>
   );
 }

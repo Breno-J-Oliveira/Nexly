@@ -53,7 +53,7 @@ test('six operational modules persist and complete their workflows', async ({ pa
     await page.waitForURL('**/dashboard');
     async function goto(path: string) {
       await page.goto(path);
-      await expect(page.getByRole('navigation', { name: 'Menu principal' })).toBeAttached();
+      await expect(page.getByRole('navigation', { name: 'Menu principal', includeHidden: true })).toBeAttached();
       await expect(page.getByRole('button', { name: 'Novo registro', exact: true })).toBeVisible();
     }
     const dialog = page.getByRole('dialog');

@@ -102,6 +102,11 @@ export function OperationsPage({ kind }: { kind: Kind }) {
   }, [load, cancelPendingLoads]);
   useEffect(() => {
     if (!allowed) return;
+    if (kind === 'documentos' || kind === 'filiais') {
+      setOptionsLoading(false);
+      setOptionsError(false);
+      return;
+    }
     let active = true;
     setOptionsLoading(true);
     setOptionsError(false);
@@ -119,7 +124,7 @@ export function OperationsPage({ kind }: { kind: Kind }) {
     return () => {
       active = false;
     };
-  }, [allowed, optionsAttempt]);
+  }, [allowed, optionsAttempt, kind]);
   async function searchClients() {
     try {
       const r = await api.get<Options>('/operacoes/opcoes', { params: { busca: clientSearch } });

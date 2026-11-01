@@ -17,6 +17,7 @@ import { toastSuccess, toastError } from '@/components/ui/Toaster';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { isCancel } from 'axios';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ClientesTutorial } from '@/components/ClientesTutorial';
 import { ClienteDrawer } from './ClienteDrawer';
 
 interface Cliente {
@@ -40,7 +41,7 @@ interface FormState {
 const vazio: FormState = { nome: '', telefone: '', email: '' };
 
 export default function ClientesPage() {
-  const {profile}=useWorkspace();
+  const { profile } = useWorkspace();
   const { user } = useAuth();
   const podeCriar = hasPermission(user?.role, 'clientes:create');
   const podeEditar = hasPermission(user?.role, 'clientes:update');
@@ -184,12 +185,43 @@ export default function ClientesPage() {
     }
   };
 
+  const emptyClients = (
+    <EmptyState
+      icon="users-slash"
+      title={busca ? `Nenhum cliente encontrado para "${busca}"` : 'Nenhum cliente cadastrado'}
+      description={
+        busca
+          ? 'Confira o nome digitado ou limpe a busca para ver todos.'
+          : podeCriar
+            ? 'Adicione clientes para começar a agendar serviços.'
+            : 'Os clientes cadastrados pela equipe aparecerão aqui.'
+      }
+      action={
+        busca ? (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setBusca('');
+              setPagina(1);
+              buscaRef.current?.focus();
+            }}
+          >
+            Limpar busca
+          </Button>
+        ) : podeCriar ? (
+          <Button onClick={abrirNovo}>+ Novo cliente</Button>
+        ) : undefined
+      }
+    />
+  );
   return (
     <div className="clients-page">
       <PageToolbar>
         <div className="page-heading with-search flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-[#FAFAFA]">{profile.preferencias?.nomeCliente??'Clientes'}</h2>
+            <h2 className="text-xl font-semibold text-[#FAFAFA]">
+              {profile.preferencias?.nomeCliente ?? 'Clientes'}
+            </h2>
             <p className="mt-1 text-sm text-[#A1A1AA]">
               CRM de clientes e acompanhamento de fidelidade · {totalClientes}{' '}
               {totalClientes === 1 ? 'registrado' : 'registrados'}
@@ -200,6 +232,7 @@ export default function ClientesPage() {
             <div className="toolbar-search w-full sm:w-56">
               <Input
                 ref={buscaRef}
+                data-help="clientes-busca"
                 aria-label="Buscar cliente"
                 placeholder="Buscar cliente..."
                 value={busca}
@@ -210,7 +243,7 @@ export default function ClientesPage() {
               />
             </div>
             {podeCriar && (
-              <Button className="toolbar-primary" onClick={abrirNovo}>
+              <Button data-help="clientes-novo" className="toolbar-primary" onClick={abrirNovo}>
                 + Novo cliente
               </Button>
             )}
@@ -218,6 +251,7 @@ export default function ClientesPage() {
         </div>
       </PageToolbar>
 
+      <ClientesTutorial canCreate={podeCriar} paused={modalAberto || Boolean(clienteDrawer)} />
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
           <MetricGrid
@@ -270,24 +304,7 @@ export default function ClientesPage() {
                 {!carregando && !erroCarga && clientes.length === 0 && (
                   <tr>
                     <td colSpan={podeVerCompras ? 7 : 6} className="px-4 py-16">
-                      <EmptyState
-                        icon="users-slash"
-                        title={
-                          busca
-                            ? `Nenhum cliente encontrado para "${busca}"`
-                            : 'Nenhum cliente cadastrado'
-                        }
-                        description={
-                          busca
-                            ? 'Verifique a grafia ou cadastre um novo cliente'
-                            : 'Adicione clientes para começar a agendar serviços'
-                        }
-                        action={
-                          podeCriar && !busca ? (
-                            <Button onClick={abrirNovo}>+ Novo cliente</Button>
-                          ) : undefined
-                        }
-                      />
+                      {emptyClients}
                     </td>
                   </tr>
                 )}
@@ -397,13 +414,7 @@ export default function ClientesPage() {
                 <span className="text-[#71717A]">&rsaquo;</span>
               </button>
             ))}
-            {!carregando && !erroCarga && clientes.length === 0 && (
-              <EmptyState
-                icon="users"
-                title="Nenhum cliente encontrado"
-                description="Cadastre um cliente ou ajuste a busca"
-              />
-            )}
+            {!carregando && !erroCarga && clientes.length === 0 && emptyClients}
           </div>
           {!erroCarga && (
             <nav

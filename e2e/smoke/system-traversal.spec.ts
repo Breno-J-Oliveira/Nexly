@@ -83,7 +83,7 @@ test('todos os módulos permanecem utilizáveis em 320px com nomes longos e sem 
       await test.step(route, async () => {
         await page.goto(route);
         await expect(
-          page.getByRole('navigation', { name: 'Menu principal', exact: true }),
+          page.getByRole('navigation', { name: 'Menu principal', exact: true, includeHidden: true }),
         ).toBeAttached();
         await expect(
           page.locator('main, #page-toolbar').getByRole('heading').first(),

@@ -32,6 +32,9 @@ test('cadastro chega à revisão sem pedir cartão e exige aceite', async ({ pag
   await page.getByLabel('E-mail', { exact: true }).fill('teste@example.test');
   await page.getByLabel('Senha', { exact: true }).fill('SenhaSegura123!');
   await page.getByRole('button', { name: 'Continuar', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Configure seu negócio', exact: true }),
+  ).toBeFocused();
   await page.getByLabel('Nome da empresa', { exact: true }).fill('Empresa de teste');
   await page.getByLabel('Segmento').selectOption('psicologia');
   await page.getByRole('button', { name: 'Continuar', exact: true }).click();
@@ -71,4 +74,11 @@ test('recuperação não confirma envio de e-mail indisponível', async ({ page 
   await expect(page.getByRole('button', { name: 'Enviar instruções' })).toHaveCount(0);
   await page.getByRole('link', { name: 'Voltar ao login', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
+});
+
+test('cadastro posiciona o foco no primeiro campo inválido', async ({ page }) => {
+  await page.goto('/cadastro');
+  await page.getByRole('button', { name: 'Continuar', exact: true }).click();
+  await expect(page.getByLabel('E-mail', { exact: true })).toBeFocused();
+  await expect(page.getByRole('alert').filter({ hasText: 'E-mail inválido' })).toBeVisible();
 });

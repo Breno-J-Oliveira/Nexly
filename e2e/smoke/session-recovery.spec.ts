@@ -37,7 +37,7 @@ for (const status of [503, 429]) {
     await expect(retry).toBeEnabled();
     await retry.click();
     await expect(
-      page.getByRole('navigation', { name: 'Menu principal', exact: true }),
+      page.getByRole('navigation', { name: 'Menu principal', exact: true, includeHidden: true }),
     ).toBeAttached();
     await expect(page.getByRole('heading', { name: 'Clientes', exact: true })).toBeVisible();
     await expect(page).toHaveURL(/\/clientes$/);

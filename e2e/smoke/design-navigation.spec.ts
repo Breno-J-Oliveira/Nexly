@@ -61,7 +61,7 @@ for (const width of [1440, 390]) {
       expect(response?.status(), route).toBeLessThan(400);
       if (protectedRoutes.includes(route)) {
         // A bateria percorre dezenas de rotas: respeita o limite real do servidor.
-        const menu = page.getByRole('navigation', { name: 'Menu principal', exact: true });
+        const menu = page.getByRole('navigation', { name: 'Menu principal', exact: true, includeHidden: true });
         const recovery = page.getByRole('region', { name: 'Recuperar acesso', exact: true });
         await expect(menu.or(recovery)).toBeAttached();
         if (await recovery.isVisible()) {

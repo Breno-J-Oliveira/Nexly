@@ -119,7 +119,7 @@ export const configs: Record<
   filiais: {
     title: 'Filiais',
     description:
-      'Cadastre locais de operação e vincule tarefas a cada unidade. Agenda, estoque e financeiro continuam compartilhados pela empresa.',
+      'Cadastre unidades para organizar tarefas e controlar o estoque por local. No PDV, escolha a unidade da venda. A agenda continua compartilhada pela empresa; consulte no Financeiro os lançamentos vinculados a cada unidade.',
     path: 'filiais',
     defaults: { nome: '', endereco: '', telefone: '', ativa: true },
     fields: [

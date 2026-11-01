@@ -35,7 +35,7 @@ export function CommandPalette({
     const shortcut = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         // Não sobrepor um formulário em edição com outro diálogo.
-        if (document.querySelector('[role="dialog"]')) return;
+        if (document.querySelector('[role="dialog"]:not(#workspace-navigation)')) return;
         event.preventDefault();
         setOpen(true);
       }
