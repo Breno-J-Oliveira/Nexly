@@ -14,12 +14,15 @@ test('exportações usam a reserva Redis real por empresa e preservam os dados c
   const database = new URL(process.env.DATABASE_URL || 'http://unavailable');
   const redisUrl = new URL(process.env.REDIS_URL || 'redis://localhost:6380');
   const local = (hostname: string) => ['localhost', '127.0.0.1'].includes(hostname);
+  // GitHub Actions starts an isolated Redis service on 6379; local fixtures use 6380.
+  const allowedRedisPort =
+    redisUrl.port === '6380' || (process.env.CI === 'true' && redisUrl.port === '6379');
   test.skip(
     !local(database.hostname) ||
       !database.pathname.includes('test') ||
       !local(redisUrl.hostname) ||
-      redisUrl.port !== '6380',
-    'Fixtures somente em PostgreSQL local de teste e Redis local na porta 6380',
+      !allowedRedisPort,
+    'Fixtures somente em PostgreSQL local de teste e Redis local 6380 (6379 somente no CI)',
   );
   const api = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   expect(local(new URL(api).hostname)).toBe(true);

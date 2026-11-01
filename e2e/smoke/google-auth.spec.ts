@@ -52,7 +52,9 @@ test('novo usuário Google continua cadastro com e-mail confirmado e senha alter
   await expect(page).toHaveURL(/\/cadastro$/);
   await expect(page.getByLabel('E-mail', { exact: true })).toHaveValue('novo@gmail.com');
   await expect(page.getByLabel('E-mail', { exact: true })).toHaveAttribute('readonly', '');
-  await expect(page.getByRole('status')).toContainText('senha alternativa');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'E-mail confirmado pelo Google' }),
+  ).toContainText('senha alternativa');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const storage = await page.evaluate(
     () => `${JSON.stringify(localStorage)} ${JSON.stringify(sessionStorage)}`,

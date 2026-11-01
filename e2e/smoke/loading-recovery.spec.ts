@@ -126,7 +126,7 @@ test('cadastros auxiliares não perdem o erro quando a lista termina de carregar
         : { usuarios: [], filiais: [], clientes: [], profissionais: [], servicos: [] },
     }),
   );
-  await page.route('**/api/operacoes/documentos?*', async (route) => {
+  await page.route('**/api/operacoes/tarefas?*', async (route) => {
     await gate;
     await route.fulfill({ headers: mockHeaders(route), json: { data: [], total: 0 } });
   });
@@ -144,7 +144,7 @@ test('cadastros auxiliares não perdem o erro quando a lista termina de carregar
         },
       }),
     );
-    await page.goto('/documentos');
+    await page.goto('/tarefas');
     await expect(page.getByRole('main').getByRole('alert')).toContainText('cadastros auxiliares');
     release();
     await expect(page.getByText('Carregando registros…', { exact: true })).toHaveCount(0);
