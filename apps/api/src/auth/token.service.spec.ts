@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../database/prisma.service';
 import { TokenService } from './token.service';
 import { RotationResponse } from './rotation-response';
+import { Usuario } from '@prisma/client';
 
 describe('TokenService', () => {
   let service: TokenService;
@@ -69,7 +70,9 @@ describe('TokenService', () => {
   });
 
   it('persiste apenas hash do desafio temporário com expiração', async () => {
-    await expect(service.generateTempToken('u1')).resolves.toBe('signed-challenge');
+    await expect(service.generateTempToken('u1', usuarioMock as Usuario)).resolves.toBe(
+      'signed-challenge',
+    );
     expect(jwt.signAsync).toHaveBeenCalledWith(
       expect.objectContaining({ sub: 'u1', scope: '2fa', jti: expect.any(String) }),
       { expiresIn: '5m' },
@@ -83,6 +86,58 @@ describe('TokenService', () => {
   it('JWT malformado ou expirado resulta em 401', async () => {
     jwt.verifyAsync.mockRejectedValue(new Error('jwt expired'));
     await expect(service.verifyTempToken('invalid')).rejects.toThrow(UnauthorizedException);
+  });
+  it('restringe a ativação à sessão, ao segredo e ao estado da credencial confirmada', async () => {
+    const usuario = { ...usuarioMock, twoFactorSecret: 'setup-secret' } as Usuario;
+    await service.generateTwoFactorSetupToken(usuario, 's1');
+    const payload = jwt.signAsync.mock.calls[0]?.[0];
+    expect(jwt.signAsync).toHaveBeenCalledWith(
+      {
+        sub: 'u1',
+        sid: 's1',
+        scope: '2fa-setup',
+        binding: expect.stringMatching(/^[a-f0-9]{64}$/),
+      },
+      { expiresIn: '5m' },
+    );
+    jwt.verifyAsync.mockResolvedValue(payload);
+    await expect(
+      service.verifyTwoFactorSetupToken('token', usuario, 's1'),
+    ).resolves.toBeUndefined();
+    await expect(service.verifyTwoFactorSetupToken('token', usuario, 's2')).rejects.toThrow(
+      UnauthorizedException,
+    );
+    await expect(
+      service.verifyTwoFactorSetupToken('token', { ...usuario, twoFactorSecret: 'changed' }, 's1'),
+    ).rejects.toThrow(UnauthorizedException);
+    await expect(
+      service.verifyTwoFactorSetupToken('token', { ...usuario, senhaHash: 'new-hash' }, 's1'),
+    ).rejects.toThrow(UnauthorizedException);
+    jwt.verifyAsync.mockRejectedValueOnce(new Error('jwt expired'));
+    await expect(service.verifyTwoFactorSetupToken('token', usuario, 's1')).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+  it('desafio temporário exige o snapshot de senha e segundo fator ainda vigente', async () => {
+    prisma.client.usuario.updateMany.mockResolvedValueOnce({ count: 0 });
+    await expect(
+      service.generateTempToken('u1', {
+        ...usuarioMock,
+        twoFactorSecret: 'secret',
+        googleSubject: 'google-id',
+      } as Usuario),
+    ).rejects.toThrow(UnauthorizedException);
+    expect(prisma.client.usuario.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          senhaHash: 'hashed',
+          twoFactorSecret: 'secret',
+          googleSubject: 'google-id',
+          role: 'ADMIN',
+          empresaId: 'e1',
+        }),
+      }),
+    );
   });
 
   it.each([{ sub: 'u1' }, { sub: 'u1', scope: '2fa' }, { sub: 'u1', scope: 'other', jti: 'n' }])(
@@ -108,6 +163,9 @@ describe('TokenService', () => {
     prisma.client.refreshToken.create.mockResolvedValue({ sessionId: 's1' });
 
     const result = await service.rotateRefreshToken('token-valido');
+    const locks = prisma.client.$queryRaw.mock.calls.map((call) => call[0].join(''));
+    expect(locks[0]).toContain('FROM usuarios');
+    expect(locks[1]).toContain('FROM public.sessoes');
 
     expect(prisma.client.refreshToken.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({

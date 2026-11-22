@@ -62,6 +62,8 @@ export class TokenService {
     if (!candidate) throw new UnauthorizedException('Refresh token inválido');
 
     const result = await this.prisma.client.$transaction(async (tx) => {
+      // All credential changes and issuance acquire user before session (including FK checks).
+      await tx.$queryRaw`SELECT id FROM usuarios WHERE id=${candidate.usuarioId} FOR UPDATE`;
       // O relógio do banco é lido depois do bloqueio; máquinas diferentes não alteram a janela.
       const clock = await tx.$queryRaw<{ now: Date }[]>`
         WITH locked AS MATERIALIZED (
@@ -186,13 +188,22 @@ export class TokenService {
   }
 
   /** Token temporário de 5 min usado no fluxo de 2FA (scope restrito). */
-  async generateTempToken(usuarioId: string): Promise<string> {
+  async generateTempToken(usuarioId: string, expected: Usuario): Promise<string> {
     const token = await this.jwtService.signAsync(
       { sub: usuarioId, scope: '2fa', jti: randomUUID() },
       { expiresIn: '5m' },
     );
     const saved = await this.prisma.client.usuario.updateMany({
-      where: { id: usuarioId, ativo: true, twoFactorEnabled: true },
+      where: {
+        id: usuarioId,
+        ativo: true,
+        twoFactorEnabled: true,
+        senhaHash: expected.senhaHash,
+        twoFactorSecret: expected.twoFactorSecret,
+        googleSubject: expected.googleSubject,
+        empresaId: expected.empresaId,
+        role: expected.role,
+      },
       data: {
         twoFactorChallengeHash: this.hashToken(token),
         twoFactorChallengeExpiresAt: new Date(Date.now() + 5 * 60_000),
@@ -218,6 +229,58 @@ export class TokenService {
     } catch {
       throw new UnauthorizedException('Verificação expirada. Entre novamente.');
     }
+  }
+
+  async generateTwoFactorSetupToken(usuario: Usuario, sessionId: string): Promise<string> {
+    return this.jwtService.signAsync(
+      {
+        sub: usuario.id,
+        sid: sessionId,
+        scope: '2fa-setup',
+        binding: this.twoFactorSetupBinding(usuario),
+      },
+      { expiresIn: '5m' },
+    );
+  }
+
+  async verifyTwoFactorSetupToken(
+    token: string,
+    usuario: Usuario,
+    sessionId: string,
+  ): Promise<void> {
+    const invalid = () =>
+      new UnauthorizedException({
+        code: 'TWO_FACTOR_SETUP_REQUIRED',
+        message: 'A confirmação expirou ou mudou. Reinicie a configuração do 2FA.',
+      });
+    const payload = await this.jwtService
+      .verifyAsync<{ sub: string; sid: string; scope: string; binding: string }>(token, {
+        algorithms: ['RS256'],
+      })
+      .catch(() => {
+        throw invalid();
+      });
+    if (
+      payload.scope !== '2fa-setup' ||
+      payload.sub !== usuario.id ||
+      payload.sid !== sessionId ||
+      payload.binding !== this.twoFactorSetupBinding(usuario)
+    ) {
+      throw invalid();
+    }
+  }
+
+  private twoFactorSetupBinding(usuario: Usuario): string {
+    return this.hashToken(
+      JSON.stringify([
+        usuario.empresaId,
+        usuario.role,
+        usuario.email,
+        usuario.senhaHash,
+        usuario.googleSubject,
+        usuario.twoFactorSecret,
+      ]),
+    );
   }
 
   private hashToken(token: string): string {

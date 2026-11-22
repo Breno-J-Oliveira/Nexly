@@ -76,6 +76,40 @@ test('recuperação não confirma envio de e-mail indisponível', async ({ page 
   await expect(page).toHaveURL(/\/login$/);
 });
 
+test('recuperação permite reenviar depois de corrigir o endereço', async ({ page, baseURL }) => {
+  const enderecos: string[] = [];
+  const headers = {
+    'Access-Control-Allow-Origin': new URL(baseURL!).origin,
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Headers': 'content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  };
+  await page.route('**/api/auth/recuperacao/status', (route) =>
+    route.fulfill({ headers, json: { disponivel: true } }),
+  );
+  await page.route('**/api/auth/recuperacao/solicitar', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({ headers, status: 204 });
+      return;
+    }
+    enderecos.push(route.request().postDataJSON().email);
+    await route.fulfill({ headers, json: { ok: true } });
+  });
+  await page.goto('/recuperar-senha');
+  const email = page.getByLabel('E-mail da conta');
+  const enviar = page.getByRole('button', { name: 'Enviar instruções' });
+  await email.fill('primeiro@example.test');
+  await enviar.click();
+  await expect(enviar).toBeDisabled();
+  await expect(page.getByText(/O link expira em 30 minutos/)).toBeVisible();
+  await email.fill('corrigido@example.test');
+  await expect(enviar).toBeEnabled();
+  await expect(page.getByText(/O link expira em 30 minutos/)).toHaveCount(0);
+  await enviar.click();
+  await expect(page.getByText(/O link expira em 30 minutos/)).toBeVisible();
+  expect(enderecos).toEqual(['primeiro@example.test', 'corrigido@example.test']);
+});
+
 test('cadastro posiciona o foco no primeiro campo inválido', async ({ page }) => {
   await page.goto('/cadastro');
   await page.getByRole('button', { name: 'Continuar', exact: true }).click();

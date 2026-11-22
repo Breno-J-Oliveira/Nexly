@@ -58,9 +58,16 @@ export class UsuariosService {
             'Mantenha pelo menos um administrador ativo. Promova outro usuário antes de continuar.',
         });
       }
-      await tx.usuario.updateMany({ where: { id, empresaId }, data: dto });
+      const revogarCredenciais =
+        dto.ativo === false || (dto.role !== undefined && dto.role !== usuario.role);
+      await tx.usuario.updateMany({
+        where: { id, empresaId },
+        data: revogarCredenciais
+          ? { ...dto, twoFactorChallengeHash: null, twoFactorChallengeExpiresAt: null }
+          : dto,
+      });
       // Desativar e reativar não pode restaurar credenciais antigas.
-      if (dto.ativo === false || (dto.role !== undefined && dto.role !== usuario.role)) {
+      if (revogarCredenciais) {
         await tx.authSession.updateMany({
           where: { usuarioId: id, revogado: false },
           data: { revogado: true },

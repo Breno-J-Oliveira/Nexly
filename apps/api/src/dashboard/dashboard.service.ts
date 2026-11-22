@@ -5,6 +5,7 @@ import { AuthUser, hasPermission } from '@nexly/shared';
 import { diaNoFuso, periodoNoFuso } from '../booking/booking-time';
 
 const TTL_SEGUNDOS = 5 * 60;
+const MS_DIA = 86_400_000;
 
 @Injectable()
 export class DashboardService {
@@ -108,13 +109,25 @@ export class DashboardService {
       return JSON.parse(cached) as unknown;
     }
 
+    const { fusoHorario } = await this.prisma.client.empresa.findFirstOrThrow({
+      where: { id: empresaId },
+      select: { fusoHorario: true },
+    });
     const agora = new Date();
-    const inicioDia = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-    const fimDia = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + 1);
-    const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
-    const inicioMesAnterior = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
-    const ultimos30d = new Date(agora.getTime() - 30 * 86_400_000);
-    const inicioSemana = new Date(inicioDia.getTime() - 6 * 86_400_000);
+    const hoje = diaNoFuso(agora, fusoHorario);
+    const { inicio: inicioDia, fimExclusivo: fimDia } = periodoNoFuso(hoje, fusoHorario);
+    const hojeCivil = new Date(`${hoje}T00:00:00.000Z`);
+    const inicioSemanaCivil = hojeCivil.getTime() - 6 * MS_DIA;
+    const primeiroDiaSemana = new Date(inicioSemanaCivil).toISOString().slice(0, 10);
+    const { inicio: inicioSemana } = periodoNoFuso(primeiroDiaSemana, fusoHorario);
+    const { inicio: inicioMes } = periodoNoFuso(`${hoje.slice(0, 7)}-01`, fusoHorario);
+    const mesAnterior = new Date(hojeCivil);
+    mesAnterior.setUTCMonth(mesAnterior.getUTCMonth() - 1, 1);
+    const { inicio: inicioMesAnterior } = periodoNoFuso(
+      mesAnterior.toISOString().slice(0, 10),
+      fusoHorario,
+    );
+    const ultimos30d = new Date(agora.getTime() - 30 * MS_DIA);
 
     const [
       agendamentosHoje,
@@ -194,14 +207,15 @@ export class DashboardService {
     // Faturamento hoje
     const faturamentoHoje = Number(vendasDia._sum.total ?? 0);
 
-    // Taxa de ocupação (simplificada): agendamentos hoje / (profissionais * 8 slots de 1h)
+    // Estimativa de ocupação com oito horários de uma hora por profissional.
     const slotsDisponiveis = Math.max(profissionaisAtivos * 8, 1);
-    const ocupacao = Math.min(100, Math.round((agendamentosHoje.length / slotsDisponiveis) * 100));
+    const horariosOcupados = agendamentosHoje.length - (porStatus.CANCELADO ?? 0);
+    const ocupacao = Math.min(100, Math.round((horariosOcupados / slotsDisponiveis) * 100));
 
     // Agendamentos concluídos por dia (últimos 30 dias)
     const porDia = new Map<string, number>();
     for (const a of agendamentosConcluidos) {
-      const chave = a.dataHora.toISOString().slice(0, 10);
+      const chave = diaNoFuso(a.dataHora, fusoHorario);
       porDia.set(chave, (porDia.get(chave) ?? 0) + 1);
     }
     const agendamentosPorDia = [...porDia.entries()]
@@ -211,15 +225,15 @@ export class DashboardService {
     // Evolução de vendas semanal (receita acumulada dos últimos 7 dias)
     const vendasPorDia = new Map<string, number>();
     for (const venda of vendasSemana) {
-      const chave = `${venda.createdAt.getFullYear()}-${venda.createdAt.getMonth()}-${venda.createdAt.getDate()}`;
+      const chave = diaNoFuso(venda.createdAt, fusoHorario);
       vendasPorDia.set(chave, (vendasPorDia.get(chave) ?? 0) + Number(venda.total));
     }
     const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     const evolucaoVendasSemanal = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(inicioSemana.getTime() + i * 86_400_000);
-      const chave = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const d = new Date(inicioSemanaCivil + i * MS_DIA);
+      const chave = d.toISOString().slice(0, 10);
       const total = vendasPorDia.get(chave) ?? 0;
-      return { dia: diasSemana[d.getDay()], total };
+      return { dia: diasSemana[d.getUTCDay()], total };
     });
 
     // Top 5 serviços mais realizados
@@ -277,7 +291,8 @@ export class DashboardService {
       proximosCompromissos,
     };
 
-    await this.redis.set(cacheKey, JSON.stringify(resultado), TTL_SEGUNDOS);
+    const ttl = Math.min(TTL_SEGUNDOS, Math.floor((fimDia.getTime() - Date.now()) / 1000));
+    if (ttl > 0) await this.redis.set(cacheKey, JSON.stringify(resultado), ttl);
 
     return resultado;
   }

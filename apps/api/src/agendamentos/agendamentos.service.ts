@@ -197,15 +197,15 @@ export class AgendamentosService {
           where: { id, empresaId, status: 'CONCLUIDO' },
           data: valoresConclusao,
         });
-        await registrarVisitaClienteTx(
-          tx as unknown as Prisma.TransactionClient,
-          getTenantIdOrFail(),
-          atualizado.clienteId,
-          atualizado.dataHora,
-        );
         const pendenciasEstoque = await this.estoqueIntegracao.concluirTx(
           tx as unknown as Prisma.TransactionClient,
           atualizado,
+        );
+        await registrarVisitaClienteTx(
+          tx as unknown as Prisma.TransactionClient,
+          empresaId,
+          atualizado.clienteId,
+          atualizado.dataHora,
         );
         return { ...atualizado, ...valoresConclusao, pendenciasEstoque };
       }

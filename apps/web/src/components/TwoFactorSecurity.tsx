@@ -4,16 +4,21 @@ import Image from 'next/image';
 import { RECOVERY_CODE_LENGTH, TWO_FACTOR_CODE_PATTERN } from '@nexly/shared';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errors';
 import { baixarBlob } from '@/lib/download';
+import { GoogleSignIn } from '@/components/GoogleSignIn';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { toastSuccess } from '@/components/ui/Toaster';
 
+type TwoFactorSetup = { qrCodeUrl: string; secret: string; setupToken: string };
+
 export function TwoFactorSecurity() {
   const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [googleLinked, setGoogleLinked] = useState(false);
   const [statusError, setStatusError] = useState(false);
-  const [setup, setSetup] = useState<{ qrCodeUrl: string; secret: string } | null>(null);
+  const [setup, setSetup] = useState<TwoFactorSetup | null>(null);
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
@@ -22,8 +27,14 @@ export function TwoFactorSecurity() {
   const load = useCallback(async (signal?: AbortSignal) => {
     setStatusError(false);
     try {
-      const { data } = await api.get<{ enabled: boolean }>('/auth/2fa/status', { signal });
-      if (!signal?.aborted) setEnabled(data.enabled);
+      const { data } = await api.get<{ enabled: boolean; googleLinked: boolean }>(
+        '/auth/2fa/status',
+        { signal },
+      );
+      if (!signal?.aborted) {
+        setEnabled(data.enabled);
+        setGoogleLinked(data.googleLinked === true);
+      }
     } catch {
       if (!signal?.aborted) setStatusError(true);
     }
@@ -33,17 +44,24 @@ export function TwoFactorSecurity() {
     void load(c.signal);
     return () => c.abort();
   }, [load]);
-  const mutate = async (action: 'setup' | 'enable' | 'disable') => {
+  const mutate = async (action: 'setup' | 'enable' | 'disable', credential?: string) => {
     if (busy) return;
     setBusy(true);
     setError('');
     try {
       if (action === 'setup') {
-        const { data } = await api.get<{ qrCodeUrl: string; secret: string }>('/auth/2fa/setup');
+        const { data } = credential
+          ? await api.post<TwoFactorSetup>('/auth/google/2fa/setup', { credential })
+          : await api.post<TwoFactorSetup>('/auth/2fa/setup', { password });
         setSetup(data);
+        setPassword('');
         setCode('');
       } else if (action === 'enable') {
-        const { data } = await api.post<{ backupCodes: string[] }>('/auth/2fa/enable', { code });
+        if (!setup) return;
+        const { data } = await api.post<{ backupCodes: string[] }>('/auth/2fa/enable', {
+          code,
+          setupToken: setup.setupToken,
+        });
         setBackupCodes(data.backupCodes);
         setEnabled(true);
         setSetup(null);
@@ -58,15 +76,18 @@ export function TwoFactorSecurity() {
         toastSuccess('2FA desativado.');
       }
     } catch (e) {
-      const r = e as { response?: { data?: { message?: string } } };
-      setError(
-        r.response?.data?.message ?? 'Não foi possível atualizar sua segurança. Tente novamente.',
-      );
+      if (credential) throw e;
+      const failure = parseApiError(e);
+      if (failure.code === 'TWO_FACTOR_SETUP_REQUIRED') {
+        setSetup(null);
+        setCode('');
+      }
+      setError(failure.message);
     } finally {
       setBusy(false);
     }
   };
-  const submit = (event: FormEvent<HTMLFormElement>, action: 'enable' | 'disable') => {
+  const submit = (event: FormEvent<HTMLFormElement>, action: 'setup' | 'enable' | 'disable') => {
     event.preventDefault();
     void mutate(action);
   };
@@ -103,9 +124,29 @@ export function TwoFactorSecurity() {
       ) : (
         <>
           {!enabled && !setup && (
-            <Button className="mt-5" loading={busy} onClick={() => void mutate('setup')}>
-              Configurar autenticador
-            </Button>
+            <div className="mt-5 max-w-md space-y-4">
+              <form onSubmit={(event) => submit(event, 'setup')} className="space-y-4">
+                <Input
+                  label="Senha atual para configurar"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  maxLength={128}
+                  disabled={busy}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+                <Button type="submit" loading={busy} disabled={!password}>
+                  Configurar autenticador
+                </Button>
+              </form>
+              {googleLinked && (
+                <GoogleSignIn
+                  text="continue_with"
+                  onCredential={(credential) => mutate('setup', credential)}
+                />
+              )}
+            </div>
           )}
           {!enabled && setup && (
             <form onSubmit={(e) => submit(e, 'enable')} className="mt-5 max-w-md space-y-4">
@@ -129,7 +170,7 @@ export function TwoFactorSecurity() {
                 </code>
               </details>
               <p className="text-sm text-[#A1A1AA]">
-                2. Digite o código de seis números exibido no app.
+                2. Digite o código de seis números exibido no app. Conclua em até 5 minutos.
               </p>
               <Input
                 label="Código do app"

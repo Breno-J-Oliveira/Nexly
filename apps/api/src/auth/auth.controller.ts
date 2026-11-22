@@ -24,6 +24,7 @@ import { Disable2faDto } from './dto/disable-2fa.dto';
 import { Enable2faDto } from './dto/enable-2fa.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { Setup2faDto } from './dto/setup-2fa.dto';
 import { Verify2faDto } from './dto/verify-2fa.dto';
 import { GoogleCredentialDto, GoogleLinkDto, GoogleRegisterDto } from './dto/google.dto';
 import { GoogleService } from './google.service';
@@ -237,9 +238,30 @@ export class AuthController {
     return this.authService.revogarSessao(user.id, id);
   }
 
-  @Get('2fa/setup')
-  async setup2fa(@CurrentUser() user: { id: string }) {
-    return this.authService.setup2fa(user.id);
+  @Post('2fa/setup')
+  @HttpCode(200)
+  async setup2fa(
+    @CurrentUser() user: { id: string; sessionId: string },
+    @Body() dto: Setup2faDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.authService.setup2fa(user.id, user.sessionId, { password: dto.password });
+  }
+
+  @Post('google/2fa/setup')
+  @HttpCode(200)
+  async setup2faWithGoogle(
+    @CurrentUser() user: { id: string; sessionId: string },
+    @Body() dto: GoogleCredentialDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Cache-Control', 'no-store');
+    const nonce = getCookie(req, 'googleNonce');
+    res.clearCookie('googleNonce', { ...this.cookieOptions(), path: '/api/auth/google' });
+    const identity = await this.google.verify(dto.credential, nonce, getClientIp(req));
+    return this.authService.setup2fa(user.id, user.sessionId, { identity });
   }
 
   @Get('2fa/status')
@@ -251,8 +273,10 @@ export class AuthController {
   async enable2fa(
     @CurrentUser() user: { id: string; sessionId: string },
     @Body() dto: Enable2faDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.enable2fa(user.id, dto.code, user.sessionId);
+    res.setHeader('Cache-Control', 'no-store');
+    return this.authService.enable2fa(user.id, dto.code, user.sessionId, dto.setupToken);
   }
 
   @Post('2fa/disable')

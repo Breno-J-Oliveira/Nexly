@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { AgendarPublicoDto } from './dto/agendar-publico.dto';
 import { diaNoFuso, instanteNoFuso, instanteSolicitado, periodoNoFuso } from './booking-time';
@@ -266,66 +267,83 @@ export class BookingService {
       throw new BadRequestException('Horario fora do funcionamento');
     }
 
-    const semConflito = {
+    const sobreposicao = {
+      empresaId: empresa.id,
       status: { in: ['AGENDADO' as const, 'CONFIRMADO' as const] },
       dataHora: { lt: fim },
       dataHoraFim: { gt: inicio },
     };
 
-    // O profissional escolhido é sempre validado dentro do tenant do token —
-    // sem isso seria possível agendar referenciando profissional de outra empresa.
-    let profissionalEscolhido = profissionalId ?? null;
-    if (profissionalEscolhido) {
-      const profissional = await this.prisma.client.profissional.findFirst({
-        where: { id: profissionalEscolhido, empresaId: empresa.id, ativo: true },
-        select: { id: true },
-      });
-      if (!profissional) throw new NotFoundException('Profissional nao encontrado');
-    } else {
-      // "Qualquer profissional": escolhe o primeiro livre no horário.
-      const livre = await this.prisma.client.profissional.findFirst({
-        where: { empresaId: empresa.id, ativo: true, agendamentos: { none: semConflito } },
-        select: { id: true },
-        orderBy: { nome: 'asc' },
-      });
-      if (!livre) throw new ConflictException('Horario ja ocupado');
-      profissionalEscolhido = livre.id;
+    const profissionaisAtivos = { empresaId: empresa.id, ativo: true };
+    const candidatos = await this.prisma.client.profissional.findMany({
+      where: {
+        ...profissionaisAtivos,
+        ...(profissionalId ? { id: profissionalId } : { agendamentos: { none: sobreposicao } }),
+      },
+      select: { id: true },
+      orderBy: [{ nome: 'asc' }, { id: 'asc' }],
+    });
+    if (profissionalId && candidatos.length === 0) {
+      throw new NotFoundException('Profissional nao encontrado');
     }
 
-    const agendamento = await this.prisma.client.$transaction(async (tx) => {
-      await bloquearAgenda(tx, profissionalEscolhido);
-      const conflito = await tx.agendamento.findFirst({
-        where: { empresaId: empresa.id, profissionalId: profissionalEscolhido, ...semConflito },
-        select: { id: true },
-      });
-      if (conflito) throw new ConflictException('Horario ja ocupado');
+    const telefone = clienteTelefone.replace(/\D/g, '');
+    for (const { id } of candidatos) {
+      // Uma transação por candidato libera o lock anterior antes de tentar o próximo.
+      const agendamento = await this.prisma.client.$transaction(
+        async (tx) => {
+          await bloquearAgenda(tx, id);
+          const profissional = await tx.profissional.findFirst({
+            where: { ...profissionaisAtivos, id },
+            select: { id: true },
+          });
+          if (!profissional) {
+            if (profissionalId) throw new NotFoundException('Profissional nao encontrado');
+            return null;
+          }
 
-      // Find or create cliente
-      const telefone = clienteTelefone.replace(/\D/g, '');
-      let cliente = await tx.cliente.findFirst({
-        where: { empresaId: empresa.id, telefone },
-        select: { id: true },
-      });
-      if (!cliente) {
-        cliente = await tx.cliente.create({
-          data: { empresaId: empresa.id, nome: clienteNome, telefone, email: clienteEmail || null },
-          select: { id: true },
-        });
-      }
+          const conflito = await tx.agendamento.findFirst({
+            where: { ...sobreposicao, profissionalId: id },
+            select: { id: true },
+          });
+          if (conflito) return null;
 
-      return tx.agendamento.create({
-        data: {
-          empresaId: empresa.id,
-          clienteId: cliente.id,
-          profissionalId: profissionalEscolhido,
-          servicoId: servico.id,
-          dataHora: inicio,
-          dataHoraFim: fim,
+          let cliente = await tx.cliente.findFirst({
+            where: { empresaId: empresa.id, telefone },
+            select: { id: true },
+          });
+          if (!cliente) {
+            cliente = await tx.cliente.create({
+              data: {
+                empresaId: empresa.id,
+                nome: clienteNome,
+                telefone,
+                email: clienteEmail || null,
+              },
+              select: { id: true },
+            });
+          }
+
+          return tx.agendamento.create({
+            data: {
+              empresaId: empresa.id,
+              clienteId: cliente.id,
+              profissionalId: id,
+              servicoId: servico.id,
+              dataHora: inicio,
+              dataHoraFim: fim,
+            },
+            select: { id: true },
+          });
         },
-        select: { id: true },
-      });
-    });
+        { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+      );
 
-    return { ok: true, agendamentoId: agendamento.id, mensagem: 'Agendamento confirmado!' };
+      if (agendamento) {
+        return { ok: true, agendamentoId: agendamento.id, mensagem: 'Agendamento confirmado!' };
+      }
+    }
+
+    throw new ConflictException('Horario ja ocupado');
   }
 }

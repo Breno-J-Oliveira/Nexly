@@ -56,7 +56,24 @@ test('equipe configura 2FA, usa recuperação e bloqueia repetição de desafio'
     await page.waitForURL('**/dashboard');
     const { accessToken } = await (await loginResponse).json();
     await page.goto('/minha-conta');
+    const configure = page.getByRole('button', { name: 'Configurar autenticador', exact: true });
+    await expect(configure).toBeDisabled();
+    const currentPassword = page.getByLabel('Senha atual para configurar', { exact: true });
+    await currentPassword.fill('Senha de teste incorreta');
+    const rejected = page.waitForResponse(
+      (r) => r.url().endsWith('/api/auth/2fa/setup') && r.request().method() === 'POST',
+    );
+    await configure.click();
+    expect((await rejected).ok()).toBe(false);
+    await expect(
+      page.getByRole('img', { name: 'QR code para configurar o autenticador Nexly', exact: true }),
+    ).toHaveCount(0);
+    await currentPassword.fill(senha);
+    const setupResponse = page.waitForResponse(
+      (r) => r.url().endsWith('/api/auth/2fa/setup') && r.request().method() === 'POST',
+    );
     await page.getByRole('button', { name: 'Configurar autenticador', exact: true }).click();
+    const { setupToken } = await (await setupResponse).json();
     await expect(
       page.getByRole('img', { name: 'QR code para configurar o autenticador Nexly', exact: true }),
     ).toBeVisible();
@@ -77,7 +94,7 @@ test('equipe configura 2FA, usa recuperação e bloqueia repetição de desafio'
     expect((await p.authSession.findUniqueOrThrow({ where: { id: old.id } })).revogado).toBe(true);
     const reenable = await request.post(`${apiURL}/api/auth/2fa/enable`, {
       headers: { Authorization: `Bearer ${accessToken}`, Origin: baseURL! },
-      data: { code: authenticator.generate(configured.twoFactorSecret!) },
+      data: { code: authenticator.generate(configured.twoFactorSecret!), setupToken },
     });
     expect(reenable.status()).toBe(400);
     const downloads = page.waitForEvent('download');

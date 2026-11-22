@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { isCancel } from 'axios';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -41,6 +41,7 @@ export function AgendamentoModal({
   clienteNomeInicial,
 }: Props) {
   const [step, setStep] = useState(clienteIdInicial ? 2 : 1);
+  const stepHeading = useRef<HTMLHeadingElement>(null);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
@@ -61,6 +62,10 @@ export function AgendamentoModal({
   const [tentativaBusca, setTentativaBusca] = useState(0);
   const [carregandoOpcoes, setCarregandoOpcoes] = useState(true);
   const [erroOpcoes, setErroOpcoes] = useState(false);
+
+  useEffect(() => {
+    stepHeading.current?.focus();
+  }, [step, inline]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -171,6 +176,14 @@ export function AgendamentoModal({
           <span className="text-sm text-[#FAFAFA]">{nomeClienteSelecionado}</span>
         </div>
       )}
+
+      <h4 ref={stepHeading} tabIndex={-1} className="mt-4 text-sm font-semibold text-[#E4E4E7]">
+        {step === 1
+          ? 'Escolha o cliente'
+          : step === 2
+            ? 'Escolha o profissional e o serviço'
+            : 'Escolha a data e a hora'}
+      </h4>
 
       {step === 1 && (
         <div className="mt-4 space-y-4">
@@ -388,7 +401,7 @@ export function AgendamentoModal({
       {conteudo}
     </aside>
   ) : (
-    <Modal open onClose={fechar} title="Novo agendamento">
+    <Modal open onClose={fechar} title="Novo agendamento" initialFocusRef={stepHeading}>
       {conteudo}
     </Modal>
   );

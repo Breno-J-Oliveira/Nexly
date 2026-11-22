@@ -142,7 +142,7 @@ export class ClientesService {
    * Métricas agregadas do cliente para o drawer de histórico.
    *
    * - totalVisitas: agendamentos CONCLUIDO.
-   * - totalGasto: soma do `total` das vendas vinculadas ao cliente.
+   * - totalGasto: soma do `total` das vendas concluídas vinculadas ao cliente.
    * - ticketMedio: totalGasto / quantidade de vendas.
    * - frequenciaMediaDias: intervalo médio entre visitas (dias).
    */
@@ -157,7 +157,7 @@ export class ClientesService {
       }),
       incluirVendas
         ? this.prisma.client.venda.findMany({
-            where: { clienteId: id },
+            where: { clienteId: id, status: 'CONCLUIDA' },
             select: { total: true },
           })
         : Promise.resolve([]),

@@ -79,6 +79,15 @@ test('agendamento público respeita profissional e fuso, recupera conflito e con
     await page.goto(`/booking/${token}`);
     await page.getByRole('button', { name: /Consulta pública/ }).click();
     await page.getByRole('button', { name: 'Próximo →', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Escolha o profissional' })).toBeFocused();
+    await page.getByRole('button', { name: /Qualquer profissional/ }).click();
+    await expect(page.getByRole('button', { name: /Qualquer profissional/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await page.getByRole('button', { name: /Voltar/ }).click();
+    await expect(page.getByRole('heading', { name: 'Escolha o serviço' })).toBeFocused();
+    await page.getByRole('button', { name: 'Próximo →', exact: true }).click();
     await page.getByRole('button', { name: /Profissional escolhido/ }).click();
     await page.getByRole('button', { name: 'Próximo →', exact: true }).click();
     if (today.slice(0, 7) !== day.slice(0, 7))
@@ -97,7 +106,11 @@ test('agendamento público respeita profissional e fuso, recupera conflito e con
     await page.getByRole('button', { name: '11:00', exact: true }).click();
     await page.getByRole('button', { name: 'Próximo →', exact: true }).click();
     await page.getByLabel('Seu nome completo', { exact: true }).fill('Cliente de outro fuso');
-    await page.getByLabel('WhatsApp', { exact: true }).fill('11999992222');
+    const telefone = page.getByLabel('WhatsApp', { exact: true });
+    await telefone.fill('55999992222');
+    await expect(telefone).toHaveValue('(55) 99999-2222');
+    await telefone.fill('+55 (11) 99999-2222');
+    await expect(telefone).toHaveValue('(11) 99999-2222');
     await page.screenshot({
       path: 'test-results/manual/redesign-agendamento-390.png',
       fullPage: true,
@@ -132,7 +145,7 @@ test('agendamento público respeita profissional e fuso, recupera conflito e con
     await page.getByRole('button', { name: 'Confirmar agendamento', exact: true }).click();
     await expect(
       page.getByRole('heading', { name: 'Agendamento confirmado!', exact: true }),
-    ).toBeVisible();
+    ).toBeFocused();
     const created = await p.agendamento.findFirstOrThrow({
       where: { empresaId: empresa.id, status: 'AGENDADO' },
     });
@@ -145,6 +158,8 @@ test('agendamento público respeita profissional e fuso, recupera conflito e con
       true,
     );
     expect(errors).toEqual([]);
+    await page.getByRole('button', { name: 'Fazer outro agendamento' }).click();
+    await expect(page.getByRole('heading', { name: 'Escolha o serviço' })).toBeFocused();
   } finally {
     await p.agendamento.deleteMany({ where: { empresaId: empresa.id } });
     await p.servico.deleteMany({ where: { empresaId: empresa.id } });

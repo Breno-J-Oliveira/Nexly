@@ -39,6 +39,8 @@ export interface AuthResult {
   requiresTwoFactor?: false;
 }
 
+type TwoFactorReauthentication = { password: string } | { identity: { sub: string } };
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -112,7 +114,7 @@ export class AuthService {
     if (usuario.twoFactorEnabled) {
       return {
         requiresTwoFactor: true as const,
-        tempToken: await this.tokenService.generateTempToken(usuario.id),
+        tempToken: await this.tokenService.generateTempToken(usuario.id, usuario),
       };
     }
     return this.buildAuthResult(usuario);
@@ -236,7 +238,7 @@ export class AuthService {
 
     // Se 2FA ativo, não emite JWT completo ainda — retorna um token temporário.
     if (usuario.twoFactorEnabled) {
-      const tempToken = await this.tokenService.generateTempToken(usuario.id);
+      const tempToken = await this.tokenService.generateTempToken(usuario.id, usuario);
       return { requiresTwoFactor: true, tempToken };
     }
 
@@ -373,42 +375,69 @@ export class AuthService {
 
   /** Retorna se o 2FA está ativo para o usuário autenticado. */
   async status2fa(userId: string) {
-    const usuario = await this.prisma.client.usuario.findUnique({ where: { id: userId } });
+    const usuario = await this.prisma.client.usuario.findUnique({
+      where: { id: userId },
+      select: { twoFactorEnabled: true, googleSubject: true },
+    });
     if (!usuario) throw new UnauthorizedException('Usuário não encontrado');
-    return { enabled: usuario.twoFactorEnabled };
+    return { enabled: usuario.twoFactorEnabled, googleLinked: Boolean(usuario.googleSubject) };
   }
 
   /** Gera o secret TOTP e o QR code (ainda sem ativar o 2FA). */
-  async setup2fa(userId: string) {
+  async setup2fa(userId: string, sessionId: string, credential: TwoFactorReauthentication) {
+    const throttleKey = `2fa:setup:${userId}`;
+    if (await this.throttle.isBlocked(throttleKey)) {
+      throw new UnauthorizedException('Muitas tentativas. Aguarde alguns minutos.');
+    }
     const usuario = await this.prisma.client.usuario.findUnique({ where: { id: userId } });
-    if (!usuario) throw new UnauthorizedException('Usuário não encontrado');
+    if (!usuario?.ativo) throw new UnauthorizedException('Usuário não encontrado');
     if (usuario.twoFactorEnabled) {
       throw new BadRequestException('Desative o 2FA antes de configurar um novo autenticador');
     }
 
+    const confirmed =
+      'password' in credential
+        ? await argon2.verify(usuario.senhaHash, credential.password)
+        : usuario.googleSubject === credential.identity.sub;
+    if (!confirmed) {
+      await this.throttle.registerFailure(throttleKey);
+      throw new UnauthorizedException({
+        code: 'TWO_FACTOR_REAUTH_FAILED',
+        message: 'Não foi possível confirmar sua identidade. Confira a senha ou a conta Google.',
+      });
+    }
+
     const secret = authenticator.generateSecret();
-    const configured = await this.prisma.client.usuario.updateMany({
-      where: { id: userId, ativo: true, twoFactorEnabled: false },
-      data: { twoFactorSecret: secret },
-    });
-    if (configured.count !== 1) throw new BadRequestException('Atualize o estado do autenticador');
-
     const otpauthUrl = authenticator.keyuri(usuario.email, 'Nexly', secret);
-    const qrCodeUrl = await toDataURL(otpauthUrl);
+    const [qrCodeUrl, setupToken] = await Promise.all([
+      toDataURL(otpauthUrl),
+      this.tokenService.generateTwoFactorSetupToken(
+        { ...usuario, twoFactorSecret: secret },
+        sessionId,
+      ),
+    ]);
+    await this.prisma.client.$transaction(async (tx) => {
+      await this.lockTwoFactorSetupState(
+        usuario,
+        sessionId,
+        tx as unknown as Prisma.TransactionClient,
+      );
+      await tx.usuario.update({ where: { id: userId }, data: { twoFactorSecret: secret } });
+    });
+    await this.throttle.registerSuccess(throttleKey);
 
-    return { qrCodeUrl, secret };
+    return { qrCodeUrl, secret, setupToken };
   }
 
   /** Valida o código TOTP e ativa o 2FA, gerando códigos de backup. */
-  async enable2fa(userId: string, code: string, sessionId: string) {
+  async enable2fa(userId: string, code: string, sessionId: string, setupToken: string) {
     const usuario = await this.prisma.client.usuario.findUnique({ where: { id: userId } });
     if (!usuario || !usuario.twoFactorSecret) {
       throw new BadRequestException('2FA não inicializado');
     }
     if (usuario.twoFactorEnabled) throw new BadRequestException('O 2FA já está ativo');
 
-    const valido = authenticator.check(code, usuario.twoFactorSecret);
-    if (!valido) throw new BadRequestException('Código inválido');
+    const secret = usuario.twoFactorSecret;
 
     const backupCodes = Array.from({ length: 10 }, () =>
       randomBytes(RECOVERY_CODE_BYTES).toString('hex'),
@@ -416,6 +445,13 @@ export class AuthService {
     const backupHashes = backupCodes.map((c) => createHash('sha256').update(c).digest('hex'));
 
     await this.prisma.client.$transaction(async (tx) => {
+      await this.lockTwoFactorSetupState(
+        usuario,
+        sessionId,
+        tx as unknown as Prisma.TransactionClient,
+      );
+      await this.tokenService.verifyTwoFactorSetupToken(setupToken, usuario, sessionId);
+      if (!authenticator.check(code, secret)) throw new BadRequestException('Código inválido');
       const enabled = await tx.usuario.updateMany({
         where: {
           id: userId,
@@ -442,6 +478,20 @@ export class AuthService {
     });
 
     return { backupCodes };
+  }
+
+  private async lockTwoFactorSetupState(
+    usuario: Usuario,
+    sessionId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await this.lockAuthenticationState(usuario, tx);
+    const active = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM public.sessoes
+      WHERE id=${sessionId} AND usuario_id=${usuario.id}
+        AND NOT revogado AND expires_at > (clock_timestamp() AT TIME ZONE 'UTC')
+      FOR UPDATE`;
+    if (active.length !== 1) throw new UnauthorizedException('Sessão encerrada');
   }
 
   /** Desativa o 2FA mediante senha e um segundo fator válido. */
@@ -525,38 +575,70 @@ export class AuthService {
       );
     }
 
-    // CAS único: desafio, código de backup e passo TOTP são consumidos na mesma escrita.
-    const consumed = await this.prisma.client.usuario.updateMany({
-      where: {
-        id: usuario.id,
-        ativo: true,
-        twoFactorEnabled: true,
-        twoFactorSecret: usuario.twoFactorSecret,
-        senhaHash: usuario.senhaHash,
-        twoFactorChallengeHash: challengeHash,
-        twoFactorChallengeExpiresAt: { gt: new Date() },
-        twoFactorBackupCodes: { equals: usuario.twoFactorBackupCodes },
-        twoFactorLastUsedStep: usuario.twoFactorLastUsedStep,
-      },
-      data: {
-        twoFactorChallengeHash: null,
-        twoFactorChallengeExpiresAt: null,
-        ...(isBackup
-          ? { twoFactorBackupCodes: usuario.twoFactorBackupCodes.filter((c) => c !== codeHash) }
-          : { twoFactorLastUsedStep: step }),
-      },
+    const result = await this.prisma.client.$transaction(async (tx) => {
+      await this.lockAuthenticationState(usuario, tx as unknown as Prisma.TransactionClient);
+      // Challenge consumption and session creation must commit together.
+      const consumed = await tx.usuario.updateMany({
+        where: {
+          id: usuario.id,
+          ativo: true,
+          twoFactorEnabled: true,
+          twoFactorSecret: usuario.twoFactorSecret,
+          senhaHash: usuario.senhaHash,
+          twoFactorChallengeHash: challengeHash,
+          twoFactorChallengeExpiresAt: { gt: new Date() },
+          twoFactorBackupCodes: { equals: usuario.twoFactorBackupCodes },
+          twoFactorLastUsedStep: usuario.twoFactorLastUsedStep,
+        },
+        data: {
+          twoFactorChallengeHash: null,
+          twoFactorChallengeExpiresAt: null,
+          ...(isBackup
+            ? { twoFactorBackupCodes: usuario.twoFactorBackupCodes.filter((c) => c !== codeHash) }
+            : { twoFactorLastUsedStep: step }),
+        },
+      });
+      if (consumed.count !== 1)
+        throw new UnauthorizedException('Verificação já utilizada. Entre novamente.');
+      return this.buildAuthResult(usuario, tx as unknown as Prisma.TransactionClient);
     });
-    if (consumed.count !== 1)
-      throw new UnauthorizedException('Verificação já utilizada. Entre novamente.');
     await this.throttle.registerSuccess(throttleKey);
-    return this.buildAuthResult(usuario);
+    return result;
   }
 
-  private async buildAuthResult(usuario: Usuario): Promise<AuthResult> {
-    const issued = await this.tokenService.issueRefreshToken(usuario.id);
-    const refreshToken = issued.token;
-    const accessToken = await this.tokenService.generateAccessToken(usuario, issued.sessionId);
-    return { accessToken, refreshToken, usuario: this.toPublic(usuario) };
+  private async lockAuthenticationState(usuario: Usuario, tx: Prisma.TransactionClient) {
+    await tx.$queryRaw`SELECT id FROM usuarios WHERE id=${usuario.id} FOR UPDATE`;
+    const current = await tx.usuario.findUnique({ where: { id: usuario.id } });
+    const fields = [
+      'senhaHash',
+      'twoFactorEnabled',
+      'twoFactorSecret',
+      'googleSubject',
+      'empresaId',
+      'role',
+      'email',
+    ] as const;
+    if (!current?.ativo || fields.some((field) => current[field] !== usuario[field])) {
+      throw new UnauthorizedException('As credenciais foram alteradas. Entre novamente.');
+    }
+    return current;
+  }
+
+  private async buildAuthResult(
+    usuario: Usuario,
+    tx?: Prisma.TransactionClient,
+  ): Promise<AuthResult> {
+    const issue = async (transaction: Prisma.TransactionClient) => {
+      const current = await this.lockAuthenticationState(usuario, transaction);
+      const issued = await this.tokenService.issueRefreshToken(current.id, undefined, transaction);
+      const accessToken = await this.tokenService.generateAccessToken(current, issued.sessionId);
+      return { accessToken, refreshToken: issued.token, usuario: this.toPublic(current) };
+    };
+    return tx
+      ? issue(tx)
+      : this.prisma.client.$transaction((transaction) =>
+          issue(transaction as unknown as Prisma.TransactionClient),
+        );
   }
 
   private toPublic(usuario: Usuario): UsuarioPublico {

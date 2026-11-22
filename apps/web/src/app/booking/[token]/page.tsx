@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { BookingApiError, bookingRequest as getJson, mensagemErro } from '@/lib/public-booking-api';
-import { formatarMoeda } from '@/lib/format';
+import { formatarMoeda, maskTelefone } from '@/lib/format';
 import { env } from '@/lib/env';
 import { Icon } from '@/components/ui/Icon';
 
@@ -51,16 +51,6 @@ type Step = 1 | 2 | 3 | 4 | 5;
 
 const API = env.NEXT_PUBLIC_API_URL;
 
-function maskTelefone(v: string): string {
-  const d = v.replace(/\D/g, '').slice(0, 11);
-  if (d.length <= 10) {
-    return d
-      .replace(/^(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{4})(\d)/, '$1-$2');
-  }
-  return d.replace(/^(\d{2})(\d{5})(\d)/, '($1) $2-$3');
-}
-
 function formatarDataBR(data: string): string {
   const [y, m, d] = data.split('-');
   return `${d}/${m}/${y}`;
@@ -96,10 +86,10 @@ function Stepper({ step }: { step: Step }) {
               className="flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-semibold transition-colors"
               style={
                 current
-                  ? { backgroundColor: '#6366F1', color: '#FFFFFF' }
+                  ? { backgroundColor: '#4F46E5', color: '#FFFFFF' }
                   : done
                     ? { backgroundColor: '#22C55E', color: '#FFFFFF' }
-                    : { backgroundColor: '#18181F', color: '#71717A', border: '1px solid rgba(255,255,255,0.08)' }
+                    : { backgroundColor: '#18181F', color: '#A1A1AA', border: '1px solid rgba(255,255,255,0.08)' }
               }
             >
               {done ? (
@@ -121,7 +111,7 @@ function IniciaisAvatar({ nome }: { nome: string }) {
   const last = parts[parts.length - 1] ?? '';
   const iniciais = parts.length >= 2 ? first.charAt(0) + last.charAt(0) : first.slice(0, 2);
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[12px] font-semibold" style={{ backgroundColor: '#6366F1', color: '#FFFFFF' }}>
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[12px] font-semibold" style={{ backgroundColor: '#4F46E5', color: '#FFFFFF' }}>
       {iniciais.toUpperCase()}
     </div>
   );
@@ -164,7 +154,7 @@ function Mes({ offset, selecionado, onSelecionar, hojeIso }: { offset: number; s
     <div>
       <div className="mb-1 grid grid-cols-7 gap-1">
         {ws.map((w, i) => (
-          <div key={i} className="pb-1 text-center text-[11px] font-medium uppercase" style={{ color: '#71717A' }}>
+          <div key={i} className="pb-1 text-center text-[11px] font-medium uppercase" style={{ color: '#A1A1AA' }}>
             {w}
           </div>
         ))}
@@ -196,7 +186,7 @@ function Mes({ offset, selecionado, onSelecionar, hojeIso }: { offset: number; s
               className="flex h-9 items-center justify-center rounded-lg text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               style={
                 sel
-                  ? { backgroundColor: '#6366F1', color: '#FFFFFF' }
+                  ? { backgroundColor: '#4F46E5', color: '#FFFFFF' }
                   : ehHoje
                     ? { color: '#FAFAFA', boxShadow: 'inset 0 0 0 1px #6366F1' }
                     : { color: '#A1A1AA', backgroundColor: 'transparent' }
@@ -231,9 +221,6 @@ export default function BookingPage() {
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
 
   const [step, setStep] = useState<Step>(1);
-  useEffect(() => {
-    if (step !== 1) stepHeading.current?.focus();
-  }, [step]);
   const [servicoId, setServicoId] = useState<string>('');
   const [profissionalId, setProfissionalId] = useState<string>('');
   const [data, setData] = useState<string>('');
@@ -247,6 +234,10 @@ export default function BookingPage() {
   const [email, setEmail] = useState('');
   const [confirmando, setConfirmando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
+
+  useEffect(() => {
+    stepHeading.current?.focus();
+  }, [step, sucesso]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -355,7 +346,7 @@ export default function BookingPage() {
       !horario ||
       !data ||
       nome.trim().length < 2 ||
-      telefone.replace(/\D/g, '').length < 10
+      !/^\(\d{2}\) \d{4,5}-\d{4}$/.test(telefone)
     )
       return;
     const dataHora = instantes[horario];
@@ -415,7 +406,7 @@ export default function BookingPage() {
       <p className="mt-1 text-sm" style={{ color: '#A1A1AA' }}>
         Verifique o endereço ou tente carregar novamente.
       </p>
-      <button type="button" className="mt-5 rounded-xl bg-[#6366F1] px-5 py-3 text-sm text-white" onClick={() => setTentativa(v=>v+1)}>Tentar novamente</button>
+      <button type="button" className="mt-5 rounded-xl bg-[#4F46E5] px-5 py-3 text-sm text-white" onClick={() => setTentativa(v=>v+1)}>Tentar novamente</button>
       <Link href="/" className="mt-5 rounded py-2 text-sm text-[#818CF8] hover:underline">Voltar para o início do Nexly</Link>
     </div>
   );
@@ -434,7 +425,7 @@ export default function BookingPage() {
             >
               <Icon name="circle-check" className="text-[#22C55E]" size="2x" />
             </div>
-            <h1 className="mt-6 text-[22px] font-semibold" style={{ color: '#FAFAFA' }}>
+            <h1 ref={stepHeading} tabIndex={-1} className="mt-6 text-[22px] font-semibold" style={{ color: '#FAFAFA' }}>
               Agendamento confirmado!
             </h1>
             <p className="mt-1 text-sm" style={{ color: '#A1A1AA' }}>
@@ -443,23 +434,23 @@ export default function BookingPage() {
 
             <div className="mt-6 w-full rounded-xl p-5 [&>div]:gap-4 [&>div>span:last-child]:min-w-0 [&>div>span:last-child]:break-words [&>div>span:last-child]:text-right" style={{ backgroundColor: '#111116', border: '1px solid rgba(99,102,241,0.30)' }}>
               <div className="flex justify-between py-1 text-sm">
-                <span style={{ color: '#71717A' }}>Serviço</span>
+                <span style={{ color: '#A1A1AA' }}>Serviço</span>
                 <span style={{ color: '#FAFAFA' }}>{servicoSelecionado?.nome}</span>
               </div>
               <div className="flex justify-between py-1 text-sm">
-                <span style={{ color: '#71717A' }}>Profissional</span>
+                <span style={{ color: '#A1A1AA' }}>Profissional</span>
                 <span style={{ color: '#FAFAFA' }}>{profissionalSelecionado?.nome ?? 'Qualquer'}</span>
               </div>
               <div className="flex justify-between py-1 text-sm">
-                <span style={{ color: '#71717A' }}>Data</span>
+                <span style={{ color: '#A1A1AA' }}>Data</span>
                 <span style={{ color: '#FAFAFA' }}>{formatarDataBR(data)}</span>
               </div>
               <div className="flex justify-between py-1 text-sm">
-                <span style={{ color: '#71717A' }}>Horário</span>
+                <span style={{ color: '#A1A1AA' }}>Horário</span>
                 <span style={{ color: '#FAFAFA' }}>{formatarHora(horario)}</span>
               </div>
               <div className="flex justify-between border-t py-1 pt-3 text-sm" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                <span style={{ color: '#71717A' }}>Total</span>
+                <span style={{ color: '#A1A1AA' }}>Total</span>
                 <span className="font-semibold" style={{ color: '#818CF8' }}>{formatarMoeda(servicoSelecionado?.preco ?? 0)}</span>
               </div>
             </div>
@@ -467,7 +458,7 @@ export default function BookingPage() {
             <button
               onClick={resetar}
               className="mt-6 h-11 w-full rounded-md font-medium transition-opacity hover:opacity-90"
-              style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}
+              style={{ backgroundColor: '#4F46E5', color: '#FAFAFA' }}
             >
               Fazer outro agendamento
             </button>
@@ -507,7 +498,7 @@ export default function BookingPage() {
         style={{ backgroundColor: 'rgba(12,12,16,0.90)', backdropFilter: 'blur(8px)', borderColor: 'rgba(255,255,255,0.06)' }}
       >
         <div className="mx-auto flex w-full min-w-0 max-w-5xl items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg text-[13px] font-semibold" style={{ backgroundColor: '#6366F1', color: '#FFFFFF' }}>
+          <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg text-[13px] font-semibold" style={{ backgroundColor: '#4F46E5', color: '#FFFFFF' }}>
             {empresa?.logo ? <Image src={empresa.logo} unoptimized width={32} height={32} alt="" className="h-full w-full object-cover" /> : ((empresa?.nome ?? 'N').charAt(0) || 'N').toUpperCase()}
           </div>
           <span className="truncate text-[15px] font-semibold" style={{ color: '#FAFAFA' }}>{empresa?.nome ?? 'Agendamento'}</span>
@@ -587,7 +578,7 @@ export default function BookingPage() {
                     >
                       <div className="text-[15px] font-bold" style={{ color: '#FAFAFA' }}>{s.nome}</div>
                       <div className="mt-1 flex items-center justify-between">
-                        <span className="text-sm" style={{ color: '#71717A' }}>{s.duracaoMin} min</span>
+                    <span className="text-sm" style={{ color: '#A1A1AA' }}>{s.duracaoMin} min</span>
                         <span className="text-sm font-semibold" style={{ color: '#818CF8' }}>{formatarMoeda(s.preco)}</span>
                       </div>
                     </button>
@@ -600,7 +591,7 @@ export default function BookingPage() {
                 disabled={!podeProximo[1]}
                 onClick={() => setStep(2)}
                 className="h-11 w-full rounded-md font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:opacity-90"
-                style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}
+                style={{ backgroundColor: '#4F46E5', color: '#FAFAFA' }}
               >
                 Próximo →
               </button>
@@ -615,16 +606,17 @@ export default function BookingPage() {
             <div className="mt-4 space-y-3">
               <button
                 disabled={profissionaisLoading || profissionais.length===0 || !!erroEtapa}
+                aria-pressed={profissionalId === 'qualquer'}
                 onClick={() => setProfissionalId('qualquer')}
                 className="flex w-full items-center gap-3 rounded-xl p-4 transition-colors"
                 style={profissionalId === 'qualquer' ? { backgroundColor: 'rgba(99,102,241,0.08)', border: '1px solid #6366F1' } : { backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: '#18181F', color: '#71717A' }}>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: '#18181F', color: '#A1A1AA' }}>
                   <Icon name="user" size="sm" />
                 </div>
                 <div className="text-left">
                   <div className="text-[15px] font-semibold" style={{ color: '#FAFAFA' }}>Qualquer profissional</div>
-                  <div className="text-sm" style={{ color: '#71717A' }}>Primeiro disponível</div>
+                  <div className="text-sm" style={{ color: '#A1A1AA' }}>Primeiro disponível</div>
                 </div>
               </button>
 
@@ -647,7 +639,7 @@ export default function BookingPage() {
                       <IniciaisAvatar nome={p.nome} />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[15px] font-semibold" style={{ color: '#FAFAFA' }}>{p.nome}</div>
-                        {p.especialidade && <div className="truncate text-sm" style={{ color: '#71717A' }}>{p.especialidade}</div>}
+                        {p.especialidade && <div className="truncate text-sm" style={{ color: '#A1A1AA' }}>{p.especialidade}</div>}
                       </div>
                     </button>
                   );
@@ -666,7 +658,7 @@ export default function BookingPage() {
                 disabled={!podeProximo[2]}
                 onClick={() => setStep(3)}
                 className="h-11 flex-1 rounded-md font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:opacity-90"
-                style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}
+                style={{ backgroundColor: '#4F46E5', color: '#FAFAFA' }}
               >
                 Próximo →
               </button>
@@ -713,7 +705,7 @@ export default function BookingPage() {
                 disabled={!podeProximo[3]}
                 onClick={() => setStep(4)}
                 className="h-11 flex-1 rounded-md font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:opacity-90"
-                style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}
+                style={{ backgroundColor: '#4F46E5', color: '#FAFAFA' }}
               >
                 Próximo →
               </button>
@@ -758,7 +750,7 @@ export default function BookingPage() {
                       aria-pressed={sel}
                       onClick={() => setHorario(h)}
                       className="h-10 rounded-lg text-sm font-medium transition-colors"
-                      style={sel ? { backgroundColor: '#6366F1', color: '#FFFFFF' } : { backgroundColor: '#18181F', color: '#A1A1AA', border: '1px solid rgba(255,255,255,0.06)' }}
+                      style={sel ? { backgroundColor: '#4F46E5', color: '#FFFFFF' } : { backgroundColor: '#18181F', color: '#A1A1AA', border: '1px solid rgba(255,255,255,0.06)' }}
                     >
                       {h}
                     </button>
@@ -779,7 +771,7 @@ export default function BookingPage() {
                 disabled={!podeProximo[4]}
                 onClick={() => setStep(5)}
                 className="h-11 flex-1 rounded-md font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:opacity-90"
-                style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}
+                style={{ backgroundColor: '#4F46E5', color: '#FAFAFA' }}
               >
                 Próximo →
               </button>
@@ -794,19 +786,19 @@ export default function BookingPage() {
 
             <div className="mt-4 rounded-xl p-5" style={{ backgroundColor: '#111116', border: '1px solid rgba(99,102,241,0.30)' }}>
               <div className="flex justify-between py-1 text-sm">
-                <span style={{ color: '#71717A' }}>Serviço</span>
+                <span style={{ color: '#A1A1AA' }}>Serviço</span>
                 <span style={{ color: '#FAFAFA' }}>{servicoSelecionado?.nome}</span>
               </div>
               <div className="flex justify-between py-1 text-sm">
-                <span style={{ color: '#71717A' }}>Profissional</span>
+                <span style={{ color: '#A1A1AA' }}>Profissional</span>
                 <span style={{ color: '#FAFAFA' }}>{profissionalSelecionado?.nome ?? 'Qualquer'}</span>
               </div>
               <div className="flex justify-between py-1 text-sm">
-                <span style={{ color: '#71717A' }}>Data e hora</span>
+                <span style={{ color: '#A1A1AA' }}>Data e hora</span>
                 <span style={{ color: '#FAFAFA' }}>{formatarDataBR(data)} · {formatarHora(horario)}</span>
               </div>
               <div className="flex justify-between border-t py-1 pt-3 text-sm" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                <span style={{ color: '#71717A' }}>Preço</span>
+                <span style={{ color: '#A1A1AA' }}>Preço</span>
                 <span className="font-semibold" style={{ color: '#818CF8' }}>{formatarMoeda(servicoSelecionado?.preco ?? 0)}</span>
               </div>
             </div>
@@ -828,7 +820,7 @@ export default function BookingPage() {
                 <label htmlFor="booking-telefone" className="mb-1 block text-sm" style={{ color: '#A1A1AA' }}>WhatsApp</label>
                 <input
                   id="booking-telefone"
-                  autoComplete="tel-national" type="tel" required minLength={14} maxLength={15} disabled={confirmando}
+                  autoComplete="tel-national" type="tel" required pattern="\(\d{2}\) \d{4,5}-\d{4}" title="Informe o DDD e o número do WhatsApp" disabled={confirmando}
                   value={telefone}
                   onChange={(e) => setTelefone(maskTelefone(e.target.value))}
                   placeholder="(00) 00000-0000"
@@ -838,7 +830,7 @@ export default function BookingPage() {
                 />
               </div>
               <div>
-                <label htmlFor="booking-email" className="mb-1 block text-sm" style={{ color: '#A1A1AA' }}>E-mail <span style={{ color: '#71717A' }}>(opcional)</span></label>
+                <label htmlFor="booking-email" className="mb-1 block text-sm" style={{ color: '#A1A1AA' }}>E-mail <span style={{ color: '#A1A1AA' }}>(opcional)</span></label>
                 <input
                   id="booking-email"
                   autoComplete="email" maxLength={254} disabled={confirmando}
@@ -865,7 +857,7 @@ export default function BookingPage() {
                 disabled={confirmando || nome.trim().length<2 || telefone.replace(/\D/g,'').length<10 || (!!email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))}
                 type="submit"
                 className="h-12 flex-1 rounded-md font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-40 enabled:hover:opacity-90"
-                style={{ backgroundColor: '#6366F1', color: '#FAFAFA' }}
+                style={{ backgroundColor: '#4F46E5', color: '#FAFAFA' }}
               >
                 {confirmando ? 'Confirmando…' : 'Confirmar agendamento'}
               </button>

@@ -10,7 +10,9 @@ export function PasswordRecoveryForm() {
   const status = useApi<{ disponivel: boolean }>('/auth/recuperacao/status'),
     action = useAction();
   const [email, setEmail] = useState(''),
-    [enviado, setEnviado] = useState(false);
+    [emailEnviado, setEmailEnviado] = useState('');
+  const emailNormalizado = email.trim().toLowerCase();
+  const enviado = emailEnviado !== '' && emailNormalizado === emailEnviado;
   if (status.loading)
     return (
       <p role="status" className="mt-6 text-sm text-[#A1A1AA]">
@@ -40,9 +42,10 @@ export function PasswordRecoveryForm() {
       className="mt-6 space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
+        if (enviado) return;
         void action.run(async () => {
-          await api.post('/auth/recuperacao/solicitar', { email: email.trim().toLowerCase() });
-          setEnviado(true);
+          await api.post('/auth/recuperacao/solicitar', { email: emailNormalizado });
+          setEmailEnviado(emailNormalizado);
         }, 'Se a conta existir e estiver ativa, enviaremos as instruções. O link expira em 30 minutos.');
       }}
     >
@@ -55,7 +58,7 @@ export function PasswordRecoveryForm() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
-      <ActionStatus {...action} />
+      <ActionStatus error={action.error} success={enviado ? action.success : ''} />
       <Button type="submit" loading={action.busy} disabled={enviado}>
         Enviar instruções
       </Button>

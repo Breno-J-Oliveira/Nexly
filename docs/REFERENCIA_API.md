@@ -56,7 +56,8 @@ Fonte: [apps/api/src/auth/auth.controller.ts](../apps/api/src/auth/auth.controll
 | GET    | `/api/auth/me`               | `me`                   | Política global e verificações do fluxo |
 | GET    | `/api/auth/sessions`         | `listarSessoes`        | Roles(...Object.values(Role))           |
 | DELETE | `/api/auth/sessions/:id`     | `revogarSessao`        | Roles(...Object.values(Role))           |
-| GET    | `/api/auth/2fa/setup`        | `setup2fa`             | Política global e verificações do fluxo |
+| POST   | `/api/auth/2fa/setup`        | `setup2fa`             | Política global e verificações do fluxo |
+| POST   | `/api/auth/google/2fa/setup` | `setup2faWithGoogle`   | Política global e verificações do fluxo |
 | GET    | `/api/auth/2fa/status`       | `status2fa`            | Política global e verificações do fluxo |
 | POST   | `/api/auth/2fa/enable`       | `enable2fa`            | Política global e verificações do fluxo |
 | POST   | `/api/auth/2fa/disable`      | `disable2fa`           | Política global e verificações do fluxo |
@@ -414,4 +415,4 @@ Fonte: [apps/api/src/whatsapp/whatsapp.controller.ts](../apps/api/src/whatsapp/w
 | POST   | `/api/whatsapp/test`          | `testSend`             | Roles('ADMIN')                  |
 | POST   | `/api/whatsapp/reminder/test` | `testReminder`         | Roles('ADMIN')                  |
 
-Total de declarações de rota nesta revisão: **195**.
+Total de declarações de rota nesta revisão: **196**.

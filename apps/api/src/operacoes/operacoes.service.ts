@@ -255,31 +255,41 @@ export class OperacoesService implements OnModuleInit, OnModuleDestroy {
     if (!campanha) throw new NotFoundException('Campanha nao encontrada');
     if (campanha.status !== 'ATIVA')
       throw new BadRequestException('Ative a campanha para preparar os contatos');
-    const where = { empresaId, autorizado: true };
-    const [consentimentos, total] = await Promise.all([
-      this.prisma.client.consentimentoMarketing.findMany({
-        where,
-        orderBy: { id: 'asc' },
-        take: 50,
-        skip: (page - 1) * 50,
-      }),
-      this.prisma.client.consentimentoMarketing.count({ where }),
-    ]);
-    const clientes = await this.prisma.client.cliente.findMany({
-      where: { empresaId, ativo: true, id: { in: consentimentos.map((c) => c.clienteId) } },
-      select: { id: true, nome: true, telefone: true },
-    });
+    const limit = 50;
+    const [{ clientes, total }] = await this.prisma.client.$queryRaw<
+      [{ clientes: { id: string; nome: string; telefone: string | null }[]; total: bigint }]
+    >`
+      WITH contatos AS NOT MATERIALIZED (
+        SELECT consentimento.id AS consentimento_id, cliente.id, cliente.nome, cliente.telefone
+        FROM consentimentos_marketing AS consentimento
+        INNER JOIN clientes AS cliente
+          ON cliente.id = consentimento.cliente_id AND cliente.empresa_id = consentimento.empresa_id
+        WHERE consentimento.empresa_id = ${empresaId} AND consentimento.autorizado AND cliente.ativo
+      ), pagina AS (
+        SELECT * FROM contatos ORDER BY consentimento_id LIMIT ${limit} OFFSET ${(page - 1) * limit}
+      )
+      SELECT
+        (SELECT COUNT(*) FROM contatos) AS total,
+        COALESCE((
+          SELECT jsonb_agg(jsonb_build_object('id', id, 'nome', nome, 'telefone', telefone)
+                           ORDER BY consentimento_id)
+          FROM pagina
+        ), '[]'::jsonb) AS clientes
+    `;
     return {
-      data: clientes.map((c) => ({
-        id: c.id,
-        nome: c.nome,
-        url: telefoneWhatsApp(c.telefone)
-          ? `https://wa.me/${telefoneWhatsApp(c.telefone)}?text=${encodeURIComponent(campanha.mensagem.replaceAll('{nome}', c.nome))}`
-          : null,
-      })),
-      total,
+      data: clientes.map((cliente) => {
+        const telefone = telefoneWhatsApp(cliente.telefone);
+        return {
+          id: cliente.id,
+          nome: cliente.nome,
+          url: telefone
+            ? `https://wa.me/${telefone}?text=${encodeURIComponent(campanha.mensagem.replaceAll('{nome}', cliente.nome))}`
+            : null,
+        };
+      }),
+      total: Number(total),
       page,
-      limit: 50,
+      limit,
     };
   }
   async automacoes(empresaId: string, page: number) {

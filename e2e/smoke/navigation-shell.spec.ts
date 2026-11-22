@@ -14,6 +14,7 @@ test('navegação mobile fecha, retém foco e volta ao desktop sem conteúdo ine
   await page.getByLabel('Senha', { exact: true }).fill(process.env.E2E_PASSWORD || 'nexly123');
   await page.getByRole('button', { name: 'Entrar no painel' }).click();
   await page.waitForURL('**/dashboard');
+
   const sidebar = page.locator('#workspace-navigation');
   await expect(sidebar).toBeHidden();
   await expect(sidebar).toHaveJSProperty('inert', true);
@@ -21,6 +22,24 @@ test('navegação mobile fecha, retém foco e volta ao desktop sem conteúdo ine
     await page.keyboard.press('Tab');
     expect(await sidebar.evaluate((el) => el.contains(document.activeElement))).toBe(false);
   }
+
+  const notifications = page.getByRole('button', { name: 'Notificações', exact: true });
+  const notificationPanel = page.locator('#workspace-notifications');
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 812 });
+    await notifications.click();
+    await expect(notificationPanel).toBeVisible();
+    const { left, right } = await notificationPanel.evaluate((panel) => {
+      const bounds = panel.getBoundingClientRect();
+      return { left: bounds.left, right: bounds.right };
+    });
+    expect(left).toBeGreaterThanOrEqual(0);
+    expect(right).toBeLessThanOrEqual(width);
+    await page.keyboard.press('Escape');
+    await expect(notificationPanel).toHaveCount(0);
+  }
+  await page.setViewportSize({ width: 375, height: 812 });
+
   const opener = page.getByRole('button', { name: 'Abrir menu', exact: true });
   await opener.click();
   await expect(sidebar).toHaveAttribute('aria-modal', 'true');

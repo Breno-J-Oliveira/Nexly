@@ -350,6 +350,12 @@ export class VendasService {
         });
       }
       if (venda.clienteId) {
+        // Serializa o recálculo com compras e conclusões da agenda para este cliente.
+        await tx.$queryRaw`
+          SELECT id FROM clientes
+          WHERE id = ${venda.clienteId} AND empresa_id = ${empresaId}
+          FOR NO KEY UPDATE
+        `;
         const [compras, ultimaVenda, ultimaVisita] = await Promise.all([
           tx.venda.aggregate({
             where: { empresaId, clienteId: venda.clienteId, status: 'CONCLUIDA' },

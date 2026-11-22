@@ -105,6 +105,8 @@ async function bootstrap(): Promise<void> {
           '/google/login',
           '/google/link',
           '/google/register',
+          '/google/2fa/setup',
+          '/2fa/setup',
           '/2fa/verify',
           '/2fa/enable',
           '/2fa/disable',

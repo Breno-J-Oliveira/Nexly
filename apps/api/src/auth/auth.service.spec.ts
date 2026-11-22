@@ -18,7 +18,7 @@ const verifyMock = jest.mocked(argon2.verify);
 describe('AuthService', () => {
   let service: AuthService;
   let prisma: {
-    client: { usuario: { findUnique: jest.Mock } };
+    client: { usuario: { findUnique: jest.Mock }; $transaction: jest.Mock; $queryRaw: jest.Mock };
   };
   let tokenService: {
     generateAccessToken: jest.Mock;
@@ -47,7 +47,16 @@ describe('AuthService', () => {
   };
 
   beforeEach(async () => {
-    prisma = { client: { usuario: { findUnique: jest.fn() } } };
+    prisma = {
+      client: {
+        usuario: { findUnique: jest.fn() },
+        $transaction: jest.fn(),
+        $queryRaw: jest.fn().mockResolvedValue([{ id: 'u1' }]),
+      },
+    };
+    prisma.client.$transaction.mockImplementation((callback: (tx: unknown) => unknown) =>
+      callback(prisma.client),
+    );
     tokenService = {
       generateAccessToken: jest.fn().mockResolvedValue('access-token'),
       issueRefreshToken: jest

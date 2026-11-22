@@ -19,6 +19,11 @@ describe('PermissionsGuard', () => {
     expect(guard.canActivate(context('/api/auth/me'))).toBe(true);
     expect(guard.canActivate(context('/api/auth/new-sensitive-operation', 'POST'))).toBe(false);
   });
+  it('permite reautenticar o 2FA por POST para qualquer papel autenticado', () => {
+    expect(guard.canActivate(context('/api/auth/2fa/setup', 'POST', 'PROFISSIONAL'))).toBe(true);
+    expect(guard.canActivate(context('/api/auth/google/2fa/setup', 'POST', 'CAIXA'))).toBe(true);
+    expect(guard.canActivate(context('/api/auth/2fa/setup', 'GET', 'ADMIN'))).toBe(false);
+  });
   it('caixa não acessa relatório financeiro', () => {
     expect(guard.canActivate(context('/api/financeiro', 'GET', 'CAIXA'))).toBe(false);
     expect(guard.canActivate(context('/api/vendas', 'POST', 'CAIXA'))).toBe(true);

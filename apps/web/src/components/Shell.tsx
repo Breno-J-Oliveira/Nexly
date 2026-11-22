@@ -239,12 +239,13 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="shell-header-tools ml-auto flex items-center gap-2">
             <button type="button" onClick={() => changeSearchOpen(true)} aria-label="Buscar páginas" aria-haspopup="dialog" className="shell-global-search hidden min-h-11 items-center gap-4 rounded-lg border border-white/10 px-3 text-sm text-[#A1A1AA] lg:flex">Buscar página <kbd className="text-xs">Ctrl K</kbd></button>
             {/* Notificações */}
-            <div className="relative" ref={notifRef}>
+            <div className="md:relative" ref={notifRef}>
               <button
                 onClick={() => setNotifAberto((v) => !v)}
                 className="relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-white/5"
                 style={{ color: '#A1A1AA' }}
                 aria-label="Notificações" aria-expanded={notifAberto}
+                aria-controls={notifAberto ? 'workspace-notifications' : undefined}
               >
                 <Icon name="bell" size="sm" color="#71717A" />
                 {naoLidas > 0 && (
@@ -256,7 +257,8 @@ export function Shell({ children }: { children: ReactNode }) {
 
               {notifAberto && (
                 <div
-                  className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-lg border"
+                  className="absolute inset-x-4 top-full ml-auto mt-2 max-w-80 overflow-hidden rounded-lg border md:left-auto md:right-0 md:w-80"
+                  id="workspace-notifications"
                   style={{ backgroundColor: '#18181F', borderColor: 'rgba(255,255,255,0.10)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)', zIndex: 50 }}
                 >
                   <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>

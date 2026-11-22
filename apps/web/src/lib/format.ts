@@ -18,7 +18,11 @@ export function maskCnpj(v: string): string {
 }
 
 export function maskTelefone(v: string): string {
-  const d = soDigitos(v).slice(0, 11);
+  const digitos = soDigitos(v);
+  const temCodigoPais =
+    digitos.startsWith('55') && (digitos.length === 12 || digitos.length === 13);
+  const d = temCodigoPais ? digitos.slice(2) : digitos;
+  if (d.length > 11) return d;
   if (d.length <= 10) {
     return d
       .replace(/^(\d{2})(\d)/, '($1) $2')

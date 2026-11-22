@@ -10,6 +10,7 @@ const CAMPOS_SENSIVEIS = new Set([
   'password',
   'code',
   'tempToken',
+  'setupToken',
   'credential',
   'registrationToken',
   'googleSubject',

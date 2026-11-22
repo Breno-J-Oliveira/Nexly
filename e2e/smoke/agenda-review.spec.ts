@@ -131,12 +131,17 @@ test('calendar filters, late appointments, mobile creation and cancellation work
     await page.getByRole('button', { name: '+ Novo agendamento', exact: true }).click();
     const modal = page.getByRole('dialog', { name: 'Novo agendamento', exact: true });
     await expect(modal).toBeVisible();
+    await expect(modal.getByRole('heading', { name: 'Escolha o cliente' })).toBeFocused();
     await modal.getByLabel('Buscar cliente', { exact: true }).fill('ZZZ cliente');
     await modal.getByRole('button', { name: alvo.nome, exact: true }).click();
     await modal.getByRole('button', { name: 'Próximo', exact: true }).click();
+    await expect(
+      modal.getByRole('heading', { name: 'Escolha o profissional e o serviço' }),
+    ).toBeFocused();
     await modal.getByLabel('Profissional', { exact: true }).selectOption(prof1.id);
     await modal.getByLabel('Serviço', { exact: true }).selectOption(servico.id);
     await modal.getByRole('button', { name: 'Próximo', exact: true }).click();
+    await expect(modal.getByRole('heading', { name: 'Escolha a data e a hora' })).toBeFocused();
     const tomorrow = new Date(dates.tomorrow);
     const local = dates.local;
     await modal.getByLabel('Data e hora', { exact: true }).fill(local);

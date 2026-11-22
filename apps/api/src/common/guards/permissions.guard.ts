@@ -47,8 +47,10 @@ export class PermissionsGuard implements CanActivate {
     const permissao = permissaoDoRequest(request.path, request.method);
     if (permissao === null) {
       const pessoais: Record<string, string[]> = {
-        GET: ['/api/auth/me', '/api/auth/2fa/setup', '/api/auth/2fa/status', '/api/experiencia'],
+        GET: ['/api/auth/me', '/api/auth/2fa/status', '/api/experiencia'],
         POST: [
+          '/api/auth/2fa/setup',
+          '/api/auth/google/2fa/setup',
           '/api/auth/2fa/enable',
           '/api/auth/2fa/disable',
           '/api/usuarios/trocar-senha',

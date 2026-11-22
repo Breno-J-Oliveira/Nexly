@@ -57,6 +57,58 @@ describe('agendamento no fuso do estabelecimento', () => {
       '10:00',
     );
   });
+  const reserva = {
+    servicoId: 's1',
+    dataHora: `${DIA}T10:00:00`,
+    clienteNome: 'Teste',
+    clienteTelefone: '11999990000',
+  };
+  it('reserva com o próximo profissional se outra transação ocupou o primeiro', async () => {
+    client.agendamento.findFirst.mockImplementation(
+      async ({ where }: { where: { profissionalId: string } }) =>
+        where.profissionalId === 'p1' ? { id: 'reserva-concorrente' } : null,
+    );
+
+    await expect(service.agendar('token', reserva)).resolves.toMatchObject({ agendamentoId: 'a1' });
+
+    expect(client.$queryRaw.mock.calls.map(([, id]) => id)).toEqual(['p1', 'p2']);
+    expect(client.$transaction).toHaveBeenCalledTimes(2);
+    expect(client.agendamento.create).toHaveBeenCalledTimes(1);
+    expect(client.agendamento.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ profissionalId: 'p2' }) }),
+    );
+  });
+  it('recusa a reserva se todos os candidatos perderam o horário', async () => {
+    client.agendamento.findFirst.mockResolvedValue({ id: 'reserva-concorrente' });
+
+    await expect(service.agendar('token', reserva)).rejects.toThrow('Horario ja ocupado');
+
+    expect(client.$queryRaw.mock.calls.map(([, id]) => id)).toEqual(['p1', 'p2']);
+    expect(client.cliente.findFirst).not.toHaveBeenCalled();
+    expect(client.agendamento.create).not.toHaveBeenCalled();
+  });
+  it('mantém o profissional explícito quando seu horário é ocupado', async () => {
+    client.agendamento.findFirst.mockResolvedValue({ id: 'reserva-concorrente' });
+
+    await expect(service.agendar('token', { ...reserva, profissionalId: 'p1' })).rejects.toThrow(
+      'Horario ja ocupado',
+    );
+
+    expect(client.$queryRaw.mock.calls.map(([, id]) => id)).toEqual(['p1']);
+    expect(client.agendamento.create).not.toHaveBeenCalled();
+  });
+  it('não bloqueia um profissional explícito que não pertence à empresa', async () => {
+    client.profissional.findMany.mockResolvedValue([]);
+
+    await expect(
+      service.agendar('token', { ...reserva, profissionalId: 'outra-empresa' }),
+    ).rejects.toThrow('Profissional nao encontrado');
+
+    expect(client.profissional.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'outra-empresa', empresaId: 'e1', ativo: true } }),
+    );
+    expect(client.$transaction).not.toHaveBeenCalled();
+  });
   it('consulta sobreposição incluindo atendimento iniciado no dia anterior', async () => {
     await service.getDisponibilidade('token', DIA, 'p1', 's1');
     expect(client.agendamento.findMany.mock.calls[0]?.[0].where).toMatchObject({

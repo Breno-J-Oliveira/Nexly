@@ -151,6 +151,52 @@ test('six operational modules persist and complete their workflows', async ({ pa
       dialog.getByRole('link', { name: 'Revisar no WhatsApp', exact: true }),
     ).toHaveAttribute('href', /^https:\/\/wa\.me\/5511999999999\?text=/);
     await dialog.getByRole('button', { name: 'Fechar janela', exact: true }).click();
+
+    const contatosAtivos = Array.from({ length: 50 }, (_, index) => ({
+      id: `contato-${suffix}-${index}`,
+      empresaId: company.id,
+      nome: `Contato de teste ${index + 1}`,
+    }));
+    const inativo = `inativo-${suffix}`;
+    const removido = `removido-${suffix}`;
+    await prisma.cliente.createMany({
+      data: [
+        ...contatosAtivos,
+        { id: inativo, empresaId: company.id, nome: 'Inativo', ativo: false },
+      ],
+    });
+    await prisma.consentimentoMarketing.createMany({
+      data: [...contatosAtivos.map(({ id }) => id), inativo, removido].map((clienteId) => ({
+        id: `consentimento-${clienteId}`,
+        empresaId: company.id,
+        clienteId,
+        autorizado: true,
+        evidencia: 'Autorização explícita em teste',
+      })),
+    });
+    const aguardarContatos = async (): Promise<{ data: { id: string }[] }> => {
+      const resposta = await page.waitForResponse((response) =>
+        /^\/api\/operacoes\/campanhas\/[^/]+\/contatos$/.test(new URL(response.url()).pathname),
+      );
+      expect(resposta.ok()).toBe(true);
+      return resposta.json();
+    };
+    const primeiraConsulta = aguardarContatos();
+    await page.getByRole('button', { name: 'Preparar contatos', exact: true }).click();
+    const primeiraPagina = await primeiraConsulta;
+    expect(primeiraPagina).toMatchObject({ total: 51, page: 1, limit: 50 });
+    expect(primeiraPagina.data).toHaveLength(50);
+    const proxima = dialog.getByRole('button', { name: 'Próxima', exact: true });
+    const segundaConsulta = aguardarContatos();
+    await proxima.click();
+    const segundaPagina = await segundaConsulta;
+    expect(segundaPagina).toMatchObject({ total: 51, page: 2, limit: 50 });
+    expect(segundaPagina.data).toHaveLength(1);
+    const ids = [...primeiraPagina.data, ...segundaPagina.data].map((contato) => contato.id);
+    expect(new Set(ids)).toEqual(new Set([cliente.id, ...contatosAtivos.map(({ id }) => id)]));
+    await expect(proxima).toBeDisabled();
+    await dialog.getByRole('button', { name: 'Fechar janela', exact: true }).click();
+
     await goto('/automacao');
     await start();
     await dialog.getByLabel('Título', { exact: true }).fill('Abertura automática');
