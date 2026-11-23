@@ -65,8 +65,8 @@ describe('agendamento no fuso do estabelecimento', () => {
   };
   it('reserva com o próximo profissional se outra transação ocupou o primeiro', async () => {
     client.agendamento.findFirst.mockImplementation(
-      async ({ where }: { where: { profissionalId: string } }) =>
-        where.profissionalId === 'p1' ? { id: 'reserva-concorrente' } : null,
+      ({ where }: { where: { profissionalId: string } }) =>
+        Promise.resolve(where.profissionalId === 'p1' ? { id: 'reserva-concorrente' } : null),
     );
 
     await expect(service.agendar('token', reserva)).resolves.toMatchObject({ agendamentoId: 'a1' });

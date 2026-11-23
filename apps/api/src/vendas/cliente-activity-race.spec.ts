@@ -32,13 +32,13 @@ it('preserva visita concluída entre a leitura do histórico e atualização do 
     filialId: null,
   };
   const tx = {
-    $queryRaw: jest.fn(async (sql: TemplateStringsArray) => {
+    $queryRaw: jest.fn((sql: TemplateStringsArray) => {
       if (sql.join('').includes('FOR NO KEY UPDATE')) clienteBloqueado = true;
-      return [];
+      return Promise.resolve([]);
     }),
     venda: {
-      findFirst: jest.fn(async (args: { where: { id?: string } }) =>
-        args.where.id ? venda : { createdAt: anterior },
+      findFirst: jest.fn((args: { where: { id?: string } }) =>
+        Promise.resolve(args.where.id ? venda : { createdAt: anterior }),
       ),
       update: jest.fn().mockResolvedValue({}),
       aggregate: jest.fn().mockResolvedValue({ _sum: { total: new Prisma.Decimal(0) } }),
@@ -55,14 +55,14 @@ it('preserva visita concluída entre a leitura do histórico e atualização do 
     },
     cliente: {
       updateMany: jest.fn(
-        async (args: { where: { OR?: unknown }; data: { ultimaVisita: Date | null } }) => {
+        (args: { where: { OR?: unknown }; data: { ultimaVisita: Date | null } }) => {
           if (
             !args.where.OR ||
             !ultimaVisita ||
             (args.data.ultimaVisita && ultimaVisita < args.data.ultimaVisita)
           )
             ultimaVisita = args.data.ultimaVisita;
-          return { count: 1 };
+          return Promise.resolve({ count: 1 });
         },
       ),
     },

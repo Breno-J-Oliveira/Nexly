@@ -114,13 +114,23 @@ pg_restore \
   "${RAW_FILE}"
 
 # ── 3. Valida as contagens ───────────────────────────────────
+consultar_contagem() {
+  local resultado
+  resultado="$(psql -X -v ON_ERROR_STOP=1 -tA --dbname="${TEST_URL}" --command="$1")" || return 1
+  if [[ ! "${resultado}" =~ ^[0-9]+$ ]]; then
+    echo '[restore] FALHA: a consulta de verificação não retornou uma contagem válida.' >&2
+    return 1
+  fi
+  printf '%s\n' "${resultado}"
+}
+
 contar() {
-  psql "${TEST_URL}" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM \"$1\""
+  consultar_contagem "SELECT count(*) FROM \"$1\""
 }
 
 echo "[restore] conferindo as tabelas principais"
 TABELAS=(empresas usuarios clientes agendamentos produtos vendas movimentacoes_estoque audit_logs)
-COMERCIAL="$(psql "${TEST_URL}" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM _prisma_migrations WHERE migration_name='20261018093112_commercial_operations' AND finished_at IS NOT NULL AND rolled_back_at IS NULL")"
+COMERCIAL="$(consultar_contagem "SELECT count(*) FROM _prisma_migrations WHERE migration_name='20261018093112_commercial_operations' AND finished_at IS NOT NULL AND rolled_back_at IS NULL")"
 if [ "${COMERCIAL}" -gt 0 ]; then
   TABELAS+=(lancamentos_financeiros baixas_financeiras saldos_filiais jobs_duraveis importacoes comprovacoes_operacionais recuperacoes_senha transferencias_filiais)
 fi
@@ -128,7 +138,7 @@ for tabela in "${TABELAS[@]}"; do
   CONTAGEM="$(contar "${tabela}")"
   printf '  %-24s %s\n' "${tabela}" "${CONTAGEM}"
 done
-SEM_RLS="$(psql "${TEST_URL}" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename<>'_prisma_migrations' AND NOT rowsecurity")"
+SEM_RLS="$(consultar_contagem "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename<>'_prisma_migrations' AND NOT rowsecurity")"
 if [ "${SEM_RLS}" -ne 0 ]; then
   echo '[restore] FALHA: tabelas da aplicação restauradas sem RLS.' >&2
   exit 1

@@ -18,7 +18,7 @@ CREATED=0
 cleanup() {
   local result=$?
   if [ "$CREATED" -eq 1 ]; then dropdb --maintenance-db="$RESTORE_ADMIN_URL" --if-exists --force "$SENTINEL" || result=1; fi
-  rm -f -- "$WORK/gpg" "$WORK/guard.log" "$WORK/collision.log" "$WORK/encryption.log"
+  rm -f -- "$WORK/gpg" "$WORK/psql" "$WORK/guard.log" "$WORK/collision.log" "$WORK/encryption.log" "$WORK/count.log"
   rmdir -- "$WORK" || result=1
   exit "$result"
 }
@@ -32,8 +32,17 @@ CREATED=1
 if TEST_DB_NAME="$SENTINEL" bash scripts/restore-test.sh >"$WORK/collision.log" 2>&1; then
   echo 'FALHA: restore aceitou um banco existente' >&2; exit 1
 fi
-EXISTS="$(psql "$RESTORE_ADMIN_URL" -tAc "SELECT count(*) FROM pg_database WHERE datname='$SENTINEL'")"
+EXISTS="$(psql -X -v ON_ERROR_STOP=1 -tA --dbname="$RESTORE_ADMIN_URL" --command="SELECT count(*) FROM pg_database WHERE datname='$SENTINEL'")"
 if [ "$EXISTS" != 1 ]; then echo 'FALHA: banco preexistente foi removido' >&2; exit 1; fi
+
+printf '#!/usr/bin/env bash\nexit 0\n' > "$WORK/psql"
+chmod +x "$WORK/psql"
+if PATH="$WORK:$PATH" bash scripts/restore-test.sh >"$WORK/count.log" 2>&1; then
+  echo 'FALHA: restore aceitou contagem vazia' >&2; exit 1
+fi
+if ! grep -Fq 'não retornou uma contagem válida' "$WORK/count.log"; then
+  echo 'FALHA: cenário de contagem não chegou à validação' >&2; exit 1
+fi
 
 original_checksum="$(sha256sum "$DUMP_FILE" | cut -d ' ' -f 1)"
 printf '#!/usr/bin/env bash\nexit 17\n' > "$WORK/gpg"
