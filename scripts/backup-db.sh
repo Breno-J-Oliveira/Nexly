@@ -75,11 +75,20 @@ if [ -n "${S3_BUCKET:-}" ]; then
   S3_URI="s3://${S3_BUCKET}/${S3_PREFIX}/$(basename "${ENC_FILE}")"
   AWS_ARGS=()
   [ -n "${S3_ENDPOINT:-}" ] && AWS_ARGS+=(--endpoint-url "${S3_ENDPOINT}")
-  if [[ "${S3_ENDPOINT:-}" =~ ^https://s3\.[a-z0-9-]+\.backblazeb2\.com/?$ ]]; then
-    # Use ordinary PutObject signing without the AWS-specific optional streaming checksum.
-    AWS_REQUEST_CHECKSUM_CALCULATION=when_required aws s3api put-object \
-      --bucket "${S3_BUCKET}" --key "${S3_PREFIX}/$(basename "${ENC_FILE}")" \
-      --body "${ENC_FILE}" "${AWS_ARGS[@]}" >/dev/null
+  if [[ "${S3_ENDPOINT:-}" =~ ^https://s3\.([a-z0-9-]+)\.backblazeb2\.com/?$ ]]; then
+    B2_REGION="${BASH_REMATCH[1]}"
+    OBJECT_KEY="${S3_PREFIX}/$(basename "${ENC_FILE}")"
+    if [ "${AWS_DEFAULT_REGION:-}" != "${B2_REGION}" ]; then
+      echo '[backup] ERRO: BACKUP_S3_REGION deve coincidir com a região do endpoint do Backblaze.' >&2
+      exit 1
+    fi
+    # Use a signed, fixed-length payload for the Backblaze S3 endpoint.
+    SHA256="$(sha256sum "${ENC_FILE}" | cut -d ' ' -f 1)"
+    printf 'user = "%s:%s"\n' "${AWS_ACCESS_KEY_ID:?}" "${AWS_SECRET_ACCESS_KEY:?}" | \
+      curl --config - --aws-sigv4 "aws:amz:${B2_REGION}:s3" --http1.1 \
+        --header "x-amz-content-sha256: ${SHA256}" --header 'Expect:' \
+        --fail --silent --show-error --upload-file "${ENC_FILE}" \
+        "${S3_ENDPOINT%/}/${S3_BUCKET}/${OBJECT_KEY}" >/dev/null
   else
     aws s3 cp "${ENC_FILE}" "${S3_URI}" "${AWS_ARGS[@]}"
   fi
