@@ -75,7 +75,14 @@ if [ -n "${S3_BUCKET:-}" ]; then
   S3_URI="s3://${S3_BUCKET}/${S3_PREFIX}/$(basename "${ENC_FILE}")"
   AWS_ARGS=()
   [ -n "${S3_ENDPOINT:-}" ] && AWS_ARGS+=(--endpoint-url "${S3_ENDPOINT}")
-  aws s3 cp "${ENC_FILE}" "${S3_URI}" "${AWS_ARGS[@]}"
+  if [[ "${S3_ENDPOINT:-}" =~ ^https://s3\.[a-z0-9-]+\.backblazeb2\.com/?$ ]]; then
+    # Use ordinary PutObject signing without the AWS-specific optional streaming checksum.
+    AWS_REQUEST_CHECKSUM_CALCULATION=when_required aws s3api put-object \
+      --bucket "${S3_BUCKET}" --key "${S3_PREFIX}/$(basename "${ENC_FILE}")" \
+      --body "${ENC_FILE}" "${AWS_ARGS[@]}" >/dev/null
+  else
+    aws s3 cp "${ENC_FILE}" "${S3_URI}" "${AWS_ARGS[@]}"
+  fi
   echo "[backup] enviado para ${S3_URI}"
 else
   echo "[backup] S3_BUCKET não definido — backup mantido apenas em ${OUT_DIR}"
