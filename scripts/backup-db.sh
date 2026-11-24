@@ -83,12 +83,18 @@ if [ -n "${S3_BUCKET:-}" ]; then
       exit 1
     fi
     # Use a signed, fixed-length payload for the Backblaze S3 endpoint.
+    aws s3api list-objects-v2 --bucket "${S3_BUCKET}" --max-keys 1 "${AWS_ARGS[@]}" >/dev/null
     SHA256="$(sha256sum "${ENC_FILE}" | cut -d ' ' -f 1)"
-    printf 'user = "%s:%s"\n' "${AWS_ACCESS_KEY_ID:?}" "${AWS_SECRET_ACCESS_KEY:?}" | \
+    if ! B2_RESPONSE="$(printf 'user = "%s:%s"\n' "${AWS_ACCESS_KEY_ID:?}" "${AWS_SECRET_ACCESS_KEY:?}" | \
       curl --config - --aws-sigv4 "aws:amz:${B2_REGION}:s3" --http1.1 \
         --header "x-amz-content-sha256: ${SHA256}" --header 'Expect:' \
-        --fail --silent --show-error --upload-file "${ENC_FILE}" \
-        "${S3_ENDPOINT%/}/${S3_BUCKET}/${OBJECT_KEY}" >/dev/null
+        --fail-with-body --silent --show-error --upload-file "${ENC_FILE}" \
+        "${S3_ENDPOINT%/}/${S3_BUCKET}/${OBJECT_KEY}")"; then
+      if [[ "${B2_RESPONSE}" =~ \<Code\>([a-zA-Z0-9_]+)\</Code\> ]]; then
+        echo "[backup] ERRO: resposta do Backblaze: ${BASH_REMATCH[1]}." >&2
+      fi
+      exit 1
+    fi
   else
     aws s3 cp "${ENC_FILE}" "${S3_URI}" "${AWS_ARGS[@]}"
   fi
