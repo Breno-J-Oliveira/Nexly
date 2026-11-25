@@ -1,0 +1,148 @@
+.chartControls,
+.listTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.chartControls {
+  padding: 0 20px 12px;
+}
+
+.ranges {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--rail);
+  padding: 2px;
+}
+
+.ranges button {
+  min-height: 33px;
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.ranges button[aria-pressed='true'] {
+  color: var(--text);
+  background: var(--surface-raised);
+  font-weight: 650;
+}
+
+.chartSummary {
+  margin: 0 20px 3px;
+  min-height: 49px;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 10px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.chartSummary strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-size: 25px;
+  font-weight: 670;
+  letter-spacing: -0.055em;
+}
+
+.chartSummary span[data-empty='true'] {
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.chartSummary small {
+  color: var(--muted);
+  font-size: inherit;
+}
+
+.planButton {
+  flex: 1;
+  text-align: left;
+  color: inherit;
+}
+
+.planButton:hover,
+.attention:hover:enabled {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.planCounts {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.planCounts small {
+  display: inline-block;
+  margin-left: 6px;
+  min-width: 4ch;
+  text-align: right;
+}
+
+.attention {
+  border-radius: 4px;
+  text-align: left;
+}
+
+.refresh {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: end;
+  color: var(--muted);
+}
+
+header.directoryFilters {
+  grid-template-columns: minmax(155px, 1.3fr) repeat(3, minmax(130px, 1fr));
+}
+
+.listTools {
+  padding: 0 20px 12px;
+  color: var(--muted);
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.listTools > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.pageRange {
+  line-height: 1.4;
+}
+
+@media (max-width: 1130px) {
+  header.directoryFilters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 500px) {
+  header.directoryFilters {
+    grid-template-columns: 1fr;
+  }
+
+  .chartControls,
+  .listTools {
+    padding-inline: 14px;
+  }
+
+  .chartSummary {
+    margin-inline: 14px;
+  }
+}

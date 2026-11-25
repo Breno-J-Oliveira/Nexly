@@ -8,11 +8,19 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Plano, Prisma } from '@prisma/client';
-import type Stripe from 'stripe';
+import Stripe from 'stripe';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { ESTADOS_EM_ANDAMENTO } from './catalogo';
+import { PlatformCouponsService } from './platform-coupons.service';
 import { StripeGateway } from './stripe.gateway';
+
+const CHECKOUT_ENCERRADO = {
+  checkoutId: null,
+  checkoutChave: null,
+  checkoutPlano: null,
+  checkoutPromocaoId: null,
+} as const;
 
 /** Só a reconciliação autenticada com o Stripe altera o plano comercial em produção. */
 @Injectable()
@@ -21,6 +29,7 @@ export class AssinaturasService {
     private readonly prisma: PrismaService,
     private readonly gateway: StripeGateway,
     private readonly redis: RedisService,
+    private readonly coupons: PlatformCouponsService,
   ) {}
 
   async status(empresaId: string) {
@@ -59,7 +68,7 @@ export class AssinaturasService {
       );
   }
 
-  async checkout(empresaId: string, plano: string) {
+  async checkout(empresaId: string, plano: string, cupom?: string) {
     const tier = this.gateway.planos.find((item) => item.id === plano);
     if (!tier) throw new BadRequestException('Plano inválido.');
     const stripe = this.gateway.client;
@@ -101,6 +110,9 @@ export class AssinaturasService {
         });
         this.validarAmbiente(row);
         try {
+          // A campanha pode ter mudado desde a emissão da sessão existente.
+          // Valide no servidor antes de retornar aquela sessão ou criar outra.
+          const promocaoId = cupom ? await this.coupons.resolve(cupom) : null;
           if (!row.customerId) {
             const customer = await stripe.customers.create(
               {},
@@ -134,39 +146,74 @@ export class AssinaturasService {
             if (session.status === 'complete')
               throw new ConflictException('Pagamento em processamento. Aguarde a confirmação.');
             if (session.status === 'open') {
-              if (row.checkoutPlano === tier.id && session.url) return { url: session.url };
+              if (
+                row.checkoutPlano === tier.id &&
+                row.checkoutPromocaoId === promocaoId &&
+                session.url
+              ) {
+                return { url: session.url };
+              }
               await stripe.checkout.sessions.expire(session.id);
             }
             row = await tx.assinatura.update({
               where: { empresaId },
-              data: { checkoutId: null, checkoutChave: null },
+              data: CHECKOUT_ENCERRADO,
             });
           }
           // A chave é persistida mesmo se o Stripe responder com timeout.
           // Repetir a tentativa recupera a mesma sessão, em vez de cobrar duas vezes.
           const key = row.checkoutChave ?? randomUUID();
-          if (row.checkoutChave && row.checkoutPlano !== tier.id) {
+          if (
+            row.checkoutChave &&
+            (row.checkoutPlano !== tier.id || row.checkoutPromocaoId !== promocaoId)
+          ) {
             throw new ConflictException(
-              'Tente novamente o plano anterior para recuperar o checkout pendente.',
+              'Repita o mesmo plano e cupom para recuperar o checkout pendente.',
             );
           }
           await tx.assinatura.update({
             where: { empresaId },
-            data: { checkoutChave: key, checkoutPlano: tier.id },
-          });
-          const session = await stripe.checkout.sessions.create(
-            {
-              mode: 'subscription',
-              customer,
-              line_items: [{ price: tier.precoId, quantity: 1 }],
-              subscription_data: { billing_mode: { type: 'flexible' } },
-              integration_identifier: 'nexly_subscription_qihjvpxs',
-              success_url: `${origin}/assinatura?retorno=sucesso`,
-              cancel_url: `${origin}/assinatura?retorno=cancelado`,
-              locale: 'pt-BR',
+            data: {
+              checkoutChave: key,
+              checkoutPlano: tier.id,
+              checkoutPromocaoId: promocaoId,
             },
-            { idempotencyKey: key },
-          );
+          });
+          const cancelParams = new URLSearchParams({ retorno: 'cancelado' });
+          if (cupom) {
+            cancelParams.set('cupom', cupom);
+            cancelParams.set('plano', tier.id);
+          }
+          const session = await stripe.checkout.sessions
+            .create(
+              {
+                mode: 'subscription',
+                customer,
+                line_items: [{ price: tier.precoId, quantity: 1 }],
+                ...(promocaoId ? { discounts: [{ promotion_code: promocaoId }] } : {}),
+                subscription_data: { billing_mode: { type: 'flexible' } },
+                integration_identifier: 'nexly_subscription_qihjvpxs',
+                success_url: `${origin}/assinatura?retorno=sucesso`,
+                cancel_url: `${origin}/assinatura?${cancelParams.toString()}`,
+                locale: 'pt-BR',
+              },
+              { idempotencyKey: key },
+            )
+            .catch(async (error: unknown) => {
+              if (
+                promocaoId &&
+                error instanceof Stripe.errors.StripeInvalidRequestError &&
+                (error.code === 'coupon_expired' || error.param?.startsWith('discounts'))
+              ) {
+                // Uma rejeição definitiva da primeira tentativa não merece um bloqueio.
+                // A chave de uma tentativa anterior incerta continua protegida.
+                if (!row.checkoutChave) {
+                  await tx.assinatura.update({ where: { empresaId }, data: CHECKOUT_ENCERRADO });
+                }
+                throw new BadRequestException('Cupom indisponível, expirado ou esgotado.');
+              }
+              throw error;
+            });
           if (session.livemode !== this.gateway.livemode || !session.url)
             throw new ServiceUnavailableException('Checkout indisponível.');
           await tx.assinatura.update({ where: { empresaId }, data: { checkoutId: session.id } });
@@ -368,9 +415,7 @@ export class AssinaturasService {
                 : current.cancel_at_period_end && item.current_period_end
                   ? new Date(item.current_period_end * 1000)
                   : null,
-              checkoutId: null,
-              checkoutChave: null,
-              checkoutPlano: null,
+              ...CHECKOUT_ENCERRADO,
             },
           });
           if (this.gateway.livemode) {

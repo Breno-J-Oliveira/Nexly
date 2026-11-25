@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { env } from './env';
+import { authLink } from './auth-navigation';
 import type { UsuarioPublico } from '@nexly/shared';
 
 // Access token em memória (não em localStorage, para evitar XSS).
@@ -118,7 +119,11 @@ api.interceptors.response.use(
 
       if (typeof window !== 'undefined') {
         setAccessToken(null);
-        window.location.href = '/login';
+        const { pathname, search } = window.location;
+        window.location.href =
+          pathname === '/assinatura' || pathname === '/assinatura/'
+            ? authLink('/login', pathname + search)
+            : '/login';
       }
     }
 

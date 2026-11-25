@@ -28,6 +28,13 @@ enum Role {
   CAIXA
 }
 
+enum PlatformRole {
+  OWNER
+  OPERATIONS
+  FINANCE
+  VIEWER
+}
+
 enum Plano {
   FREE
   BASIC
@@ -137,6 +144,7 @@ model Assinatura {
   checkoutId String? @unique @map("checkout_id")
   checkoutPlano Plano? @map("checkout_plano")
   checkoutChave String? @map("checkout_chave")
+  checkoutPromocaoId String? @map("checkout_promocao_id")
   updatedAt DateTime @updatedAt @map("updated_at")
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
@@ -180,9 +188,22 @@ model Usuario {
   auditLogs     AuditLog[]
   termosAceite  TermoAceite[]
   depoimento    Depoimento?
+  platformMember PlatformMember?
 
   @@index([empresaId])
   @@map("usuarios")
+}
+
+model PlatformMember {
+  id          String       @id @default(uuid())
+  usuarioId   String       @unique @map("usuario_id")
+  papel       PlatformRole
+  ativo       Boolean      @default(true)
+  criadoEm    DateTime     @default(now()) @map("criado_em")
+  atualizadoEm DateTime   @updatedAt @map("atualizado_em")
+  usuario     Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("platform_members")
 }
 
 model Depoimento {

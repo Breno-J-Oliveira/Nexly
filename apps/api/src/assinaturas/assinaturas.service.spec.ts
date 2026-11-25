@@ -4,11 +4,13 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { Plano, Prisma } from '@prisma/client';
+import Stripe from 'stripe';
 import { AssinaturasService } from './assinaturas.service';
 import { StripeGateway } from './stripe.gateway';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { PLANOS, PLANOS_LIVE, PORTAL_SANDBOX, PORTAL_LIVE } from './catalogo';
+import { PlatformCouponsService } from './platform-coupons.service';
 
 describe('Assinaturas do Nexly no Sandbox', () => {
   let row: Record<string, unknown>;
@@ -69,10 +71,12 @@ describe('Assinaturas do Nexly no Sandbox', () => {
     ),
   };
   const redis = { consumeLimit: jest.fn() };
+  const coupons = { resolve: jest.fn() };
   const service = new AssinaturasService(
     { client: db } as unknown as PrismaService,
     gateway as unknown as StripeGateway,
     redis as unknown as RedisService,
+    coupons as unknown as PlatformCouponsService,
   );
   const deliver = (
     id = 'evt_1',
@@ -103,6 +107,7 @@ describe('Assinaturas do Nexly no Sandbox', () => {
       checkoutId: null,
       checkoutPlano: null,
       checkoutChave: null,
+      checkoutPromocaoId: null,
     };
     db.assinatura.findUnique.mockImplementation(() => Promise.resolve(row));
     gateway.enabled = true;
@@ -112,6 +117,7 @@ describe('Assinaturas do Nexly no Sandbox', () => {
     gateway.planos = [...PLANOS];
     gateway.portalId = PORTAL_SANDBOX;
     redis.consumeLimit.mockResolvedValue({ allowed: true });
+    coupons.resolve.mockResolvedValue('promo_nexly');
     stripe.prices.retrieve.mockResolvedValue({
       active: true,
       livemode: false,
@@ -307,6 +313,77 @@ describe('Assinaturas do Nexly no Sandbox', () => {
       url: 'https://checkout.stripe.com/recovered',
     });
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it('aplica apenas o ID Stripe resolvido pelo servidor e mantém o cupom ao cancelar', async () => {
+    await service.checkout('e1', 'BASIC', 'NEXLY25');
+    expect(coupons.resolve).toHaveBeenCalledWith('NEXLY25');
+    expect(row.checkoutPromocaoId).toBe('promo_nexly');
+    expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        discounts: [{ promotion_code: 'promo_nexly' }],
+        cancel_url: 'http://localhost:3002/assinatura?retorno=cancelado&cupom=NEXLY25&plano=BASIC',
+      }),
+      { idempotencyKey: row.checkoutChave },
+    );
+    expect(db.empresa.update).not.toHaveBeenCalled();
+  });
+
+  it('não devolve checkout existente para campanha desativada', async () => {
+    row.checkoutId = 'cs_1';
+    row.checkoutPlano = Plano.BASIC;
+    row.checkoutPromocaoId = 'promo_nexly';
+    coupons.resolve.mockRejectedValueOnce(new BadRequestException('Cupom indisponível.'));
+    await expect(service.checkout('e1', 'BASIC', 'NEXLY25')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(stripe.checkout.sessions.retrieve).not.toHaveBeenCalled();
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it('substitui um checkout aberto se o desconto não corresponde ao solicitado', async () => {
+    row.checkoutId = 'cs_anterior';
+    row.checkoutPlano = Plano.BASIC;
+    row.checkoutPromocaoId = 'promo_anterior';
+    stripe.checkout.sessions.retrieve.mockResolvedValueOnce({
+      id: 'cs_anterior',
+      status: 'open',
+      livemode: false,
+      url: 'https://checkout.stripe.com/old',
+    });
+    await service.checkout('e1', 'BASIC', 'NEXLY25');
+    expect(stripe.checkout.sessions.expire).toHaveBeenCalledWith('cs_anterior');
+    expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({ discounts: [{ promotion_code: 'promo_nexly' }] }),
+      expect.any(Object),
+    );
+  });
+
+  it('protege uma tentativa promocional com resposta incerta e recupera com os mesmos parâmetros', async () => {
+    stripe.checkout.sessions.create.mockRejectedValueOnce(new Error('timeout'));
+    await expect(service.checkout('e1', 'BASIC', 'NEXLY25')).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+    const first = stripe.checkout.sessions.create.mock.calls[0];
+    await expect(service.checkout('e1', 'BASIC')).rejects.toBeInstanceOf(ConflictException);
+    expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    await service.checkout('e1', 'BASIC', 'NEXLY25');
+    expect(stripe.checkout.sessions.create.mock.calls[1]).toEqual(first);
+  });
+
+  it('libera nova tentativa quando o Stripe rejeita a primeira sessão pelo cupom', async () => {
+    stripe.checkout.sessions.create.mockRejectedValueOnce(
+      new Stripe.errors.StripeInvalidRequestError({
+        type: 'invalid_request_error',
+        code: 'coupon_expired',
+        message: 'raw provider error',
+      }),
+    );
+    await expect(service.checkout('e1', 'BASIC', 'NEXLY25')).rejects.toThrow('Cupom indisponível');
+    expect(row.checkoutChave).toBeNull();
+    expect(row.checkoutPromocaoId).toBeNull();
+    await expect(service.checkout('e1', 'BASIC')).resolves.toHaveProperty('url');
+    expect(stripe.checkout.sessions.create.mock.calls[1]?.[0]).not.toHaveProperty('discounts');
   });
 
   it('recupera a disputa de criação da linha entre réplicas', async () => {
