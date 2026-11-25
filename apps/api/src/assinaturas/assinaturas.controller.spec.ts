@@ -116,7 +116,37 @@ describe('Fronteiras HTTP de assinaturas', () => {
       .set('test-role', 'ADMIN')
       .send({ plano: 'PRO' })
       .expect(200);
-    expect(service.checkout).toHaveBeenCalledWith('e1', 'PRO');
+    expect(service.checkout).toHaveBeenCalledWith('e1', 'PRO', undefined);
+  });
+
+  it('admin pode enviar código de promoção da assinatura', async () => {
+    await request(app.getHttpServer())
+      .post('/assinaturas/checkout')
+      .set('test-role', 'ADMIN')
+      .send({ plano: 'PRO', cupom: 'NEXLY25' })
+      .expect(200);
+    expect(service.checkout).toHaveBeenCalledWith('e1', 'PRO', 'NEXLY25');
+  });
+
+  it.each([null, 'invalido', 'XY', 'PROMO-INVALIDA', 123])(
+    'recusa formato de cupom inválido %p',
+    async (cupom) => {
+      await request(app.getHttpServer())
+        .post('/assinaturas/checkout')
+        .set('test-role', 'ADMIN')
+        .send({ plano: 'PRO', cupom })
+        .expect(400);
+      expect(service.checkout).not.toHaveBeenCalled();
+    },
+  );
+
+  it('recusa identificador do provedor enviado diretamente', async () => {
+    await request(app.getHttpServer())
+      .post('/assinaturas/checkout')
+      .set('test-role', 'ADMIN')
+      .send({ plano: 'PRO', promocaoId: 'promo_privado' })
+      .expect(400);
+    expect(service.checkout).not.toHaveBeenCalled();
   });
 
   it('webhook dispensa login, preserva bytes e exige assinatura', async () => {

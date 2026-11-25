@@ -136,3 +136,22 @@ Em ambiente isolado de teste, valide contratação, retorno cancelado, repetiç�
 | Cliente pagou, dinheiro ainda não chegou ao banco | Saldo disponível, dados bancários, pendências da conta e estado do payout no Stripe.                  |
 
 Para suporte, registre data, commit, ambiente, rota, código HTTP e identificadores estritamente necessários em canal privado. Não registrar cartões, chaves ou URLs temporárias de gerenciamento. Nenhuma cobrança real, reembolso ou alteração bancária foi executada para produzir este guia.
+# Cupons no console Nexly
+
+O console interno fica em `/admin`. Após aplicar as migrações, use o comando abaixo
+com `DATABASE_URL` configurada para o ambiente pretendido e o UUID de um administrador
+ativo da empresa interna com 2FA habilitado.
+
+```sh
+node apps/api/prisma/bootstrap-platform-owner.cjs --usuario <UUID>
+```
+
+O proprietário pode conceder acesso ao console para contas existentes da empresa
+interna. Colaboradores precisam habilitar o 2FA antes de entrar.
+Proprietários e operadores financeiros gerenciam cupons da assinatura do Nexly.
+Para a funcionalidade, a chave restrita do ambiente deve ter acesso de leitura e
+escrita a **Coupons** e **Promotion Codes**, além das permissões do checkout.
+
+O link abre a página de assinatura com o código. O Stripe aplica o desconto à
+primeira cobrança e controla validade e limite de resgates. A desativação bloqueia
+novos checkouts pelo Nexly. Sessões já emitidas seguem o prazo do Stripe.

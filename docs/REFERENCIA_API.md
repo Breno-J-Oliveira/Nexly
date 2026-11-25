@@ -324,6 +324,31 @@ Fonte: [apps/api/src/pedidos-compra/pedidos-compra.controller.ts](../apps/api/sr
 | PATCH  | `/api/pedidos-compra/:id/receber`  | `receber`              | Política global e verificações do fluxo |
 | PATCH  | `/api/pedidos-compra/:id/cancelar` | `cancelar`             | Política global e verificações do fluxo |
 
+## PlatformAccessController
+
+Fonte: [apps/api/src/platform-access/platform-access.controller.ts](../apps/api/src/platform-access/platform-access.controller.ts).
+
+| Método | Caminho                         | Operação no controller | Decorators de acesso explícitos         |
+| ------ | ------------------------------- | ---------------------- | --------------------------------------- |
+| GET    | `/api/platform/me`              | `me`                   | Política global e verificações do fluxo |
+| GET    | `/api/platform/team`            | `listar`               | Política global e verificações do fluxo |
+| GET    | `/api/platform/team/candidates` | `candidatos`           | Política global e verificações do fluxo |
+| POST   | `/api/platform/team`            | `adicionar`            | Política global e verificações do fluxo |
+| PATCH  | `/api/platform/team/:id`        | `atualizar`            | Política global e verificações do fluxo |
+
+## PlatformController
+
+Fonte: [apps/api/src/platform/platform.controller.ts](../apps/api/src/platform/platform.controller.ts).
+
+| Método | Caminho                     | Operação no controller | Decorators de acesso explícitos         |
+| ------ | --------------------------- | ---------------------- | --------------------------------------- |
+| GET    | `/api/platform/overview`    | `overview`             | Política global e verificações do fluxo |
+| GET    | `/api/platform/companies`   | `companies`            | Política global e verificações do fluxo |
+| GET    | `/api/platform/operations`  | `operations`           | Política global e verificações do fluxo |
+| GET    | `/api/platform/coupons`     | `campaigns`            | Política global e verificações do fluxo |
+| POST   | `/api/platform/coupons`     | `createCampaign`       | Política global e verificações do fluxo |
+| PATCH  | `/api/platform/coupons/:id` | `disableCampaign`      | Política global e verificações do fluxo |
+
 ## ProdutosController
 
 Fonte: [apps/api/src/produtos/produtos.controller.ts](../apps/api/src/produtos/produtos.controller.ts).
@@ -415,4 +440,4 @@ Fonte: [apps/api/src/whatsapp/whatsapp.controller.ts](../apps/api/src/whatsapp/w
 | POST   | `/api/whatsapp/test`          | `testSend`             | Roles('ADMIN')                  |
 | POST   | `/api/whatsapp/reminder/test` | `testReminder`         | Roles('ADMIN')                  |
 
-Total de declarações de rota nesta revisão: **196**.
+Total de declarações de rota nesta revisão: **207**.

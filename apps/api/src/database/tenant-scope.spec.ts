@@ -13,6 +13,7 @@ const CHILD_MODELS: Record<string, string> = {
   ItemPedidoCompra: 'pedido',
   RefreshToken: 'usuario',
   AuthSession: 'usuario',
+  PlatformMember: 'usuario',
   TermoAceite: 'usuario',
 };
 const models = Prisma.dmmf.datamodel.models;

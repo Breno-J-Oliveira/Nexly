@@ -32,6 +32,8 @@ export class AuditInterceptor implements NestInterceptor {
     if (!acao) return next.handle();
 
     const path = req.originalUrl || req.url;
+    // O histórico de uma empresa não inclui operações internas do Nexly.
+    if (/^\/(?:api\/)?platform(?:\/|\?|$)/.test(path)) return next.handle();
     if (IGNORADOS.some((p) => path.startsWith(p))) return next.handle();
 
     const empresaId = req.user?.empresaId;

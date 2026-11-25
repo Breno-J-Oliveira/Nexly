@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errors';
 import { Button } from '@/components/ui/Button';
 import { PROFESSIONAL_LIMITS, type Plano } from '@nexly/shared';
 
@@ -35,14 +37,19 @@ const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL
 const date = (value: string) =>
   new Date(value).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
-export default function AssinaturaPage() {
+function AssinaturaContent() {
+  const router = useRouter();
+  const params = useSearchParams();
   const { user } = useAuth();
   const [data, setData] = useState<SubscriptionState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
-  const [retorno, setRetorno] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState('');
+  const retorno = params.get('retorno') ?? '';
+  const selectedPlan = params.get('plano') ?? '';
+  const temCupom = params.has('cupom');
+  const cupom = params.get('cupom')?.trim().toUpperCase() ?? '';
+  const cupomValido = /^[A-Z0-9]{3,32}$/.test(cupom);
   const load = useCallback(
     async (reconcile = false) => {
       if (user?.role !== 'ADMIN') return;
@@ -66,18 +73,22 @@ export default function AssinaturaPage() {
   useEffect(() => {
     void load();
   }, [load]);
-  useEffect(() => {
-    setRetorno(new URLSearchParams(window.location.search).get('retorno') ?? '');
-    setSelectedPlan(new URLSearchParams(window.location.search).get('plano') ?? '');
-  }, []);
+
+  function removerCupom() {
+    const next = new URLSearchParams(params.toString());
+    next.delete('cupom');
+    setError('');
+    router.replace(next.size ? `/assinatura?${next.toString()}` : '/assinatura', { scroll: false });
+  }
 
   async function open(path: 'checkout' | 'portal', plano?: string) {
+    if (path === 'checkout' && temCupom && !cupomValido) return;
     setBusy(plano ?? 'portal');
     setError('');
     try {
       const response = await api.post<{ url: string }>(
         `/assinaturas/${path}`,
-        plano ? { plano } : {},
+        plano ? { plano, ...(cupomValido ? { cupom } : {}) } : {},
       );
       const url = new URL(response.data.url);
       if (
@@ -86,9 +97,12 @@ export default function AssinaturaPage() {
       )
         throw new Error('Invalid destination');
       window.location.assign(url.toString());
-    } catch {
+    } catch (cause) {
+      const failure = parseApiError(cause);
       setError(
-        'Não foi possível abrir o Stripe. Sua assinatura não foi confirmada nesta tela. Tente novamente ou atualize o status.',
+        failure.statusCode && [400, 409, 429, 503].includes(failure.statusCode)
+          ? failure.message
+          : 'Não foi possível abrir o Stripe. Sua assinatura não foi confirmada nesta tela. Tente novamente ou atualize o status.',
       );
       setBusy(null);
     }
@@ -143,6 +157,29 @@ export default function AssinaturaPage() {
         <p role="status" className="text-sm text-[#A1A1AA]">
           Você saiu do checkout. Pode escolher um plano e tentar novamente.
         </p>
+      )}
+      {temCupom && (
+        <section
+          id="assinatura-cupom"
+          aria-label="Cupom de assinatura"
+          className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-indigo-400/25 bg-indigo-400/5 p-5 text-sm leading-7 text-indigo-100"
+        >
+          <p className="min-w-0 break-words">
+            {cupomValido ? (
+              <>
+                Cupom <strong>{cupom}</strong> recebido.{' '}
+                {data?.emAndamento
+                  ? 'A promoção se aplica a novas contratações. Use o portal para gerenciar sua assinatura.'
+                  : 'A validade e o desconto na primeira mensalidade serão conferidos ao abrir o checkout.'}
+              </>
+            ) : (
+              'O link tem um cupom em formato inválido. Use um código de 3 a 32 letras ou números, ou remova o cupom para continuar.'
+            )}
+          </p>
+          <Button type="button" variant="secondary" disabled={Boolean(busy)} onClick={removerCupom}>
+            Remover cupom
+          </Button>
+        </section>
       )}
       {error && (
         <p role="alert" className="rounded-xl border border-red-400/25 p-4 text-sm text-red-200">
@@ -259,6 +296,7 @@ export default function AssinaturaPage() {
                     !data.disponivel ||
                     Boolean(busy) ||
                     loading ||
+                    (!data.emAndamento && temCupom && !cupomValido) ||
                     (data.emAndamento && (!data.podeGerenciar || data.plano === plan.id))
                   }
                   aria-describedby={
@@ -266,7 +304,9 @@ export default function AssinaturaPage() {
                       ? 'assinatura-indisponivel'
                       : data.emAndamento
                         ? 'assinatura-em-andamento'
-                        : undefined
+                        : temCupom
+                          ? 'assinatura-cupom'
+                          : undefined
                   }
                   loading={busy === plan.id}
                   onClick={() =>
@@ -293,5 +333,13 @@ export default function AssinaturaPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function AssinaturaPage() {
+  return (
+    <Suspense fallback={<p role="status">Carregando assinatura…</p>}>
+      <AssinaturaContent />
+    </Suspense>
   );
 }

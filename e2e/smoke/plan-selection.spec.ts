@@ -74,6 +74,41 @@ test('cliente autenticado escolhe outro plano sem precisar entrar novamente', as
   ).toBeVisible();
 });
 
+test('link de cupom preserva a oferta após login e só vai ao checkout por confirmação explícita', async ({
+  page,
+  baseURL,
+}) => {
+  const checkoutBodies: unknown[] = [];
+  const headers = {
+    'Access-Control-Allow-Origin': baseURL!,
+    'Access-Control-Allow-Credentials': 'true',
+  };
+  await page.route('**/api/assinaturas/checkout', async (route) => {
+    checkoutBodies.push(route.request().postDataJSON());
+    await route.fulfill({
+      status: 400,
+      headers,
+      json: { message: 'Cupom indisponível, expirado ou esgotado.' },
+    });
+  });
+  await page.goto('/assinatura?cupom=NEXLY25');
+  await expect(page).toHaveURL(/\/login\?next=%2Fassinatura%3Fcupom%3DNEXLY25$/);
+  await page.getByRole('link', { name: 'Criar conta', exact: true }).click();
+  await expect(page).toHaveURL(/\/cadastro\?next=%2Fassinatura%3Fcupom%3DNEXLY25$/);
+  await page.getByRole('link', { name: 'Entrar', exact: true }).click();
+  await login(page);
+  await expect(page).toHaveURL(/\/assinatura\?cupom=NEXLY25$/);
+  await expect(page.getByRole('region', { name: 'Cupom de assinatura' })).toContainText('NEXLY25');
+  expect(checkoutBodies).toHaveLength(0);
+  await page.getByRole('button', { name: 'Testar Profissional', exact: true }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Cupom indisponível' })).toBeVisible();
+  expect(checkoutBodies).toEqual([{ plano: 'PRO', cupom: 'NEXLY25' }]);
+  await page.getByRole('button', { name: 'Remover cupom' }).click();
+  await expect(page).toHaveURL(/\/assinatura$/);
+  await expect(page.getByRole('region', { name: 'Cupom de assinatura' })).toHaveCount(0);
+  expect(checkoutBodies).toHaveLength(1);
+});
+
 test('destino externo adulterado não redireciona o cliente após entrar', async ({ page }) => {
   await page.goto('/login?next=https%3A%2F%2Fexample.com');
   await login(page);

@@ -4,7 +4,7 @@ Inventário gerado de [schema.prisma](../apps/api/prisma/schema.prisma). Prisma 
 
 O PostgreSQL é a persistência principal; Redis não aparece como tabela neste inventário. `empresaId` identifica escopo direto quando presente. Modelos sem esse campo podem ser globais ou vinculados por relações; confira o [escopo da aplicação](../apps/api/src/database/tenant-scope.ts), a autorização e as políticas do banco antes de utilizá-los.
 
-Esta revisão contém **41 modelos** e **7 enumerações**.
+Esta revisão contém **42 modelos** e **8 enumerações**.
 
 ## Empresa
 
@@ -64,21 +64,22 @@ Tabela: `empresas`.
 
 Tabela: `assinaturas`.
 
-| Campo            | Tipo Prisma |
-| ---------------- | ----------- |
-| `empresaId`      | `String`    |
-| `ambiente`       | `String`    |
-| `customerId`     | `String?`   |
-| `subscriptionId` | `String?`   |
-| `plano`          | `Plano`     |
-| `status`         | `String`    |
-| `periodoFim`     | `DateTime?` |
-| `cancelarEm`     | `DateTime?` |
-| `checkoutId`     | `String?`   |
-| `checkoutPlano`  | `Plano?`    |
-| `checkoutChave`  | `String?`   |
-| `updatedAt`      | `DateTime`  |
-| `empresa`        | `Empresa`   |
+| Campo                | Tipo Prisma |
+| -------------------- | ----------- |
+| `empresaId`          | `String`    |
+| `ambiente`           | `String`    |
+| `customerId`         | `String?`   |
+| `subscriptionId`     | `String?`   |
+| `plano`              | `Plano`     |
+| `status`             | `String`    |
+| `periodoFim`         | `DateTime?` |
+| `cancelarEm`         | `DateTime?` |
+| `checkoutId`         | `String?`   |
+| `checkoutPlano`      | `Plano?`    |
+| `checkoutChave`      | `String?`   |
+| `checkoutPromocaoId` | `String?`   |
+| `updatedAt`          | `DateTime`  |
+| `empresa`            | `Empresa`   |
 
 ## EventoStripe
 
@@ -122,6 +123,21 @@ Tabela: `usuarios`.
 | `auditLogs`                   | `AuditLog[]`         |
 | `termosAceite`                | `TermoAceite[]`      |
 | `depoimento`                  | `Depoimento?`        |
+| `platformMember`              | `PlatformMember?`    |
+
+## PlatformMember
+
+Tabela: `platform_members`.
+
+| Campo          | Tipo Prisma    |
+| -------------- | -------------- |
+| `id`           | `String`       |
+| `usuarioId`    | `String`       |
+| `papel`        | `PlatformRole` |
+| `ativo`        | `Boolean`      |
+| `criadoEm`     | `DateTime`     |
+| `atualizadoEm` | `DateTime`     |
+| `usuario`      | `Usuario`      |
 
 ## Depoimento
 
@@ -771,6 +787,7 @@ Tabela: `transferencias_filiais`.
 ## Enumerações
 
 - **Role:** `ADMIN`, `GESTOR`, `PROFISSIONAL`, `RECEPCIONISTA`, `CAIXA`.
+- **PlatformRole:** `OWNER`, `OPERATIONS`, `FINANCE`, `VIEWER`.
 - **Plano:** `FREE`, `BASIC`, `PRO`, `ENTERPRISE`.
 - **StatusAgendamento:** `AGENDADO`, `CONFIRMADO`, `CONCLUIDO`, `CANCELADO`.
 - **TipoMovimentacao:** `ENTRADA`, `SAIDA`.

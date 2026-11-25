@@ -9,7 +9,7 @@ import {
   Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { IsIn } from 'class-validator';
+import { IsIn, Matches, ValidateIf } from 'class-validator';
 import { Role } from '@nexly/shared';
 import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -19,6 +19,12 @@ import { AssinaturasService } from './assinaturas.service';
 export class CheckoutDto {
   @IsIn(['BASIC', 'PRO', 'ENTERPRISE'])
   plano!: 'BASIC' | 'PRO' | 'ENTERPRISE';
+
+  @ValidateIf((_body: CheckoutDto, value: unknown) => value !== undefined)
+  @Matches(/^[A-Z0-9]{3,32}$/, {
+    message: 'O cupom deve ter entre 3 e 32 letras maiúsculas ou números.',
+  })
+  cupom?: string;
 }
 
 @Controller('assinaturas')
@@ -34,7 +40,7 @@ export class AssinaturasController {
   @Post('checkout')
   @HttpCode(200)
   checkout(@Body() body: CheckoutDto) {
-    return this.service.checkout(getTenantIdOrFail(), body.plano);
+    return this.service.checkout(getTenantIdOrFail(), body.plano, body.cupom);
   }
 
   @Post('portal')
