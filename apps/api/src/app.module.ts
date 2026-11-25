@@ -45,6 +45,7 @@ import { FinanceiroModule } from './financeiro/financeiro.module';
 import { RedisModule } from './redis/redis.module';
 import { ExperienciaModule } from './experiencia/experiencia.controller';
 import { AssinaturasModule } from './assinaturas/assinaturas.module';
+import { PlatformModule } from './platform/platform.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { AssinaturasModule } from './assinaturas/assinaturas.module';
     RedisModule,
     ExperienciaModule,
     AssinaturasModule,
+    PlatformModule,
     OperacoesModule,
     EventEmitterModule.forRoot(),
     JwtModule.registerAsync({

@@ -1,10 +1,14 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, Type } from '@nestjs/common';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
+import { PlatformRole } from '@prisma/client';
 import { Role } from '@nexly/shared';
 import { Request } from 'express';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { hasPermission, permissaoDoRequest } from '../auth/permissions';
+import { PlatformAccessGuard } from '../../platform-access/platform-access.guard';
+import { PLATFORM_ROLES_KEY } from '../../platform-access/platform-roles.key';
 
 type RequestComUsuario = Request & { user?: { role: Role; empresaId: string; id: string } };
 
@@ -42,6 +46,19 @@ export class PermissionsGuard implements CanActivate {
     ]);
     if (requiredRoles && requiredRoles.length > 0) {
       return requiredRoles.includes(user.role);
+    }
+
+    const targets = [context.getHandler(), context.getClass()];
+    const platformRoles = this.reflector.getAllAndOverride<PlatformRole[]>(
+      PLATFORM_ROLES_KEY,
+      targets,
+    );
+    if (platformRoles?.length) {
+      const routeGuards = this.reflector.getAllAndMerge<Type<CanActivate>[]>(
+        GUARDS_METADATA,
+        targets,
+      );
+      return routeGuards.includes(PlatformAccessGuard);
     }
 
     const permissao = permissaoDoRequest(request.path, request.method);
