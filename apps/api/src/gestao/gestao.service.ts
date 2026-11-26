@@ -7,6 +7,7 @@ import {
 import { createHash } from 'node:crypto';
 import { isEmail } from 'class-validator';
 import { Prisma } from '@prisma/client';
+import { recuperarSenhaAppUrl } from '../auth/recuperacao-config';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { EstoqueService } from '../estoque/estoque.service';
@@ -107,12 +108,7 @@ export class GestaoService {
       falhas,
       rotinas,
       comprovacoes,
-      emailConfigurado:
-        process.env.EMAIL_PROVIDER === 'resend' &&
-        !!process.env.RESEND_API_KEY &&
-        !!process.env.EMAIL_FROM &&
-        /^[a-f\d]{64}$/i.test(process.env.EMAIL_QUEUE_KEY ?? '') &&
-        /^https:\/\//.test(process.env.PUBLIC_APP_URL ?? ''),
+      emailConfigurado: recuperarSenhaAppUrl() !== null,
       geradoEm: new Date(),
     };
   }

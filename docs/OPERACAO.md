@@ -46,9 +46,17 @@ O recebimento bancário depende da conta Stripe ativada, dados bancários e veri
 
 ## E-mail e WhatsApp
 
-O envio de e-mails permanece desativado por decisão do responsável até configurar provedor e remetente. Para Resend, são necessários `EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM`, `PUBLIC_APP_URL` e `EMAIL_QUEUE_KEY`. A chave da fila tem 32 bytes representados em 64 caracteres hexadecimais e deve ser gerada com fonte criptográfica. Não trocar a chave sem avaliar mensagens pendentes cifradas com a anterior.
+Para habilitar a recuperação de senha, configure as variáveis no serviço da API no Railway:
 
-Recuperação de senha deve informar indisponibilidade quando o envio não foi configurado. Não prometer que o e-mail chegou antes de confirmação aplicável. WhatsApp inicia desativado no exemplo; provedores opcionais exigem configuração e homologação. Preparar contato manual em marketing não significa envio automático ativo.
+- `EMAIL_PROVIDER=resend`.
+- `RESEND_API_KEY` com permissão de envio.
+- `EMAIL_FROM` com um endereço do domínio verificado no Resend.
+- `PUBLIC_APP_URL` com a origem HTTPS do frontend, como `https://nexly-web.vercel.app`.
+- `EMAIL_QUEUE_KEY` com 32 bytes gerados por uma fonte criptográfica e representados em 64 caracteres hexadecimais. Mantenha a mesma chave entre instâncias e reinícios. Antes de trocar a chave, verifique as mensagens pendentes cifradas com a chave anterior.
+
+Depois que a API iniciar com a configuração, confira `GET /api/auth/recuperacao/status`. O retorno `disponivel: true` confirma a configuração local da API. Para confirmar entrega, solicite um link para uma conta de teste autorizada, confira o evento no Resend e abra a mensagem recebida. O link expira em 30 minutos, é de uso único e apenas o mais recente é válido. Após a troca, teste o login com a nova senha e confirme que a sessão anterior foi encerrada. Falhas no envio podem ser investigadas na fila de Saúde e rotinas, nos logs da API e no painel do Resend.
+
+WhatsApp inicia desativado no exemplo. Provedores opcionais exigem configuração e homologação.
 
 ## Backup e recuperação
 

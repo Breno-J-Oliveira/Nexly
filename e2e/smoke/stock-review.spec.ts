@@ -122,7 +122,7 @@ test('inventory supports complete search, real alerts, mobile entries and date-o
     await page.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
     await expect(page.getByRole('cell', { name: 'Produto 104', exact: true })).toBeVisible();
     await page.goto('/produtos');
-    await page.getByLabel('Buscar por nome ou SKU', { exact: true }).fill('CRITICAL');
+    await page.getByLabel('Buscar por nome ou código', { exact: true }).fill('CRITICAL');
     const row = page.getByRole('row').filter({ hasText: 'Reposição crítica' });
     await expect(row).toBeVisible();
     await row.getByRole('button', { name: 'Editar', exact: true }).click();

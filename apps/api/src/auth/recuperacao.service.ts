@@ -2,6 +2,7 @@ import {
   BadRequestException,
   HttpException,
   Injectable,
+  Logger,
   OnModuleInit,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -11,22 +12,20 @@ import { PrismaService } from '../database/prisma.service';
 import { JobsService } from '../jobs/jobs.service';
 import { RedisService } from '../redis/redis.service';
 import { Prisma } from '@prisma/client';
+import { recuperarSenhaAppUrl } from './recuperacao-config';
 
 @Injectable()
 export class RecuperacaoService implements OnModuleInit {
+  private readonly logger = new Logger(RecuperacaoService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jobs: JobsService,
     private readonly redis: RedisService,
   ) {}
+
   disponivel() {
-    return (
-      process.env.EMAIL_PROVIDER === 'resend' &&
-      Boolean(process.env.RESEND_API_KEY) &&
-      Boolean(process.env.EMAIL_FROM) &&
-      /^[a-f\d]{64}$/i.test(process.env.EMAIL_QUEUE_KEY ?? '') &&
-      /^https:\/\//.test(process.env.PUBLIC_APP_URL ?? '')
-    );
+    return recuperarSenhaAppUrl() !== null;
   }
   onModuleInit() {
     this.jobs.register('EMAIL_RECUPERACAO', async (payload, job) => {
@@ -48,18 +47,21 @@ export class RecuperacaoService implements OnModuleInit {
         method: 'POST',
         signal: AbortSignal.timeout(10000),
         headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          Authorization: `Bearer ${process.env.RESEND_API_KEY?.trim()}`,
           'Content-Type': 'application/json',
           'Idempotency-Key': job.id,
         },
         body: JSON.stringify({
-          from: process.env.EMAIL_FROM,
+          from: process.env.EMAIL_FROM?.trim(),
           to: [recovery.usuario.email],
           subject: 'Redefina sua senha do Nexly',
           text: `Recebemos um pedido para alterar sua senha. Use o link em até 30 minutos: ${decoded.url}\nSe não foi você, ignore esta mensagem.`,
         }),
       });
-      if (!response.ok) throw new Error('Envio não aceito');
+      if (!response.ok) {
+        this.logger.warn(`Resend recusou o e-mail de recuperação (HTTP ${response.status})`);
+        throw new Error('Envio não aceito');
+      }
     });
   }
   private hash(token: string) {
@@ -107,8 +109,8 @@ export class RecuperacaoService implements OnModuleInit {
       );
   }
   async solicitar(email: string, ip: string) {
-    if (!this.disponivel())
-      return { disponivel: false, message: 'Recuperação por e-mail indisponível' };
+    const url = recuperarSenhaAppUrl();
+    if (!url) return { disponivel: false, message: 'Recuperação por e-mail indisponível' };
     const limiteIp = await this.redis.consumeLimit(`recovery-ip:${this.hash(ip)}`, 10, 3600);
     this.validarCota(limiteIp);
     const limit = await this.redis.consumeLimit(`recovery:${this.hash(ip + '|' + email)}`, 3, 3600);
@@ -120,9 +122,11 @@ export class RecuperacaoService implements OnModuleInit {
     if (user?.ativo) {
       const token = randomBytes(32).toString('hex'),
         hash = this.hash(token);
+      url.pathname = `${url.pathname.replace(/\/$/, '')}/redefinir-senha`;
+      url.hash = `token=${token}`;
       const payload = this.cifrar({
         hash,
-        url: `${process.env.PUBLIC_APP_URL!.replace(/\/$/, '')}/redefinir-senha#token=${token}`,
+        url: url.toString(),
       });
       await this.prisma.client.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM usuarios WHERE id=${user.id} FOR UPDATE`;

@@ -203,7 +203,7 @@ test('PDV distingue busca indisponível e encontra clientes além da primeira p�
         },
       });
     });
-    await page.getByPlaceholder('Buscar por nome ou SKU... (pressione /)').fill('Produto');
+    await page.getByLabel('Buscar produto', { exact: true }).fill('Produto');
     await expect(page.getByRole('alert').filter({ hasText: 'buscar os produtos' })).toBeVisible();
     await expect(page.getByText(/Nenhum produto encontrado/)).toHaveCount(0);
     failing = false;

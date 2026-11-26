@@ -9,6 +9,7 @@ import { MetricGrid } from '@/components/ui/MetricGrid';
 import { Icon } from '@/components/ui/Icon';
 import { PageToolbar } from '@/components/ui/PageToolbar';
 import { Modal } from '@/components/ui/Modal';
+import { InsumoModal } from './InsumoModal';
 
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
@@ -37,11 +38,12 @@ interface Insumo {
 }
 
 export default function ServicosPage() {
-  const {profile}=useWorkspace();
+  const { profile, enabled } = useWorkspace();
   const { user } = useAuth();
   const podeCriar = hasPermission(user?.role, 'servicos:create');
   const podeEditar = hasPermission(user?.role, 'servicos:update');
   const podeExcluir = hasPermission(user?.role, 'servicos:delete');
+  const podeCriarProduto = enabled('/produtos') && hasPermission(user?.role, 'estoque:create');
   const [detalhesAbertos, setDetalhesAbertos] = useState(false);
   const [busca, setBusca] = useState('');
   const {
@@ -57,16 +59,12 @@ export default function ServicosPage() {
   const pedidoInsumos = useRef(0);
   const [carregandoInsumos, setCarregandoInsumos] = useState(false);
   const [erroInsumos, setErroInsumos] = useState(false);
-  const [produtos, setProdutos] = useState<Produto[]>([]);
 
   const [modalInsumoAberto, setModalInsumoAberto] = useState(false);
   const [modalServicoAberto, setModalServicoAberto] = useState(false);
   const [editandoServicoId, setEditandoServicoId] = useState<string | null>(null);
   const [formServico, setFormServico] = useState({ nome: '', duracaoMin: '', preco: '' });
 
-  const [produtoId, setProdutoId] = useState('');
-  const [quantidade, setQuantidade] = useState('');
-  const [buscaProduto, setBuscaProduto] = useState('');
   const [salvandoServico, setSalvandoServico] = useState(false);
   const [erroServico, setErroServico] = useState('');
   const [salvandoInsumo, setSalvandoInsumo] = useState(false);
@@ -101,29 +99,6 @@ export default function ServicosPage() {
     if (!selecionado && servicos[0]) void selecionar(servicos[0], false);
   }, [servicos, selecionado, selecionar]);
 
-  useEffect(() => {
-    if (!modalInsumoAberto || !podeEditar) return;
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      void api
-        .get<{ data: Produto[] }>('/produtos', {
-          signal: controller.signal,
-          params: { limit: 100, search: buscaProduto || undefined },
-        })
-        .then((response) => {
-          if (!controller.signal.aborted) setProdutos(response.data.data);
-        })
-        .catch(() => {
-          if (!controller.signal.aborted)
-            toastError('Não foi possível buscar os produtos. Tente novamente.');
-        });
-    }, 250);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [modalInsumoAberto, podeEditar, buscaProduto]);
-
   const salvarServico = async (): Promise<void> => {
     if (salvandoServico) return;
     setSalvandoServico(true);
@@ -134,17 +109,17 @@ export default function ServicosPage() {
         duracaoMin: Number(formServico.duracaoMin),
         preco: Number(formServico.preco),
       };
-      if (editandoServicoId) {
-        await api.put(`/servicos/${editandoServicoId}`, payload);
-        toastSuccess('Serviço atualizado');
-      } else {
-        await api.post('/servicos', payload);
-        toastSuccess('Serviço criado');
-      }
+      const { data: salvo } = editandoServicoId
+        ? await api.put<Servico>(`/servicos/${editandoServicoId}`, payload)
+        : await api.post<Servico>('/servicos', payload);
+
+      toastSuccess(editandoServicoId ? 'Serviço atualizado' : 'Serviço cadastrado');
       setModalServicoAberto(false);
+      if (!editandoServicoId) setBusca('');
       setFormServico({ nome: '', duracaoMin: '', preco: '' });
       setEditandoServicoId(null);
       await carregar();
+      if (!editandoServicoId) void selecionar(salvo);
     } catch (error) {
       setErroServico(parseApiError(error).message);
     } finally {
@@ -165,27 +140,6 @@ export default function ServicosPage() {
     }
   };
 
-  const associar = async (): Promise<void> => {
-    if (!selecionado || !produtoId || !quantidade || salvandoInsumo) return;
-    setSalvandoInsumo(true);
-    try {
-      await api.post(`/servicos/${selecionado.id}/insumos`, {
-        produtoId,
-        quantidade: Number(quantidade),
-      });
-      toastSuccess('Insumo associado');
-      setModalInsumoAberto(false);
-      setProdutoId('');
-      setQuantidade('');
-      setBuscaProduto('');
-      await selecionar(selecionado);
-    } catch (error) {
-      toastError(parseApiError(error).message);
-    } finally {
-      setSalvandoInsumo(false);
-    }
-  };
-
   const remover = async (pid: string): Promise<void> => {
     if (!selecionado || salvandoInsumo) return;
     setSalvandoInsumo(true);
@@ -199,10 +153,6 @@ export default function ServicosPage() {
     }
   };
 
-  const produtosFiltrados = produtos.filter((p) =>
-    p.nome.toLowerCase().includes(buscaProduto.toLowerCase()),
-  );
-
   const servicosFiltrados = servicos.filter((s) =>
     s.nome.toLocaleLowerCase('pt-BR').includes(busca.toLocaleLowerCase('pt-BR')),
   );
@@ -212,8 +162,12 @@ export default function ServicosPage() {
       <PageToolbar>
         <div className="page-heading with-search flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-[#FAFAFA]">{profile.preferencias?.nomeServico??'Serviços'}</h2>
-            <p className="mt-1 text-sm text-[#A1A1AA]">Cadastre serviços e configure insumos</p>
+            <h2 className="text-xl font-semibold text-[#FAFAFA]">
+              {profile.preferencias?.nomeServico ?? 'Serviços'}
+            </h2>
+            <p className="mt-1 text-sm text-[#A1A1AA]">
+              Cadastre o que você oferece e os materiais usados em cada atendimento.
+            </p>
           </div>
           <div className="toolbar-actions flex flex-wrap items-center gap-3">
             <div className="toolbar-search">
@@ -305,7 +259,9 @@ export default function ServicosPage() {
                     <Icon name="scissors" color="#818CF8" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <strong className="line-clamp-2 break-words text-sm" title={s.nome}>{s.nome}</strong>
+                    <strong className="line-clamp-2 break-words text-sm" title={s.nome}>
+                      {s.nome}
+                    </strong>
                     <span className="mt-1 block text-xs text-[#71717A]">{s.duracaoMin} min</span>
                   </span>
                   <span className="shrink-0 text-sm font-semibold">
@@ -414,14 +370,14 @@ export default function ServicosPage() {
                 {podeEditar && (
                   <>
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="font-semibold text-[#FAFAFA]">Insumos — {selecionado.nome}</h3>
+                      <h3 className="font-semibold text-[#FAFAFA]">Materiais usados no serviço</h3>
                       <Button
                         onClick={() => {
                           setDetalhesAbertos(false);
                           setModalInsumoAberto(true);
                         }}
                       >
-                        + Insumo
+                        Adicionar insumo
                       </Button>
                     </div>
                     <div className="mt-3 space-y-2">
@@ -442,7 +398,9 @@ export default function ServicosPage() {
                         </p>
                       )}
                       {!carregandoInsumos && !erroInsumos && insumos.length === 0 && (
-                        <p className="text-sm text-[#A1A1AA]">Nenhum insumo configurado.</p>
+                        <p className="text-sm text-[#A1A1AA]">
+                          Adicione os produtos que saem do estoque quando o atendimento é concluído.
+                        </p>
                       )}
                       {insumos.map((i) => (
                         <div
@@ -478,52 +436,20 @@ export default function ServicosPage() {
         </div>
       )}
 
-      {modalInsumoAberto && (
-        <Modal open title="Adicionar insumo" onClose={() => setModalInsumoAberto(false)}>
-          <div className="mt-4 space-y-3">
-            <Input
-              label="Buscar produto"
-              value={buscaProduto}
-              onChange={(e) => setBuscaProduto(e.target.value)}
-              placeholder="Nome do produto"
-            />
-            <div className="max-h-40 space-y-1 overflow-y-auto">
-              {produtosFiltrados.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setProdutoId(p.id)}
-                  className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
-                    produtoId === p.id
-                      ? 'bg-[rgba(99,102,241,0.10)] text-[#A5B4FC]'
-                      : 'text-[#E4E4E7] hover:bg-[#18181F]'
-                  }`}
-                >
-                  {p.nome}
-                </button>
-              ))}
-            </div>
-            <Input
-              label="Quantidade"
-              type="number"
-              min={1}
-              step={1}
-              value={quantidade}
-              onChange={(e) => setQuantidade(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setModalInsumoAberto(false)}>
-                Cancelar
-              </Button>
-              <Button
-                loading={salvandoInsumo}
-                onClick={() => void associar()}
-                disabled={!produtoId || !quantidade}
-              >
-                Adicionar
-              </Button>
-            </div>
-          </div>
-        </Modal>
+      {modalInsumoAberto && selecionado && (
+        <InsumoModal
+          servico={selecionado}
+          insumos={insumos}
+          podeCriarProduto={podeCriarProduto}
+          onClose={() => {
+            setModalInsumoAberto(false);
+            setDetalhesAbertos(true);
+          }}
+          onSaved={() => {
+            setModalInsumoAberto(false);
+            void selecionar(selecionado);
+          }}
+        />
       )}
 
       {modalServicoAberto && (
@@ -542,7 +468,7 @@ export default function ServicosPage() {
             }}
           >
             <Input
-              label="Nome"
+              label="Nome do serviço"
               required
               minLength={2}
               maxLength={120}
@@ -562,9 +488,10 @@ export default function ServicosPage() {
               placeholder="60"
             />
             <Input
-              label="Preço (R$)"
+              label="Valor cobrado (R$)"
               required
               min={0}
+              max={99999999.99}
               type="number"
               step="0.01"
               value={formServico.preco}
@@ -590,7 +517,7 @@ export default function ServicosPage() {
                 loading={salvandoServico}
                 disabled={!formServico.nome || !formServico.duracaoMin || !formServico.preco}
               >
-                Salvar
+                {editandoServicoId ? 'Salvar alterações' : 'Cadastrar serviço'}
               </Button>
             </div>
           </form>

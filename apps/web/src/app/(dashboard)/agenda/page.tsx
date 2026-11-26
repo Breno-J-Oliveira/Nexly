@@ -7,6 +7,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
 import { isCancel } from 'axios';
 import { useAuth } from '@/lib/auth';
@@ -44,6 +45,13 @@ function formatarHora(iso: string): string {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function normalizarBusca(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLocaleLowerCase('pt-BR');
+}
+
 export default function AgendaPage() {
   return (
     <Suspense fallback={<p className="text-sm text-[#A1A1AA]">Carregando...</p>}>
@@ -61,6 +69,7 @@ function AgendaContent() {
   }, []);
   const [data, setData] = useState<Date>(new Date());
   const [view, setView] = useState<'lista' | 'semana'>('semana');
+  const [busca, setBusca] = useState('');
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
@@ -198,6 +207,18 @@ function AgendaContent() {
   ultimoDia.setDate(ultimoDia.getDate() + 6);
   const profissionalNome = profissionais.find((p) => p.id === profissionalId)?.nome;
   const statusLabel = STATUS_CHIPS.find((c) => c.value === status)?.label;
+  const termos = normalizarBusca(busca.trim()).split(/\s+/).filter(Boolean);
+  const agendamentosVisiveis = agendamentos.filter((item) => {
+    const texto = normalizarBusca(
+      `${item.cliente.nome} ${item.profissional.nome} ${item.servico.nome}`,
+    );
+    return termos.every((termo) => texto.includes(termo));
+  });
+  const listaFiltrada = termos.length > 0 || !!profissionalId || status !== null;
+  const limparFiltros = () => {
+    setBusca('');
+    atualizarFiltro({ profissionalId: '', status: '' });
+  };
 
   return (
     <div>
@@ -215,7 +236,7 @@ function AgendaContent() {
                 : `${primeiroDia.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} – ${ultimoDia.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}`}
               {' · '}
               {view === 'lista'
-                ? `${agendamentos.length} ${agendamentos.length === 1 ? 'agendamento' : 'agendamentos'}`
+                ? `${agendamentosVisiveis.length} ${agendamentosVisiveis.length === 1 ? 'agendamento' : 'agendamentos'}`
                 : 'Visão semanal'}
               {profissionalNome ? ` · filtrado por ${profissionalNome}` : ''}
               {statusLabel ? ` · ${statusLabel}` : ''}
@@ -368,20 +389,50 @@ function AgendaContent() {
             </div>
           ) : (
             <div className="mt-6 space-y-3">
-              {carregando && <p className="text-sm text-[#A1A1AA]">Carregando...</p>}
-              {!carregando && !erro && agendamentos.length === 0 && (
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="w-full min-w-0 sm:max-w-sm">
+                  <Input
+                    label="Buscar agendamentos do dia"
+                    type="search"
+                    value={busca}
+                    onChange={(event) => setBusca(event.target.value)}
+                    placeholder="Cliente, profissional ou serviço"
+                  />
+                </div>
+                {listaFiltrada && (
+                  <Button variant="secondary" onClick={limparFiltros}>
+                    Limpar filtros
+                  </Button>
+                )}
+              </div>
+              {carregando && (
+                <p role="status" className="text-sm text-[#A1A1AA]">
+                  Carregando...
+                </p>
+              )}
+              {!carregando && !erro && agendamentosVisiveis.length === 0 && (
                 <EmptyState
                   icon="calendar-xmark"
-                  title="Nenhum agendamento para este dia"
-                  description="Crie o primeiro agendamento para comecar a atender"
+                  title={
+                    listaFiltrada
+                      ? 'Nenhum agendamento encontrado'
+                      : 'Nenhum agendamento para este dia'
+                  }
+                  description={
+                    listaFiltrada
+                      ? 'Tente outro termo, limpe os filtros ou escolha outro dia.'
+                      : podeEditar
+                        ? 'Use Novo agendamento para marcar um atendimento.'
+                        : 'Use as setas para consultar outro dia.'
+                  }
                   action={
-                    podeEditar ? (
+                    podeEditar && !listaFiltrada ? (
                       <Button onClick={() => setModalAberto(true)}>+ Novo agendamento</Button>
                     ) : undefined
                   }
                 />
               )}
-              {agendamentos.map((a) => (
+              {agendamentosVisiveis.map((a) => (
                 <div
                   key={a.id}
                   className="group flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111116] p-4 transition-colors hover:border-[rgba(99,102,241,0.30)]"
@@ -411,7 +462,7 @@ function AgendaContent() {
                         onClick={() => {
                           void mudarStatus(a.id, 'CONCLUIDO');
                         }}
-                        className="flex items-center gap-1.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                        className="flex items-center gap-1.5"
                       >
                         <Icon name="check" size="xs" /> Concluir
                       </Button>
@@ -449,6 +500,11 @@ function AgendaContent() {
             onClose={() => setModalAberto(false)}
             onSuccess={(horario) => {
               setModalAberto(false);
+              limparFiltros();
+              api
+                .get<Profissional[]>('/profissionais')
+                .then(({ data }) => setProfissionais(data))
+                .catch(() => undefined);
               if (horario) setData(new Date(horario));
               else void carregar();
             }}

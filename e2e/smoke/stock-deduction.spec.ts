@@ -65,17 +65,17 @@ test('concluir agendamento baixa o estoque uma única vez', async ({ page }) => 
     await page.getByRole('button', { name: '+ Novo agendamento', exact: true }).first().click();
     const modal = page.getByRole('dialog', { name: 'Novo agendamento', exact: true });
     await modal.getByRole('button', { name: cliente.nome, exact: true }).click();
-    await modal.getByRole('button', { name: 'Próximo', exact: true }).click();
+    await modal.getByRole('button', { name: 'Continuar', exact: true }).click();
     await modal.getByLabel('Profissional', { exact: true }).selectOption(profissional.id);
     await modal.getByLabel('Serviço', { exact: true }).selectOption(servico.id);
-    await modal.getByRole('button', { name: 'Próximo', exact: true }).click();
+    await modal.getByRole('button', { name: 'Continuar', exact: true }).click();
     const local = await page.evaluate(() => {
       const d = new Date();
       d.setDate(d.getDate() + 1);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T10:00`;
     });
     await modal.getByLabel('Data e hora', { exact: true }).fill(local);
-    await modal.getByRole('button', { name: 'Salvar', exact: true }).click();
+    await modal.getByRole('button', { name: 'Criar agendamento', exact: true }).click();
     await expect(modal).toBeHidden();
     await page.getByRole('button', { name: 'Lista', exact: true }).click();
     await page.getByRole('button', { name: 'Confirmar', exact: true }).click();

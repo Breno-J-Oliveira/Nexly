@@ -1,8 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { hasPermission } from '@nexly/shared';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { CadastroRapido } from '@/components/gestao/CadastroRapido';
 
 interface Cliente {
   id: string;
@@ -16,6 +20,14 @@ export function ClienteSelect({
   value: string;
   onChange: (id: string) => void;
 }) {
+  const { user } = useAuth();
+  const [cadastrando, setCadastrando] = useState(false);
+  const [criado, setCriado] = useState(false);
+  const seletor = useRef<HTMLSelectElement>(null);
+  const fecharCadastro = () => {
+    setCadastrando(false);
+    seletor.current?.focus();
+  };
   const [busca, setBusca] = useState('');
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [selecionado, setSelecionado] = useState<Cliente | null>(null);
@@ -67,10 +79,12 @@ export function ClienteSelect({
         Cliente (opcional)
       </label>
       <select
+        ref={seletor}
         id="pdv-cliente"
         value={value}
         onChange={(e) => {
           const id = e.target.value;
+          setCriado(false);
           setSelecionado(clientes.find((c) => c.id === id) ?? null);
           onChange(id);
         }}
@@ -104,6 +118,37 @@ export function ClienteSelect({
             : total > clientes.length
               ? `Mostrando ${clientes.length} de ${total}. Use a busca para encontrar qualquer cliente.`
               : `${total} ${total === 1 ? 'cliente encontrado' : 'clientes encontrados'}.`}
+        </p>
+      )}
+      {hasPermission(user?.role, 'clientes:create') && (
+        <Button
+          type="button"
+          variant="secondary"
+          aria-expanded={cadastrando}
+          onClick={() => {
+            setCriado(false);
+            setCadastrando(true);
+          }}
+        >
+          + Cadastrar cliente
+        </Button>
+      )}
+      {cadastrando && (
+        <CadastroRapido
+          recurso="clientes"
+          onCancel={fecharCadastro}
+          onCreated={(cliente) => {
+            setSelecionado(cliente);
+            onChange(cliente.id);
+            setTentativa((v) => v + 1);
+            setCriado(true);
+            fecharCadastro();
+          }}
+        />
+      )}
+      {criado && value === selecionado?.id && (
+        <p role="status" className="text-sm text-emerald-300">
+          Cliente cadastrado e selecionado.
         </p>
       )}
     </div>

@@ -15,24 +15,10 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Icon } from '@/components/ui/Icon';
-import { BarcodeScanner } from '@/components/ui/BarcodeScanner';
+import { ProdutoForm, type ProdutoCadastro as Produto } from '@/components/ProdutoForm';
 import { api } from '@/lib/api';
 import { toastSuccess, toastError } from '@/components/ui/Toaster';
 import { formatarDataHora } from '@/lib/format';
-
-interface Produto {
-  id: string;
-  nome: string;
-  sku: string;
-  preco: number;
-  custoAtual:number|null;
-  estoqueAtual: number;
-  estoqueMinimo: number;
-  categoria: string | null;
-  dataVencimento: string | null;
-  lote: string | null;
-}
 
 interface Movimentacao {
   id: string;
@@ -43,30 +29,6 @@ interface Movimentacao {
   agendamentoId: string | null;
   createdAt: string;
 }
-
-interface FormState {
-  nome: string;
-  sku: string;
-  preco: string;
-  custoAtual:string;
-  estoqueAtual: string;
-  estoqueMinimo: string;
-  categoria: string;
-  dataVencimento: string;
-  lote: string;
-}
-
-const vazio: FormState = {
-  nome: '',
-  sku: '',
-  preco: '',
-  custoAtual:'',
-  estoqueAtual: '0',
-  estoqueMinimo: '5',
-  categoria: '',
-  dataVencimento: '',
-  lote: '',
-};
 
 function vencimentoInfo(
   p: Produto,
@@ -96,15 +58,12 @@ export default function ProdutosPage() {
   const [pagina, setPagina] = useState(1);
   const [busca, setBusca] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
-  const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>(vazio);
+  const [produtoEdicao, setProdutoEdicao] = useState<Produto>();
   const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
 
   // ── Histórico de movimentações ────────────────────────────
   const [historicoProduto, setHistoricoProduto] = useState<Produto | null>(null);
   const [filtroVencendo, setFiltroVencendo] = useState(false);
-  const [scannerOpen, setScannerOpen] = useState(false);
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('vencendo') === '1')
       setFiltroVencendo(true);
@@ -132,66 +91,13 @@ export default function ProdutosPage() {
   }, [carregando, data, pagina]);
 
   const abrirNovo = (): void => {
-    setEditandoId(null);
-    setForm(vazio);
-    setErro(null);
+    setProdutoEdicao(undefined);
     setModalAberto(true);
   };
 
   const abrirEdicao = (p: Produto): void => {
-    setEditandoId(p.id);
-    setForm({
-      nome: p.nome,
-      sku: p.sku,
-      preco: String(p.preco),
-      custoAtual:p.custoAtual==null?'':String(p.custoAtual),
-      estoqueAtual: String(p.estoqueAtual),
-      estoqueMinimo: String(p.estoqueMinimo),
-      categoria: p.categoria ?? '',
-      dataVencimento: p.dataVencimento ? p.dataVencimento.slice(0, 10) : '',
-      lote: p.lote ?? '',
-    });
-    setErro(null);
+    setProdutoEdicao(p);
     setModalAberto(true);
-  };
-
-  const salvar = async (): Promise<void> => {
-    if (salvando) return;
-    setSalvando(true);
-    setErro(null);
-    try {
-      if (editandoId) {
-        await api.put(`/produtos/${editandoId}`, {
-          nome: form.nome,
-          preco: Number(form.preco),
-          custoAtual:form.custoAtual.trim()?Number(form.custoAtual):null,
-          estoqueMinimo: Number(form.estoqueMinimo),
-          categoria: form.categoria.trim() || null,
-          dataVencimento: form.dataVencimento || null,
-          lote: form.lote || null,
-        });
-      } else {
-        await api.post('/produtos', {
-          nome: form.nome,
-          sku: form.sku,
-          preco: Number(form.preco),
-          custoAtual:form.custoAtual.trim()?Number(form.custoAtual):null,
-          estoqueAtual: Number(form.estoqueAtual),
-          estoqueMinimo: Number(form.estoqueMinimo),
-          categoria: form.categoria.trim() || null,
-          dataVencimento: form.dataVencimento || null,
-          lote: form.lote || null,
-        });
-      }
-      setModalAberto(false);
-      toastSuccess(editandoId ? 'Produto atualizado!' : 'Produto criado!');
-      await carregar();
-    } catch (e) {
-      const err = e as { response?: { data?: { message?: string } } };
-      setErro(err?.response?.data?.message ?? 'Erro ao salvar produto');
-    } finally {
-      setSalvando(false);
-    }
   };
 
   const excluir = async (p: Produto): Promise<void> => {
@@ -208,7 +114,7 @@ export default function ProdutosPage() {
   return (
     <div>
       <PageToolbar>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold text-[#FAFAFA]">Produtos</h2>
             <p className="mt-1 text-sm text-[#A1A1AA]">
@@ -221,10 +127,10 @@ export default function ProdutosPage() {
       </PageToolbar>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <div className="max-w-md flex-1">
+        <div className="w-full max-w-md sm:flex-1">
           <Input
-            aria-label="Buscar por nome ou SKU"
-            placeholder="Buscar por nome ou SKU..."
+            aria-label="Buscar por nome ou código"
+            placeholder="Buscar por nome ou código..."
             value={busca}
             onChange={(e) => {
               setBusca(e.target.value);
@@ -256,7 +162,7 @@ export default function ProdutosPage() {
           <thead className="hidden border-b md:table-header-group border-[rgba(255,255,255,0.08)] bg-[#18181F]/40">
             <tr>
               <th className="px-4 py-3 font-medium text-[#A1A1AA]">Produto</th>
-              <th className="px-4 py-3 font-medium text-[#A1A1AA]">SKU</th>
+              <th className="px-4 py-3 font-medium text-[#A1A1AA]">Código</th>
               <th className="px-4 py-3 font-medium text-[#A1A1AA]">Preço</th>
               <th className="px-4 py-3 font-medium text-[#A1A1AA]">Estoque</th>
               <th className="px-4 py-3 font-medium text-[#A1A1AA]">Status</th>
@@ -292,7 +198,7 @@ export default function ProdutosPage() {
                       {p.nome}
                     </td>
                     <td className="col-span-2 text-[#A1A1AA] md:px-4 md:py-3">
-                      <span className="md:hidden">SKU: </span>
+                      <span className="md:hidden">Código: </span>
                       {p.sku}
                     </td>
                     <td className="text-[#E4E4E7] md:px-4 md:py-3">
@@ -365,133 +271,21 @@ export default function ProdutosPage() {
       />
       <Modal
         open={modalAberto}
-        title={editandoId ? 'Editar produto' : 'Novo produto'}
+        title={produtoEdicao ? 'Editar produto' : 'Novo produto'}
         onClose={() => {
           if (!salvando) setModalAberto(false);
         }}
       >
-        <form
-          className="mt-4 space-y-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void salvar();
+        <ProdutoForm
+          produto={produtoEdicao}
+          onCancel={() => setModalAberto(false)}
+          onSavingChange={setSalvando}
+          onSaved={() => {
+            setModalAberto(false);
+            toastSuccess(produtoEdicao ? 'Produto atualizado' : 'Produto cadastrado');
+            void carregar();
           }}
-        >
-          <Input
-            label="Nome"
-            required
-            minLength={2}
-            maxLength={120}
-            value={form.nome}
-            onChange={(e) => setForm({ ...form, nome: e.target.value })}
-            placeholder="Nome do produto"
-          />
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <Input
-                label="SKU"
-                required
-                minLength={2}
-                maxLength={60}
-                value={form.sku}
-                onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                placeholder="Código único"
-                disabled={!!editandoId}
-              />
-            </div>
-            {!editandoId && (
-              <button
-                type="button"
-                onClick={() => setScannerOpen(true)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.10)] text-[#A1A1AA] hover:text-[#FAFAFA]"
-                title="Escanear código de barras"
-              >
-                <Icon name="barcode" size="lg" />
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Preço"
-              required
-              type="number"
-              min={0}
-              step="0.01"
-              value={form.preco}
-              onChange={(e) => setForm({ ...form, preco: e.target.value })}
-              placeholder="0.00"
-            />
-            <Input label="Custo de aquisição (opcional)" type="number" min="0" max="99999999.99" step="0.01" value={form.custoAtual} onChange={e=>setForm({...form,custoAtual:e.target.value})}/><p className="text-xs text-[#A1A1AA]">O custo é congelado em cada nova venda e permite calcular a margem. Deixe vazio quando não souber.</p>
-            {!editandoId && (
-              <Input
-                label="Estoque inicial"
-                step={1}
-                required
-                type="number"
-                min={0}
-                value={form.estoqueAtual}
-                onChange={(e) => setForm({ ...form, estoqueAtual: e.target.value })}
-              />
-            )}
-          </div>
-          <Input
-            label="Quantidade mínima"
-            step={1}
-            required
-            type="number"
-            min={0}
-            value={form.estoqueMinimo}
-            onChange={(e) => setForm({ ...form, estoqueMinimo: e.target.value })}
-          />
-          <Input
-            label="Categoria"
-            minLength={2}
-            maxLength={60}
-            value={form.categoria}
-            onChange={(e) => setForm({ ...form, categoria: e.target.value })}
-            placeholder="Ex: coloração, cosmético"
-          />
-
-          <div className="rounded-lg border border-[rgba(255,255,255,0.08)] p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#A1A1AA]">
-              Controle de validade
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Data de vencimento"
-                type="date"
-                value={form.dataVencimento}
-                onChange={(e) => setForm({ ...form, dataVencimento: e.target.value })}
-              />
-              <Input
-                label="Lote"
-                maxLength={60}
-                value={form.lote}
-                onChange={(e) => setForm({ ...form, lote: e.target.value })}
-                placeholder="Ex: L-2026-01"
-              />
-            </div>
-          </div>
-
-          {erro && <p className="text-sm text-red-400">{erro}</p>}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              disabled={salvando}
-              variant="secondary"
-              onClick={() => setModalAberto(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              loading={salvando}
-              disabled={!form.nome || !form.sku || !form.preco}
-            >
-              Salvar
-            </Button>
-          </div>
-        </form>
+        />
       </Modal>
 
       {historicoProduto && (
@@ -502,7 +296,7 @@ export default function ProdutosPage() {
           width="max-w-lg"
         >
           <p className="mt-1 text-xs text-[#A1A1AA]">
-            SKU {historicoProduto.sku} · Estoque atual: {historicoProduto.estoqueAtual}
+            Código {historicoProduto.sku} · Estoque atual: {historicoProduto.estoqueAtual}
           </p>
 
           <div className="mt-4 max-h-96 space-y-2 overflow-y-auto">
@@ -548,15 +342,6 @@ export default function ProdutosPage() {
           </div>
         </Modal>
       )}
-
-      <BarcodeScanner
-        isOpen={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onScan={(code) => {
-          setForm((f) => ({ ...f, sku: code }));
-          toastSuccess('Código capturado');
-        }}
-      />
     </div>
   );
 }
