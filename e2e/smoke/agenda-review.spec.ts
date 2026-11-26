@@ -134,13 +134,13 @@ test('calendar filters, late appointments, mobile creation and cancellation work
     await expect(modal.getByRole('heading', { name: 'Escolha o cliente' })).toBeFocused();
     await modal.getByLabel('Buscar cliente', { exact: true }).fill('ZZZ cliente');
     await modal.getByRole('button', { name: alvo.nome, exact: true }).click();
-    await modal.getByRole('button', { name: 'Próximo', exact: true }).click();
+    await modal.getByRole('button', { name: 'Continuar', exact: true }).click();
     await expect(
       modal.getByRole('heading', { name: 'Escolha o profissional e o serviço' }),
     ).toBeFocused();
     await modal.getByLabel('Profissional', { exact: true }).selectOption(prof1.id);
     await modal.getByLabel('Serviço', { exact: true }).selectOption(servico.id);
-    await modal.getByRole('button', { name: 'Próximo', exact: true }).click();
+    await modal.getByRole('button', { name: 'Continuar', exact: true }).click();
     await expect(modal.getByRole('heading', { name: 'Escolha a data e a hora' })).toBeFocused();
     const tomorrow = new Date(dates.tomorrow);
     const local = dates.local;
@@ -149,10 +149,20 @@ test('calendar filters, late appointments, mobile creation and cancellation work
       path: 'test-results/manual/review-agendamento-mobile.png',
       fullPage: false,
     });
-    await modal.getByRole('button', { name: 'Salvar', exact: true }).click();
+    await modal.getByRole('button', { name: 'Criar agendamento', exact: true }).click();
     await expect(modal).toBeHidden();
     await page.getByRole('button', { name: 'Lista', exact: true }).click();
     await expect(page.getByText(alvo.nome, { exact: true })).toBeVisible();
+    const busca = page.getByRole('searchbox', { name: 'Buscar agendamentos do dia' });
+    await busca.fill('cliente sem correspondência');
+    await expect(
+      page.getByRole('heading', { name: 'Nenhum agendamento encontrado' }),
+    ).toBeVisible();
+    await expect(page.getByText(alvo.nome, { exact: true })).toHaveCount(0);
+    await busca.fill('zzz CLIENTE');
+    await expect(page.getByText(alvo.nome, { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Limpar filtros' }).click();
+    await expect(busca).toHaveValue('');
     await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
     await expect(
       page.getByRole('dialog', { name: 'Cancelar agendamento', exact: true }),

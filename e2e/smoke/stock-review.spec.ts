@@ -122,15 +122,16 @@ test('inventory supports complete search, real alerts, mobile entries and date-o
     await page.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
     await expect(page.getByRole('cell', { name: 'Produto 104', exact: true })).toBeVisible();
     await page.goto('/produtos');
-    await page.getByLabel('Buscar por nome ou SKU', { exact: true }).fill('CRITICAL');
+    await page.getByLabel('Buscar por nome ou código', { exact: true }).fill('CRITICAL');
     const row = page.getByRole('row').filter({ hasText: 'Reposição crítica' });
     await expect(row).toBeVisible();
     await row.getByRole('button', { name: 'Editar', exact: true }).click();
     const edit = page.getByRole('dialog', { name: 'Editar produto', exact: true });
-    await expect(edit.getByLabel('Data de vencimento')).toHaveValue('2026-10-15');
-    await edit.getByLabel('Data de vencimento').fill('');
+    await edit.getByText('Custo, alerta de estoque e validade', { exact: true }).click();
+    await expect(edit.getByLabel('Data de validade')).toHaveValue('2026-10-15');
+    await edit.getByLabel('Data de validade').fill('');
     await edit.getByLabel('Categoria', { exact: true }).fill('');
-    await edit.getByRole('button', { name: 'Salvar', exact: true }).click();
+    await edit.getByRole('button', { name: 'Salvar alterações', exact: true }).click();
     await expect(edit).toBeHidden();
     await expect
       .poll(async () => {

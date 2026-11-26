@@ -339,24 +339,19 @@ export default function PdvPage() {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-0 flex-1 basis-52">
                 <Input
                   ref={buscaRef}
-                  aria-label="Buscar produto por nome ou SKU"
-                  placeholder="Buscar por nome ou SKU... (pressione /)"
+                  label="Buscar produto"
+                  placeholder="Nome ou código do produto"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                 />
               </div>
-              <button
-                type="button"
-                onClick={() => setScannerOpen(true)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.10)] text-[#71717A] hover:text-[#FAFAFA]"
-                title="Escanear código de barras"
-              >
-                <Icon name="barcode" size="lg" />
-              </button>
+              <Button type="button" variant="secondary" onClick={() => setScannerOpen(true)}>
+                <Icon name="barcode" /> Ler código de barras
+              </Button>
             </div>
             {buscando && (
               <p role="status" className="mt-3 text-sm text-[#A1A1AA]">
@@ -410,7 +405,7 @@ export default function PdvPage() {
                 !erroCatalogo && (
                   <div className="rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] bg-[#060608]/50 px-4 py-10 text-center">
                     <p className="text-sm text-[#A1A1AA]">
-                      Digite o nome ou SKU do produto para começar
+                      Digite o nome ou código do produto para começar
                     </p>
                     <p className="mt-1 text-xs text-[#52525B]">
                       A busca inicia automaticamente após 2 caracteres.
@@ -430,7 +425,7 @@ export default function PdvPage() {
                       Nenhum produto encontrado para “{busca.trim()}”
                     </p>
                     <p className="mt-1 text-xs text-[#52525B]">
-                      Verifique a grafia ou cadastre o produto em Estoque.
+                      Confira o nome ou código. Você pode cadastrar o produto em Produtos.
                     </p>
                   </div>
                 )}
@@ -734,7 +729,7 @@ export default function PdvPage() {
           onClose={() => setScannerOpen(false)}
           onScan={(code) => {
             setBusca(code);
-            toastSuccess('Produto escaneado — buscando...');
+            setTentativaBusca((v) => v + 1);
           }}
         />
       </fieldset>

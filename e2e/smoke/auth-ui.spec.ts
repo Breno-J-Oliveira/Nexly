@@ -68,16 +68,26 @@ test('cadastro chega à revisão sem pedir cartão e exige aceite', async ({ pag
   ).toBeVisible();
 });
 
-test('recuperação não confirma envio de e-mail indisponível', async ({ page }) => {
+test('recuperação não confirma envio de e-mail indisponível', async ({ page, baseURL }) => {
+  await page.route('**/api/auth/recuperacao/status', (route) =>
+    route.fulfill({
+      headers: {
+        'Access-Control-Allow-Origin': new URL(baseURL!).origin,
+        'Access-Control-Allow-Credentials': 'true',
+      },
+      json: { disponivel: false },
+    }),
+  );
   await page.goto('/recuperar-senha');
-  await expect(page.getByRole('status')).toContainText('Recuperação por e-mail indisponível');
-  await expect(page.getByRole('button', { name: 'Enviar instruções' })).toHaveCount(0);
+  await expect(page.getByRole('status')).toContainText('Envio de links indisponível');
+  await expect(page.getByRole('button', { name: 'Enviar link de recuperação' })).toHaveCount(0);
   await page.getByRole('link', { name: 'Voltar ao login', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
 
 test('recuperação permite reenviar depois de corrigir o endereço', async ({ page, baseURL }) => {
   const enderecos: string[] = [];
+  let envioDisponivel = true;
   const headers = {
     'Access-Control-Allow-Origin': new URL(baseURL!).origin,
     'Access-Control-Allow-Credentials': 'true',
@@ -93,21 +103,27 @@ test('recuperação permite reenviar depois de corrigir o endereço', async ({ p
       return;
     }
     enderecos.push(route.request().postDataJSON().email);
-    await route.fulfill({ headers, json: { ok: true } });
+    await route.fulfill({ headers, json: { disponivel: envioDisponivel } });
   });
   await page.goto('/recuperar-senha');
   const email = page.getByLabel('E-mail da conta');
-  const enviar = page.getByRole('button', { name: 'Enviar instruções' });
+  const enviar = page.getByRole('button', { name: 'Enviar link de recuperação' });
+  const reenviar = page.getByRole('button', { name: 'Solicitar outro link' });
+  const confirmacao = page.getByText(/você receberá um link válido por 30 minutos/);
   await email.fill('primeiro@example.test');
   await enviar.click();
-  await expect(enviar).toBeDisabled();
-  await expect(page.getByText(/O link expira em 30 minutos/)).toBeVisible();
+  await expect(reenviar).toBeEnabled();
+  await expect(confirmacao).toBeVisible();
   await email.fill('corrigido@example.test');
   await expect(enviar).toBeEnabled();
-  await expect(page.getByText(/O link expira em 30 minutos/)).toHaveCount(0);
+  await expect(confirmacao).toHaveCount(0);
   await enviar.click();
-  await expect(page.getByText(/O link expira em 30 minutos/)).toBeVisible();
+  await expect(confirmacao).toBeVisible();
   expect(enderecos).toEqual(['primeiro@example.test', 'corrigido@example.test']);
+  envioDisponivel = false;
+  await reenviar.click();
+  await expect(page.getByRole('status')).toContainText('Envio de links indisponível');
+  await expect(confirmacao).toHaveCount(0);
 });
 
 test('cadastro posiciona o foco no primeiro campo inválido', async ({ page }) => {

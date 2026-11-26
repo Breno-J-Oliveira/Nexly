@@ -9,8 +9,9 @@ import { ActionStatus, useAction } from '@/components/gestao/GestaoUI';
 export function PasswordRecoveryForm() {
   const status = useApi<{ disponivel: boolean }>('/auth/recuperacao/status'),
     action = useAction();
-  const [email, setEmail] = useState(''),
-    [emailEnviado, setEmailEnviado] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailEnviado, setEmailEnviado] = useState('');
+  const [envioIndisponivel, setEnvioIndisponivel] = useState(false);
   const emailNormalizado = email.trim().toLowerCase();
   const enviado = emailEnviado !== '' && emailNormalizado === emailEnviado;
   if (status.loading)
@@ -19,22 +20,30 @@ export function PasswordRecoveryForm() {
         Verificando disponibilidade…
       </p>
     );
-  if (!status.data?.disponivel)
+  if (status.error || !status.data?.disponivel || envioIndisponivel)
     return (
       <div
         role="status"
         className="mt-6 rounded-xl border border-amber-400/20 bg-amber-500/5 p-4 text-sm leading-6 text-[#D4D4D8]"
       >
-        <p className="font-medium text-amber-200">Recuperação por e-mail indisponível</p>
-        <p className="mt-2">
-          O envio de instruções por e-mail ainda não está disponível. Você pode voltar ao login para
-          tentar entrar novamente.
+        <p className="font-medium text-amber-200">
+          {status.error ? 'Não foi possível conectar ao Nexly' : 'Envio de links indisponível'}
         </p>
-        {status.error && (
-          <Button className="mt-3" variant="ghost" onClick={() => void status.refetch()}>
-            Verificar novamente
-          </Button>
-        )}
+        <p className="mt-2">
+          {status.error
+            ? 'Confira sua conexão e tente novamente.'
+            : 'O Nexly não consegue enviar um link agora. Tente novamente mais tarde.'}
+        </p>
+        <Button
+          className="mt-3"
+          variant="ghost"
+          onClick={() => {
+            setEnvioIndisponivel(false);
+            void status.refetch();
+          }}
+        >
+          Verificar novamente
+        </Button>
       </div>
     );
   return (
@@ -42,13 +51,27 @@ export function PasswordRecoveryForm() {
       className="mt-6 space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
-        if (enviado) return;
-        void action.run(async () => {
-          await api.post('/auth/recuperacao/solicitar', { email: emailNormalizado });
-          setEmailEnviado(emailNormalizado);
-        }, 'Se a conta existir e estiver ativa, enviaremos as instruções. O link expira em 30 minutos.');
+        void action.run(
+          async () => {
+            const { data } = await api.post<{ disponivel: boolean }>(
+              '/auth/recuperacao/solicitar',
+              { email: emailNormalizado },
+              { timeout: 15_000 },
+            );
+            if (!data.disponivel) {
+              setEnvioIndisponivel(true);
+              setEmailEnviado('');
+              return false;
+            }
+            setEmailEnviado(emailNormalizado);
+          },
+          'Se houver uma conta ativa com este e-mail, você receberá um link válido por 30 minutos. Confira também a pasta de spam.',
+        );
       }}
     >
+      <p className="text-sm leading-6 text-[#A1A1AA]">
+        Informe o e-mail que você usa para entrar no Nexly.
+      </p>
       <Input
         label="E-mail da conta"
         type="email"
@@ -56,11 +79,17 @@ export function PasswordRecoveryForm() {
         required
         maxLength={254}
         value={email}
+        readOnly={action.busy}
         onChange={(e) => setEmail(e.target.value)}
       />
       <ActionStatus error={action.error} success={enviado ? action.success : ''} />
-      <Button type="submit" loading={action.busy} disabled={enviado}>
-        Enviar instruções
+      {enviado && (
+        <p className="text-sm leading-6 text-[#A1A1AA]">
+          Se precisar pedir outro link, use o e-mail mais recente para redefinir sua senha.
+        </p>
+      )}
+      <Button type="submit" loading={action.busy} className="w-full">
+        {enviado ? 'Solicitar outro link' : 'Enviar link de recuperação'}
       </Button>
     </form>
   );
@@ -79,6 +108,7 @@ export function PasswordResetForm() {
     setToken(/^[a-f0-9]{64}$/.test(value) ? value : '');
     window.history.replaceState(window.history.state, '', window.location.pathname);
   }, []);
+  if (concluido) return <ActionStatus error="" success={action.success} />;
   if (token === null) return <p role="status">Preparando redefinição…</p>;
   if (!token)
     return (
@@ -96,52 +126,60 @@ export function PasswordResetForm() {
         e.preventDefault();
         if (senha !== confirmacao) return;
         void action.run(async () => {
-          await api.post('/auth/recuperacao/redefinir', { token, senha });
+          await api.post('/auth/recuperacao/redefinir', { token, senha }, { timeout: 15_000 });
           setConcluido(true);
           setSenha('');
           setConfirmacao('');
-          setToken('concluido');
-        }, 'Senha alterada. Todas as sessões anteriores foram encerradas.');
+          setToken('');
+        }, 'Senha alterada. Entre novamente com a nova senha.');
       }}
     >
-      {!concluido && (
-        <>
-          <p className="text-sm leading-6 text-[#A1A1AA]">
-            Use entre 12 e 72 caracteres, incluindo letras e números. A verificação em duas etapas
-            continua ativa se você já a configurou.
-          </p>
-          <Input
-            label="Nova senha"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={12}
-            maxLength={72}
-            pattern="(?=.*[A-Za-z])(?=.*[0-9]).+"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-          />
-          <Input
-            label="Confirme a nova senha"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={12}
-            maxLength={72}
-            value={confirmacao}
-            onChange={(e) => setConfirmacao(e.target.value)}
-          />
-          {confirmacao && senha !== confirmacao && (
-            <p role="alert" className="text-sm text-amber-200">
-              As senhas precisam ser iguais.
-            </p>
-          )}
-          <Button type="submit" loading={action.busy} disabled={senha !== confirmacao}>
-            Salvar nova senha
-          </Button>
-        </>
+      <p className="text-sm leading-6 text-[#A1A1AA]">
+        Use entre 12 e 72 caracteres, incluindo letras e números. A verificação em duas etapas
+        continua ativa se você já a configurou.
+      </p>
+      <Input
+        label="Nova senha"
+        type="password"
+        autoComplete="new-password"
+        required
+        minLength={12}
+        maxLength={72}
+        pattern="(?=.*[A-Za-z])(?=.*[0-9]).+"
+        value={senha}
+        readOnly={action.busy}
+        onChange={(e) => setSenha(e.target.value)}
+      />
+      <Input
+        label="Confirme a nova senha"
+        type="password"
+        autoComplete="new-password"
+        required
+        minLength={12}
+        maxLength={72}
+        value={confirmacao}
+        readOnly={action.busy}
+        onChange={(e) => setConfirmacao(e.target.value)}
+      />
+      {confirmacao && senha !== confirmacao && (
+        <p role="alert" className="text-sm text-amber-200">
+          As senhas precisam ser iguais.
+        </p>
       )}
+      <Button
+        type="submit"
+        loading={action.busy}
+        disabled={senha !== confirmacao}
+        className="w-full"
+      >
+        Salvar nova senha
+      </Button>
       <ActionStatus {...action} />
+      {action.error && (
+        <Link className="block text-sm text-[#A5B4FC] underline" href="/recuperar-senha">
+          Solicitar novo link de recuperação
+        </Link>
+      )}
     </form>
   );
 }
