@@ -127,10 +127,11 @@ test('inventory supports complete search, real alerts, mobile entries and date-o
     await expect(row).toBeVisible();
     await row.getByRole('button', { name: 'Editar', exact: true }).click();
     const edit = page.getByRole('dialog', { name: 'Editar produto', exact: true });
-    await expect(edit.getByLabel('Data de vencimento')).toHaveValue('2026-10-15');
-    await edit.getByLabel('Data de vencimento').fill('');
+    await edit.getByText('Custo, alerta de estoque e validade', { exact: true }).click();
+    await expect(edit.getByLabel('Data de validade')).toHaveValue('2026-10-15');
+    await edit.getByLabel('Data de validade').fill('');
     await edit.getByLabel('Categoria', { exact: true }).fill('');
-    await edit.getByRole('button', { name: 'Salvar', exact: true }).click();
+    await edit.getByRole('button', { name: 'Salvar alterações', exact: true }).click();
     await expect(edit).toBeHidden();
     await expect
       .poll(async () => {
