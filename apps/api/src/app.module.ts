@@ -46,6 +46,7 @@ import { RedisModule } from './redis/redis.module';
 import { ExperienciaModule } from './experiencia/experiencia.controller';
 import { AssinaturasModule } from './assinaturas/assinaturas.module';
 import { PlatformModule } from './platform/platform.module';
+import { PlatformWorkspaceModule } from './platform-workspace/platform-workspace.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { PlatformModule } from './platform/platform.module';
     ExperienciaModule,
     AssinaturasModule,
     PlatformModule,
+    PlatformWorkspaceModule,
     OperacoesModule,
     EventEmitterModule.forRoot(),
     JwtModule.registerAsync({

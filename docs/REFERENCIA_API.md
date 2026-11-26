@@ -336,6 +336,14 @@ Fonte: [apps/api/src/platform-access/platform-access.controller.ts](../apps/api/
 | POST   | `/api/platform/team`            | `adicionar`            | Política global e verificações do fluxo |
 | PATCH  | `/api/platform/team/:id`        | `atualizar`            | Política global e verificações do fluxo |
 
+## PlatformWorkspaceController
+
+Fonte: [apps/api/src/platform-workspace/platform-workspace.controller.ts](../apps/api/src/platform-workspace/platform-workspace.controller.ts).
+
+| Método | Caminho                   | Operação no controller | Decorators de acesso explícitos |
+| ------ | ------------------------- | ---------------------- | ------------------------------- |
+| GET    | `/api/platform/workspace` | `resumo`               | Roles(Role.ADMIN)               |
+
 ## PlatformController
 
 Fonte: [apps/api/src/platform/platform.controller.ts](../apps/api/src/platform/platform.controller.ts).
@@ -440,4 +448,4 @@ Fonte: [apps/api/src/whatsapp/whatsapp.controller.ts](../apps/api/src/whatsapp/w
 | POST   | `/api/whatsapp/test`          | `testSend`             | Roles('ADMIN')                  |
 | POST   | `/api/whatsapp/reminder/test` | `testReminder`         | Roles('ADMIN')                  |
 
-Total de declarações de rota nesta revisão: **207**.
+Total de declarações de rota nesta revisão: **208**.

@@ -579,7 +579,7 @@
 .field > span:first-child {
   font-weight: 600;
 }
-.field :is(input, select) {
+.field :is(input, select, textarea) {
   min-height: 40px;
   width: 100%;
   min-width: 0;
@@ -588,6 +588,9 @@
   border-radius: 8px;
   color: var(--text);
   background: #101017;
+}
+.field textarea {
+  resize: vertical;
 }
 .field input::placeholder {
   color: #9c9caf;

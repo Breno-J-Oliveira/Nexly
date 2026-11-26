@@ -69,3 +69,25 @@ node apps/api/prisma/bootstrap-platform-owner.cjs --usuario <UUID>
 O diagnóstico do Stripe informa se o ambiente foi configurado. A validação de
 cupons e pagamentos usa o provedor e deve ser ensaiada no Sandbox antes da
 ativação comercial. [Configuração de pagamentos](PAGAMENTOS.md).
+
+## Minha operação
+
+Em `/admin#workspace`, o proprietário que também administra a empresa vinculada
+pode acompanhar tarefas, prazos vencidos, contatos ativos e agendamentos dos
+próximos sete dias no fuso da empresa. A aba permite criar tarefas e abrir os
+módulos habilitados, como agenda, financeiro, estoque, documentos e usuários.
+Os registros pertencem à empresa da conta autenticada.
+
+### Dados de demonstração
+
+Com a mesma `DATABASE_URL` usada no cadastro do proprietário, gere a prévia e
+confira a empresa que receberá os dados. A opção `--aplicar` grava os registros.
+
+```sh
+node apps/api/prisma/seed-platform-workspace.cjs --usuario <UUID>
+node apps/api/prisma/seed-platform-workspace.cjs --usuario <UUID> --aplicar
+```
+
+A carga inclui quatro tarefas e três contatos fictícios marcados com `[DEMO]`.
+A reaplicação preserva registros e ajustes existentes. Os exemplos não enviam
+mensagens ou geram cobranças.

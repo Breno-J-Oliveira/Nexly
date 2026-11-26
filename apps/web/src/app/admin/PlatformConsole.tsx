@@ -12,6 +12,7 @@ import {
   faHeartPulse,
   faLink,
   faLock,
+  faBriefcase,
   faShieldHalved,
   faTicket,
   faUserGroup,
@@ -19,6 +20,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import { Companies, type CompanySubscription } from './Companies';
 import { Coupons } from './Coupons';
+import { InternalWorkspace } from './InternalWorkspace';
 import { Operations } from './Operations';
 import { Overview } from './Overview';
 import { Team } from './Team';
@@ -44,6 +46,11 @@ const sections = {
     label: 'Empresas',
     description: 'Consulte os negócios da plataforma e a situação das assinaturas.',
     icon: faBuilding,
+  },
+  workspace: {
+    label: 'Minha operação',
+    description: 'Organize as tarefas, os contatos e a rotina da empresa interna.',
+    icon: faBriefcase,
   },
   team: {
     label: 'Equipe interna',
@@ -109,7 +116,7 @@ function AccessRestricted({ twoFactor = false }: { twoFactor?: boolean }) {
 }
 
 function Workspace({ member }: { member: PlatformMember }) {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const sectionHash = useSyncExternalStore(subscribeSection, readSection, initialSection);
   const [companyPreset, setCompanyPreset] = useState<{
     plan?: Plan;
@@ -120,9 +127,11 @@ function Workspace({ member }: { member: PlatformMember }) {
   const canManageTeam = member.papel === 'OWNER';
   const canManageCoupons = member.papel === 'OWNER' || member.papel === 'FINANCE';
   const canViewOperations = member.papel === 'OWNER' || member.papel === 'OPERATIONS';
+  const canManageWorkspace = member.papel === 'OWNER' && user?.role === 'ADMIN';
   const tabs: Section[] = [
     'overview',
     'companies',
+    ...(canManageWorkspace ? ['workspace' as const] : []),
     ...(canManageTeam ? ['team' as const] : []),
     ...(canManageCoupons ? ['coupons' as const] : []),
     ...(canViewOperations ? ['operations' as const] : []),
@@ -236,6 +245,7 @@ function Workspace({ member }: { member: PlatformMember }) {
           />
         )}
         {active === 'team' && canManageTeam && <Team />}
+        {active === 'workspace' && canManageWorkspace && <InternalWorkspace />}
         {active === 'coupons' && canManageCoupons && <Coupons />}
         {active === 'operations' && canViewOperations && <Operations />}
       </main>
