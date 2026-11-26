@@ -100,6 +100,12 @@ test('calendar filters, late appointments, mobile creation and cancellation work
     await page.waitForURL('**/dashboard');
     await page.goto('/agenda');
     await expect(page.getByText(noite.nome, { exact: true })).toBeVisible();
+    await page.getByLabel('Ir para a data', { exact: true }).fill(dates.local.slice(0, 10));
+    await expect(
+      page.getByRole('heading', { name: 'Nenhum agendamento para este dia' }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Hoje', exact: true }).click();
+    await expect(page.getByText(noite.nome, { exact: true })).toBeVisible();
     await page.getByLabel('Filtrar por profissional').selectOption(prof2.id);
     await expect(page.getByText(noite.nome, { exact: true })).toHaveCount(0);
     await expect(page.getByText(outro.nome, { exact: true })).toBeVisible();

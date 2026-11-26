@@ -16,9 +16,11 @@ interface Cliente {
 export function ClienteSelect({
   value,
   onChange,
+  onSavingChange,
 }: {
   value: string;
   onChange: (id: string) => void;
+  onSavingChange: (salvando: boolean) => void;
 }) {
   const { user } = useAuth();
   const [cadastrando, setCadastrando] = useState(false);
@@ -120,11 +122,10 @@ export function ClienteSelect({
               : `${total} ${total === 1 ? 'cliente encontrado' : 'clientes encontrados'}.`}
         </p>
       )}
-      {hasPermission(user?.role, 'clientes:create') && (
+      {!cadastrando && hasPermission(user?.role, 'clientes:create') && (
         <Button
           type="button"
           variant="secondary"
-          aria-expanded={cadastrando}
           onClick={() => {
             setCriado(false);
             setCadastrando(true);
@@ -137,6 +138,7 @@ export function ClienteSelect({
         <CadastroRapido
           recurso="clientes"
           onCancel={fecharCadastro}
+          onSavingChange={onSavingChange}
           onCreated={(cliente) => {
             setSelecionado(cliente);
             onChange(cliente.id);

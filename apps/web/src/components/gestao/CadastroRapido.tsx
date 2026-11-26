@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { isAxiosError } from 'axios';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/api';
@@ -23,10 +24,12 @@ export function CadastroRapido<T extends keyof Cadastros>({
   recurso,
   onCancel,
   onCreated,
+  onSavingChange,
 }: {
   recurso: T;
   onCancel: () => void;
   onCreated: (registro: Cadastros[T]) => void;
+  onSavingChange?: (salvando: boolean) => void;
 }) {
   const tituloId = useId();
   const nomeRef = useRef<HTMLInputElement>(null);
@@ -50,21 +53,33 @@ export function CadastroRapido<T extends keyof Cadastros>({
     }
     emAndamento.current = true;
     setSalvando(true);
+    onSavingChange?.(true);
     setErro('');
     try {
-      const { data } = await api.post<Cadastros[T]>(`/${recurso}`, {
-        nome,
-        ...(telefone ? { telefone } : {}),
-        ...(recurso === 'servicos'
-          ? { duracaoMin: Number(dados.get('duracaoMin')), preco: Number(dados.get('preco')) }
-          : {}),
-      });
+      const { data } = await api.post<Cadastros[T]>(
+        `/${recurso}`,
+        {
+          nome,
+          ...(telefone ? { telefone } : {}),
+          ...(recurso === 'servicos'
+            ? { duracaoMin: Number(dados.get('duracaoMin')), preco: Number(dados.get('preco')) }
+            : {}),
+        },
+        { timeout: 20_000 },
+      );
       onCreated(data);
     } catch (error) {
-      setErro(parseApiError(error).message || 'Não foi possível salvar. Tente novamente.');
+      if (isAxiosError(error) && (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT')) {
+        setErro(
+          'O servidor demorou a responder. Volte à seleção e procure pelo nome antes de cadastrar novamente.',
+        );
+      } else {
+        setErro(parseApiError(error).message || 'Não foi possível salvar. Tente novamente.');
+      }
     } finally {
       emAndamento.current = false;
       setSalvando(false);
+      onSavingChange?.(false);
     }
   }
 
@@ -125,7 +140,7 @@ export function CadastroRapido<T extends keyof Cadastros>({
       )}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" loading={salvando}>
-          Salvar e selecionar
+          {salvando ? 'Salvando cadastro…' : 'Salvar e selecionar'}
         </Button>
         <Button type="button" variant="secondary" disabled={salvando} onClick={onCancel}>
           Voltar à seleção

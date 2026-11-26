@@ -80,6 +80,11 @@ test('recuperação não confirma envio de e-mail indisponível', async ({ page,
   );
   await page.goto('/recuperar-senha');
   await expect(page.getByRole('status')).toContainText('Envio de links indisponível');
+  await expect(page.getByRole('status')).toContainText('Se você já usa o Google');
+  await expect(page.getByRole('link', { name: 'Fale com o suporte.' })).toHaveAttribute(
+    'href',
+    '/suporte',
+  );
   await expect(page.getByRole('button', { name: 'Enviar link de recuperação' })).toHaveCount(0);
   await page.getByRole('link', { name: 'Voltar ao login', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);

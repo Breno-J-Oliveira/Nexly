@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Length, Max, MaxLength, Min } from 'class-validator';
 import { PaginacaoDto } from '../../common/dto/paginacao.dto';
 import { TrimText } from '../../common/validation/trim-text';
 
@@ -9,6 +9,12 @@ export class ListarProdutosDto extends PaginacaoDto {
   @IsString()
   @MaxLength(120)
   search?: string;
+
+  @IsOptional()
+  @TrimText()
+  @IsString()
+  @Length(2, 60)
+  sku?: string;
 
   @IsOptional()
   @TrimText()

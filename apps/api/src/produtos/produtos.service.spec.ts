@@ -28,6 +28,19 @@ describe('ProdutosService', () => {
     service = moduleRef.get(ProdutosService);
   });
 
+  it('busca o código exato de produto ativo e preserva zeros à esquerda', async () => {
+    prisma.client.produto.findMany.mockResolvedValue([]);
+
+    await service.listar(1, 1, { sku: '007530ABC' });
+
+    expect(prisma.client.produto.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { ativo: true, sku: '007530ABC' }, take: 1 }),
+    );
+    expect(prisma.client.produto.count).toHaveBeenCalledWith({
+      where: { ativo: true, sku: '007530ABC' },
+    });
+  });
+
   describe('listarEmAlerta', () => {
     it('filtra abaixo do mínimo no banco antes de limitar e conta todos os alertas', async () => {
       prisma.client.produto.findMany.mockResolvedValue([

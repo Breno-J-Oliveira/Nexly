@@ -57,6 +57,8 @@ As regras de concorrência e transação devem preservar consistência quando du
 
 O PDV diferencia catálogo carregando, busca sem resultados e falha de conexão, com novas tentativas na própria tela. A busca de clientes consulta o cadastro completo e preserva a pessoa selecionada ao trocar o filtro. O atalho `/` foca a busca de produtos sem interferir na digitação de outros campos.
 
+O leitor procura o código exato no catálogo da unidade. Depois de encontrar o produto, o caixa confirma a inclusão no carrinho. Após o registro da venda, o PDV consulta o estoque novamente. Se cadastrar um cliente durante a venda, aguarde o cadastro terminar. Quando o servidor demorar a responder, procure o cadastro pelo nome antes de tentar salvar outra vez.
+
 Descontos negativos, acima do total ou acima de 100% impedem a finalização e mostram uma orientação junto ao campo. Durante o envio, o carrinho e as condições da venda ficam bloqueados. Se a resposta se perder, a repetição da mesma venda reutiliza sua chave de operação para evitar duplicação. Essa proteção não significa que atualizar ou fechar a página recupere um carrinho não salvo.
 
 Consultas comuns à API têm prazo de 20 segundos; downloads, 60 segundos, salvo prazo específico da operação. A interface permite tentar novamente após falha. Gravações não são repetidas automaticamente.

@@ -32,8 +32,14 @@ export function PasswordRecoveryForm() {
         <p className="mt-2">
           {status.error
             ? 'Confira sua conexão e tente novamente.'
-            : 'O Nexly não consegue enviar um link agora. Tente novamente mais tarde.'}
+            : 'O envio de links de recuperação está indisponível no momento.'}
         </p>
+        {!status.error && (
+          <p className="mt-2">
+            Se você já usa o Google para entrar no Nexly, volte ao login e escolha essa opção. Se
+            precisar de ajuda com o acesso, fale com o suporte abaixo.
+          </p>
+        )}
         <Button
           className="mt-3"
           variant="ghost"
@@ -51,22 +57,19 @@ export function PasswordRecoveryForm() {
       className="mt-6 space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
-        void action.run(
-          async () => {
-            const { data } = await api.post<{ disponivel: boolean }>(
-              '/auth/recuperacao/solicitar',
-              { email: emailNormalizado },
-              { timeout: 15_000 },
-            );
-            if (!data.disponivel) {
-              setEnvioIndisponivel(true);
-              setEmailEnviado('');
-              return false;
-            }
-            setEmailEnviado(emailNormalizado);
-          },
-          'Se houver uma conta ativa com este e-mail, você receberá um link válido por 30 minutos. Confira também a pasta de spam.',
-        );
+        void action.run(async () => {
+          const { data } = await api.post<{ disponivel: boolean }>(
+            '/auth/recuperacao/solicitar',
+            { email: emailNormalizado },
+            { timeout: 15_000 },
+          );
+          if (!data.disponivel) {
+            setEnvioIndisponivel(true);
+            setEmailEnviado('');
+            return false;
+          }
+          setEmailEnviado(emailNormalizado);
+        }, 'Se houver uma conta ativa com este e-mail, você receberá um link válido por 30 minutos. Confira também a pasta de spam.');
       }}
     >
       <p className="text-sm leading-6 text-[#A1A1AA]">

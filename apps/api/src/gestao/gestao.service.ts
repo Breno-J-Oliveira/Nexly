@@ -11,6 +11,7 @@ import { recuperarSenhaAppUrl } from '../auth/recuperacao-config';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { EstoqueService } from '../estoque/estoque.service';
+import { BuscaProduto, filtroBuscaProduto } from '../produtos/filtro-busca-produto';
 import { ComprovacaoDto, ImportacaoDto, PreferenciasDto, TransferenciaDto } from './gestao.dto';
 import { entradaFilial, saidaFilial } from './unidade-estoque';
 
@@ -120,7 +121,7 @@ export class GestaoService {
       take: 200,
     });
   }
-  async catalogoFilial(empresaId: string, filialId: string) {
+  async catalogoFilial(empresaId: string, filialId: string, busca: BuscaProduto) {
     if (
       !(await this.prisma.client.filial.findFirst({
         where: { id: filialId, empresaId, ativa: true },
@@ -132,9 +133,10 @@ export class GestaoService {
         empresaId,
         ativo: true,
         saldosFilial: { some: { filialId, empresaId, quantidade: { gt: 0 } } },
+        ...filtroBuscaProduto(busca),
       },
       include: { saldosFilial: { where: { filialId, empresaId }, select: { quantidade: true } } },
-      orderBy: { nome: 'asc' },
+      orderBy: [{ nome: 'asc' }, { id: 'asc' }],
       take: 500,
     });
     return {
