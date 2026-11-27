@@ -5,6 +5,7 @@ import { SelectField, erroDaAcao } from '@/components/gestao/GestaoUI';
 import { PageToolbar } from '@/components/ui/PageToolbar';
 
 import { useEffect, useState, useRef } from 'react';
+import { isAxiosError } from 'axios';
 import { Button } from '@/components/ui/Button';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Input } from '@/components/ui/Input';
@@ -35,9 +36,11 @@ export default function PdvPage() {
     [catalogoLoading, setCatalogoLoading] = useState(false);
   const [catalogo, setCatalogo] = useState<Produto[]>([]);
   const [busca, setBusca] = useState('');
+  const [buscaPorCodigo, setBuscaPorCodigo] = useState(false);
   const [resultados, setResultados] = useState<Produto[]>([]);
   const [itens, setItens] = useState<Item[]>([]);
   const [clienteId, setClienteId] = useState('');
+  const [clienteSalvando, setClienteSalvando] = useState(false);
   const [finalizando, setFinalizando] = useState(false);
   const [sucesso, setSucesso] = useState(false);
   const [mostrarPagamento, setMostrarPagamento] = useState(false);
@@ -60,11 +63,22 @@ export default function PdvPage() {
   const [tentativaBusca, setTentativaBusca] = useState(0);
   const [tentativaCatalogo, setTentativaCatalogo] = useState(0);
   const buscaRef = useRef<HTMLInputElement>(null);
+  const termoBusca = busca.trim();
+  const buscaAtiva = buscaPorCodigo || termoBusca.length >= 2;
+  const codigoInvalido = buscaPorCodigo && (termoBusca.length < 2 || termoBusca.length > 60);
+
+  function alterarBusca(valor: string, porCodigo = false) {
+    setBusca(valor);
+    setBuscaPorCodigo(porCodigo);
+    if (valor.trim() === termoBusca && porCodigo === buscaPorCodigo) return;
+    setResultados([]);
+    setErroBusca(false);
+    setBuscando(porCodigo || valor.trim().length >= 2);
+  }
 
   useEffect(() => {
     const controller = new AbortController();
     setCatalogo([]);
-    setResultados([]);
     setCatalogoLoading(true);
     setErroCatalogo('');
     api
@@ -87,41 +101,64 @@ export default function PdvPage() {
   useEffect(() => {
     setResultados([]);
     setErroBusca(false);
-    setBuscando(busca.trim().length >= 2);
+    setBuscando(buscaAtiva && !codigoInvalido);
+    if (!buscaAtiva || codigoInvalido) return;
     const controller = new AbortController();
-    const t = setTimeout(() => {
-      if (busca.trim().length < 2) {
-        setBuscando(false);
-        return;
-      }
-      if (filialId) {
-        const term = busca.trim().toLocaleLowerCase('pt-BR');
-        setResultados(
-          catalogo.filter((p) => `${p.nome} ${p.sku}`.toLocaleLowerCase('pt-BR').includes(term)),
-        );
-        setBuscando(false);
-        return;
-      }
-      api
-        .get<{ data: Produto[] }>('/produtos', {
-          params: { search: busca.trim(), limit: 10 },
-          signal: controller.signal,
-        })
-        .then((r) => {
-          if (!controller.signal.aborted) setResultados(r.data.data);
-        })
-        .catch(() => {
-          if (!controller.signal.aborted) setErroBusca(true);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setBuscando(false);
-        });
-    }, 300);
+    const t = setTimeout(
+      () => {
+        api
+          .get<{ data: Produto[] }>(
+            filialId ? `/gestao/catalogo-filial/${filialId}` : '/produtos',
+            {
+              params: {
+                ...(buscaPorCodigo ? { sku: termoBusca } : { search: termoBusca }),
+                ...(filialId ? {} : { limit: buscaPorCodigo ? 1 : 10 }),
+              },
+              signal: controller.signal,
+            },
+          )
+          .catch((error: unknown) => {
+            if (
+              controller.signal.aborted ||
+              filialId ||
+              !buscaPorCodigo ||
+              !isAxiosError(error) ||
+              error.response?.status !== 400
+            ) {
+              throw error;
+            }
+            // Durante o deploy, a API anterior pode aceitar apenas o filtro por texto.
+            return api.get<{ data: Produto[] }>('/produtos', {
+              params: { search: termoBusca, limit: 100 },
+              signal: controller.signal,
+            });
+          })
+          .then((r) => {
+            if (controller.signal.aborted) return;
+            const termo = termoBusca.toLocaleLowerCase('pt-BR');
+            setResultados(
+              r.data.data.filter((produto) =>
+                buscaPorCodigo
+                  ? produto.sku === termoBusca
+                  : produto.nome.toLocaleLowerCase('pt-BR').includes(termo) ||
+                    produto.sku.toLocaleLowerCase('pt-BR').includes(termo),
+              ),
+            );
+          })
+          .catch(() => {
+            if (!controller.signal.aborted) setErroBusca(true);
+          })
+          .finally(() => {
+            if (!controller.signal.aborted) setBuscando(false);
+          });
+      },
+      buscaPorCodigo ? 0 : 300,
+    );
     return () => {
       clearTimeout(t);
       controller.abort();
     };
-  }, [busca, filialId, catalogo, tentativaBusca]);
+  }, [buscaAtiva, buscaPorCodigo, codigoInvalido, filialId, termoBusca, tentativaBusca]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -154,8 +191,7 @@ export default function PdvPage() {
       }
       return [...prev, { produto, quantidade: 1 }];
     });
-    setResultados([]);
-    setBusca('');
+    alterarBusca('');
   };
 
   const mudarQuantidade = (id: string, delta: number): void => {
@@ -172,10 +208,11 @@ export default function PdvPage() {
   };
 
   const remover = (id: string): void => {
+    if (clienteSalvando) return;
     setItens((prev) => prev.filter((i) => i.produto.id !== id));
   };
 
-  const produtosExibidos = busca.trim().length >= 2 ? resultados : catalogo;
+  const produtosExibidos = buscaAtiva ? resultados : catalogo;
   const total =
     itens.reduce((acc, i) => acc + Math.round(Number(i.produto.preco) * 100) * i.quantidade, 0) /
     100;
@@ -197,7 +234,8 @@ export default function PdvPage() {
   const totalFinal = Math.max(0, total - descontoAplicado - descontoCupom);
 
   const finalizar = async (): Promise<void> => {
-    if (finalizando || aplicandoCupom || descontoInvalido || !itens.length) return;
+    if (finalizando || clienteSalvando || aplicandoCupom || descontoInvalido || !itens.length)
+      return;
     setFinalizando(true);
     setErroVenda('');
     try {
@@ -218,13 +256,10 @@ export default function PdvPage() {
         chaveOperacao: tentativa.current.chave,
       });
       tentativa.current = null;
-      setCatalogo((prev) =>
-        prev.map((p) => ({
-          ...p,
-          estoqueAtual:
-            p.estoqueAtual - (itens.find((i) => i.produto.id === p.id)?.quantidade || 0),
-        })),
-      );
+      alterarBusca('');
+      setCatalogo([]);
+      setCatalogoLoading(true);
+      setTentativaCatalogo((atual) => atual + 1);
       setItens([]);
       setClienteId('');
       setSucesso(true);
@@ -299,10 +334,10 @@ export default function PdvPage() {
             <SelectField
               label="Estoque da venda"
               value={filialId}
-              disabled={itens.length > 0 || finalizando}
+              disabled={itens.length > 0 || finalizando || clienteSalvando}
               onChange={(e) => {
                 setFilialId(e.target.value);
-                setBusca('');
+                alterarBusca('');
               }}
             >
               <option value="">Central</option>
@@ -313,8 +348,8 @@ export default function PdvPage() {
               ))}
             </SelectField>
             <p className="mt-2 text-xs text-[#A1A1AA]">
-              Esvazie o carrinho para trocar a unidade. Até {filialId ? '500' : '100'} produtos
-              carregados.
+              A busca inclui produtos fora da lista inicial. Esvazie o carrinho para trocar a
+              unidade.
             </p>
             {unidades.error && (
               <p role="alert" className="mt-2 text-sm text-amber-200">
@@ -345,8 +380,9 @@ export default function PdvPage() {
                   ref={buscaRef}
                   label="Buscar produto"
                   placeholder="Nome ou código do produto"
+                  maxLength={120}
                   value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
+                  onChange={(e) => alterarBusca(e.target.value)}
                 />
               </div>
               <Button type="button" variant="secondary" onClick={() => setScannerOpen(true)}>
@@ -399,36 +435,37 @@ export default function PdvPage() {
               ))}
 
               {/* Empty state: nenhuma busca iniciada */}
-              {busca.trim().length < 2 &&
-                catalogo.length === 0 &&
-                !catalogoLoading &&
-                !erroCatalogo && (
-                  <div className="rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] bg-[#060608]/50 px-4 py-10 text-center">
-                    <p className="text-sm text-[#A1A1AA]">
-                      Digite o nome ou código do produto para começar
-                    </p>
-                    <p className="mt-1 text-xs text-[#52525B]">
-                      A busca inicia automaticamente após 2 caracteres.
-                    </p>
-                  </div>
-                )}
+              {!buscaAtiva && catalogo.length === 0 && !catalogoLoading && !erroCatalogo && (
+                <div className="rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] bg-[#060608]/50 px-4 py-10 text-center">
+                  <p className="text-sm text-[#A1A1AA]">
+                    Digite o nome ou código do produto para começar
+                  </p>
+                  <p className="mt-1 text-xs text-[#52525B]">
+                    A busca inicia automaticamente após 2 caracteres.
+                  </p>
+                </div>
+              )}
 
               {/* Empty state: busca sem resultado */}
-              {busca.trim().length >= 2 &&
-                resultados.length === 0 &&
-                !buscando &&
-                !erroBusca &&
-                !catalogoLoading &&
-                !erroCatalogo && (
-                  <div className="rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] bg-[#060608]/50 px-4 py-10 text-center">
-                    <p className="text-sm text-[#D4D4D8]">
-                      Nenhum produto encontrado para “{busca.trim()}”
-                    </p>
-                    <p className="mt-1 text-xs text-[#52525B]">
-                      Confira o nome ou código. Você pode cadastrar o produto em Produtos.
-                    </p>
-                  </div>
-                )}
+              {buscaAtiva && resultados.length === 0 && !buscando && !erroBusca && (
+                <div
+                  className="col-span-full rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] bg-[#060608]/50 px-4 py-10 text-center"
+                  role="status"
+                >
+                  <p className="text-sm text-[#D4D4D8]">
+                    {codigoInvalido
+                      ? 'O código deve ter entre 2 e 60 caracteres.'
+                      : buscaPorCodigo
+                        ? 'Nenhum produto disponível com esse código nesta unidade.'
+                        : `Nenhum produto encontrado para “${termoBusca}”`}
+                  </p>
+                  <p className="mt-1 text-xs text-[#52525B]">
+                    {buscaPorCodigo
+                      ? 'Confira o código ou edite a busca para procurar pelo nome.'
+                      : 'Confira o nome ou código. Você pode cadastrar o produto em Produtos.'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -491,6 +528,7 @@ export default function PdvPage() {
                         <Button
                           variant="danger"
                           className="h-6 px-2 text-xs"
+                          disabled={clienteSalvando}
                           onClick={() => remover(item.produto.id)}
                         >
                           Remover
@@ -505,7 +543,11 @@ export default function PdvPage() {
 
           <div className="mt-4 border-t border-[rgba(255,255,255,0.08)] pt-4">
             <div className="mb-4">
-              <ClienteSelect value={clienteId} onChange={setClienteId} />
+              <ClienteSelect
+                value={clienteId}
+                onChange={setClienteId}
+                onSavingChange={setClienteSalvando}
+              />
             </div>
             <div className="flex justify-between text-lg font-bold text-[#FAFAFA]">
               <span>Total</span>
@@ -689,7 +731,7 @@ export default function PdvPage() {
             {!mostrarPagamento ? (
               <Button
                 className="mt-4 w-full"
-                disabled={itens.length === 0}
+                disabled={itens.length === 0 || clienteSalvando}
                 onClick={() => setMostrarPagamento(true)}
                 variant="primary"
               >
@@ -707,7 +749,11 @@ export default function PdvPage() {
                   className="mt-4 w-full"
                   loading={finalizando}
                   disabled={
-                    itens.length === 0 || !formaPagamento || descontoInvalido || aplicandoCupom
+                    itens.length === 0 ||
+                    !formaPagamento ||
+                    descontoInvalido ||
+                    aplicandoCupom ||
+                    clienteSalvando
                   }
                   onClick={() => void finalizar()}
                   variant="primary"
@@ -728,7 +774,7 @@ export default function PdvPage() {
           isOpen={scannerOpen}
           onClose={() => setScannerOpen(false)}
           onScan={(code) => {
-            setBusca(code);
+            alterarBusca(code, true);
             setTentativaBusca((v) => v + 1);
           }}
         />

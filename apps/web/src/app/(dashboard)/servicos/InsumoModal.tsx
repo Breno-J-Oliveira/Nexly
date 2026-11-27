@@ -147,6 +147,7 @@ export function InsumoModal({ servico, insumos, podeCriarProduto, onClose, onSav
                       if (item.id === produto?.id) return;
                       const existente = insumos.find((insumo) => insumo.produtoId === item.id);
                       if (existente) setQuantidade(String(existente.quantidade));
+                      else if (produto) setQuantidade('1');
                       setProduto(item);
                       setErro('');
                     }}

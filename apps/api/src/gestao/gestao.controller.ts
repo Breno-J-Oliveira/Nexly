@@ -19,6 +19,7 @@ import { FinanceiroOperacionalService } from './financeiro-operacional.service';
 import { GestaoService } from './gestao.service';
 import {
   BaixaDto,
+  BuscaCatalogoFilialDto,
   ComprovacaoDto,
   ImportacaoDto,
   LancamentoDto,
@@ -67,8 +68,9 @@ export class GestaoController {
   @Roles(Role.ADMIN, Role.GESTOR, Role.CAIXA) @Get('catalogo-filial/:id') catalogoFilial(
     @CurrentUser() u: User,
     @Param('id', ParseUUIDPipe) id: string,
+    @Query() busca: BuscaCatalogoFilialDto,
   ) {
-    return this.service.catalogoFilial(u.empresaId, id);
+    return this.service.catalogoFilial(u.empresaId, id, busca);
   }
   @Post('importacao/previa') previa(@CurrentUser() u: User, @Body() dto: ImportacaoDto) {
     return this.service.previa(u.empresaId, dto);

@@ -61,6 +61,7 @@ export function AgendamentoModal({
 
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [salvandoCadastro, setSalvandoCadastro] = useState(false);
   const [carregandoClientes, setCarregandoClientes] = useState(true);
   const [totalClientes, setTotalClientes] = useState(0);
   const [erroClientes, setErroClientes] = useState(false);
@@ -143,7 +144,7 @@ export function AgendamentoModal({
     setStep(passo);
   };
   const fechar = () => {
-    if (!salvando) onClose();
+    if (!salvando && !salvandoCadastro) onClose();
   };
 
   const salvar = async (): Promise<void> => {
@@ -209,6 +210,7 @@ export function AgendamentoModal({
           {cadastro === 'clientes' ? (
             <CadastroRapido
               recurso="clientes"
+              onSavingChange={setSalvandoCadastro}
               onCancel={() => fecharCadastro()}
               onCreated={(cliente) => {
                 setClienteId(cliente.id);
@@ -333,6 +335,7 @@ export function AgendamentoModal({
               <div className="mt-2">
                 <CadastroRapido
                   recurso="profissionais"
+                  onSavingChange={setSalvandoCadastro}
                   onCancel={() => fecharCadastro()}
                   onCreated={(registro) => {
                     setProfissionais((atuais) => [
@@ -379,6 +382,7 @@ export function AgendamentoModal({
               <div className="mt-2">
                 <CadastroRapido
                   recurso="servicos"
+                  onSavingChange={setSalvandoCadastro}
                   onCancel={() => fecharCadastro()}
                   onCreated={(registro) => {
                     setServicos((atuais) => [
@@ -472,7 +476,7 @@ export function AgendamentoModal({
         <button
           type="button"
           aria-label="Fechar novo agendamento"
-          disabled={salvando}
+          disabled={salvando || salvandoCadastro}
           onClick={fechar}
         >
           ✕

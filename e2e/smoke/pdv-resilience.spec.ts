@@ -69,6 +69,8 @@ test('PDV valida descontos, congela a venda em envio e recupera resposta perdida
     await page.waitForURL('**/dashboard');
     await page.goto('/pdv');
     await page.getByRole('button', { name: /Produto de teste Estoque/ }).click();
+    await page.getByLabel('Buscar produto', { exact: true }).fill('PDV');
+    await expect(page.getByRole('button', { name: /Produto de teste Estoque: 5/ })).toBeVisible();
     await page.getByRole('button', { name: 'Finalizar Venda', exact: true }).click();
     await page.getByLabel('Desconto', { exact: true }).fill('-5');
     await expect(page.getByRole('alert').filter({ hasText: 'desconto' })).toBeVisible();
@@ -102,6 +104,7 @@ test('PDV valida descontos, congela a venda em envio e recupera resposta perdida
     await expect(page.getByRole('button', { name: /^Finalizar —/ })).toBeEnabled();
     await page.getByRole('button', { name: /^Finalizar —/ }).click();
     await expect(page.getByText('Nenhum produto no carrinho')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Produto de teste Estoque: 4/ })).toBeVisible();
     const vendas = await db.venda.findMany({
       where: { empresaId: empresa.id },
       include: { itens: true },

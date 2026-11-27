@@ -13,11 +13,16 @@ import {
   IsUUID,
   Length,
   Max,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { TrimText } from '../common/validation/trim-text';
 import { StrictBoolean } from '../common/validation/strict-boolean';
+export class BuscaCatalogoFilialDto {
+  @IsOptional() @TrimText() @IsString() @MaxLength(120) search?: string;
+  @IsOptional() @TrimText() @IsString() @Length(2, 60) sku?: string;
+}
 
 export class LancamentoDto {
   @TrimText() @IsString() @Length(2, 160) descricao!: string;

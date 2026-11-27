@@ -65,6 +65,8 @@ Em desenvolvimento, a API gera um par RSA temporário quando as chaves JWT não 
 
 O Swagger não é publicado em produção. Schemas, DTOs e permissões da API definem quais dados cada operação aceita.
 
+O PDV usa `GET /api/produtos` na matriz e `GET /api/gestao/catalogo-filial/:id` nas filiais. Nos dois, `search` busca trechos do nome ou código e `sku` seleciona o código exato, preservando zeros à esquerda. A consulta da filial aplica o filtro antes do limite de resultados e considera apenas produtos com saldo positivo na filial ativa da empresa da sessão.
+
 ## Comandos de manutenção
 
 ```bash

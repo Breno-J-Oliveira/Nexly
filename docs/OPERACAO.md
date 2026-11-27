@@ -56,6 +56,8 @@ Para habilitar a recuperação de senha, configure as variáveis no serviço da 
 
 Depois que a API iniciar com a configuração, confira `GET /api/auth/recuperacao/status`. O retorno `disponivel: true` confirma a configuração local da API. Para confirmar entrega, solicite um link para uma conta de teste autorizada, confira o evento no Resend e abra a mensagem recebida. O link expira em 30 minutos, é de uso único e apenas o mais recente é válido. Após a troca, teste o login com a nova senha e confirme que a sessão anterior foi encerrada. Falhas no envio podem ser investigadas na fila de Saúde e rotinas, nos logs da API e no painel do Resend.
 
+Sem domínio próprio, use `onboarding@resend.dev` apenas em um ambiente de teste. O Resend limita a entrega ao endereço associado à própria conta Resend. Use esse mesmo e-mail na conta de teste do Nexly. Para envio público, use um domínio ou subdomínio que a equipe está autorizada a verificar. O site pode manter o endereço da Vercel. [Limites do remetente de teste](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain).
+
 WhatsApp inicia desativado no exemplo. Provedores opcionais exigem configuração e homologação.
 
 ## Backup e recuperação

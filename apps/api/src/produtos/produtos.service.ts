@@ -4,6 +4,7 @@ import { PrismaService } from '../database/prisma.service';
 import { dateRange } from '../common/validation/date-range';
 import { AtualizarProdutoDto } from './dto/atualizar-produto.dto';
 import { CriarProdutoDto } from './dto/criar-produto.dto';
+import { BuscaProduto, filtroBuscaProduto } from './filtro-busca-produto';
 
 @Injectable()
 export class ProdutosService {
@@ -12,7 +13,7 @@ export class ProdutosService {
   async listar(
     page: number,
     limit: number,
-    filtros: { categoria?: string; search?: string; estoqueAbaixoDe?: number; vencendoEm?: number },
+    filtros: BuscaProduto & { categoria?: string; estoqueAbaixoDe?: number; vencendoEm?: number },
   ) {
     const where: Prisma.ProdutoWhereInput = {
       ativo: true,
@@ -31,14 +32,7 @@ export class ProdutosService {
             },
           }
         : {}),
-      ...(filtros.search
-        ? {
-            OR: [
-              { nome: { contains: filtros.search, mode: 'insensitive' } },
-              { sku: { contains: filtros.search, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
+      ...filtroBuscaProduto(filtros),
     };
 
     const [data, total] = await Promise.all([

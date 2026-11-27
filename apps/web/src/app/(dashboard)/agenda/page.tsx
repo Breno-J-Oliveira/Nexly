@@ -203,6 +203,11 @@ function AgendaContent() {
   };
 
   const primeiroDia = inicioDaSemana(data);
+  const diaSelecionado = [
+    String(data.getFullYear()).padStart(4, '0'),
+    String(data.getMonth() + 1).padStart(2, '0'),
+    String(data.getDate()).padStart(2, '0'),
+  ].join('-');
   const ultimoDia = new Date(primeiroDia);
   ultimoDia.setDate(ultimoDia.getDate() + 6);
   const profissionalNome = profissionais.find((p) => p.id === profissionalId)?.nome;
@@ -337,32 +342,46 @@ function AgendaContent() {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-2">
-        <Button
-          variant="secondary"
-          aria-label={view === 'lista' ? 'Dia anterior' : 'Semana anterior'}
-          onClick={() =>
-            view === 'lista'
-              ? mudarDia(-1)
-              : setData((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7))
-          }
-        >
-          <Icon name="chevron-left" size="xs" />
-        </Button>
-        <Button variant="secondary" onClick={() => setData(new Date())}>
-          Hoje
-        </Button>
-        <Button
-          variant="secondary"
-          aria-label={view === 'lista' ? 'Próximo dia' : 'Próxima semana'}
-          onClick={() =>
-            view === 'lista'
-              ? mudarDia(1)
-              : setData((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7))
-          }
-        >
-          <Icon name="chevron-right" size="xs" />
-        </Button>
+      <div className="mt-4 flex flex-wrap items-end gap-x-4 gap-y-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            aria-label={view === 'lista' ? 'Dia anterior' : 'Semana anterior'}
+            onClick={() =>
+              view === 'lista'
+                ? mudarDia(-1)
+                : setData((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7))
+            }
+          >
+            <Icon name="chevron-left" size="xs" />
+          </Button>
+          <Button variant="secondary" onClick={() => setData(new Date())}>
+            Hoje
+          </Button>
+          <Button
+            variant="secondary"
+            aria-label={view === 'lista' ? 'Próximo dia' : 'Próxima semana'}
+            onClick={() =>
+              view === 'lista'
+                ? mudarDia(1)
+                : setData((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7))
+            }
+          >
+            <Icon name="chevron-right" size="xs" />
+          </Button>
+        </div>
+        <div className="w-full min-w-0 sm:w-auto">
+          <Input
+            label="Ir para a data"
+            type="date"
+            value={diaSelecionado}
+            onChange={(event) => {
+              const dia = new Date(`${event.target.value}T12:00:00`);
+              if (Number.isFinite(dia.getTime())) setData(dia);
+            }}
+            className="min-w-0"
+          />
+        </div>
       </div>
 
       {erro && (
